@@ -9,7 +9,7 @@ with open('schwab/version.py', 'r') as f:
     version = version[1:-1]
 
 setuptools.setup(
-    name='schwab-api',
+    name='schwab-py',
     version=version,
     author='Alex Golec',
     author_email='bottomless.septic.tank@gmail.com',
