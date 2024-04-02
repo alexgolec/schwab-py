@@ -13,7 +13,7 @@ setuptools.setup(
     version=version,
     author='Alex Golec',
     author_email='bottomless.septic.tank@gmail.com',
-    description='Unofficial API wrapper for the upcoming Schwab REST API',
+    description='Unofficial API wrapper for the upcoming Schwab HTTP API',
     long_description=long_description,
     long_description_content_type='text/x-rst',
     url='https://github.com/alexgolec/schwab',
@@ -28,10 +28,11 @@ setuptools.setup(
         'Operating System :: OS Independent',
         'Topic :: Office/Business :: Financial :: Investment',
     ],
-    python_requires='>=3.7',
+    python_requires='>=3.8',
     install_requires=[],
     extras_require={
         'dev': [
+            'sphinx_rtd_theme',
             'twine',
         ]
     },
