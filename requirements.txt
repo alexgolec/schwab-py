@@ -1,0 +1,3 @@
+# Note this requirements file is only used by sphinx. For regular installations, 
+# see the setup.py file.
+sphinx-rtd-theme==2.0.0
