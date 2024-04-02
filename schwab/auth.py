@@ -383,7 +383,7 @@ def client_from_manual_flow(api_key, app_secret, callback_url, token_path,
 
     #api_key = _normalize_api_key(api_key)
 
-    oauth = OAuth2Client(api_key, callback_url=callback_url)
+    oauth = OAuth2Client(api_key, redirect_uri=callback_url)
     authorization_url, state = oauth.create_authorization_url(
         'https://api.schwabapi.com/v1/oauth/authorize')
 

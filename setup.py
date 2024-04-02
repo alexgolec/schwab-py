@@ -29,9 +29,18 @@ setuptools.setup(
         'Topic :: Office/Business :: Financial :: Investment',
     ],
     python_requires='>=3.8',
-    install_requires=[],
+    install_requires=[
+        'authlib',
+        'httpx',
+        'prompt_toolkit',
+        'python-dateutil',
+        'selenium',
+    ],
     extras_require={
         'dev': [
+            'coverage',
+            'nose',
+            'pytest',
             'sphinx_rtd_theme',
             'twine',
         ]
