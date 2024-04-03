@@ -14,7 +14,15 @@
    :target: https://discord.gg/M3vjtHj
 
 
-This package is very much under construction. Please come back later.
+This package is very much under construction. Please don't use it unless you 
+know exactly what you're doing.
+
+.. toctree::
+  :maxdepth: 2
+  :caption: Contents:
+
+  client
+
 
 
 **Disclaimer:** *schwab-py is an unofficial API wrapper. It is in no way 

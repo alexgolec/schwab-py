@@ -160,8 +160,8 @@ class BaseClient(EnumEnforcer):
         return self._get_request(path, params)
 
     def get_account_numbers(self):
-        # TODO: Documentation
         '''
+        TODO
         '''
         path = '/trader/v1/accounts/accountNumbers'
         return self._get_request(path, {})
