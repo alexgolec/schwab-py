@@ -9,7 +9,7 @@ import datetime
 import json
 import logging
 import pickle
-#import tda
+import schwab
 import time
 import warnings
 
@@ -44,7 +44,7 @@ class BaseClient(EnumEnforcer):
         self.logger = get_logger()
         self.request_number = 0
 
-        #tda.LOG_REDACTOR.register(api_key, 'API_KEY')
+        schwab.LOG_REDACTOR.register(api_key, 'API_KEY')
 
         self.token_metadata = token_metadata
 
@@ -129,3 +129,59 @@ class BaseClient(EnumEnforcer):
                         #setting-a-default-timeout-on-a-client>`__ for
                         examples.'''
         self.session.timeout = timeout
+
+
+    ##########################################################################
+    # Accounts
+
+    class Account:
+        class Fields(Enum):
+            '''Account fields passed to :meth:`get_account` and
+            :meth:`get_accounts`'''
+            POSITIONS = 'positions'
+            ORDERS = 'orders'
+
+    def get_account(self, account_id, *, fields=None):
+        '''Account balances, positions, and orders for a specific account.
+        `Official documentation
+        <https://developer.tdameritrade.com/account-access/apis/get/accounts/
+        %7BaccountId%7D-0>`__.
+
+        :param fields: Balances displayed by default, additional fields can be
+                       added here by adding values from :class:`Account.Fields`.
+        '''
+        fields = self.convert_enum_iterable(fields, self.Account.Fields)
+
+        params = {}
+        if fields:
+            params['fields'] = ','.join(fields)
+
+        path = '/trader/v1/accounts/{}'.format(account_id)
+        return self._get_request(path, params)
+
+    def get_account_numbers(self):
+        # TODO: Documentation
+        '''
+        '''
+        path = '/trader/v1/accounts/accountNumbers'
+        return self._get_request(path, {})
+
+    def get_accounts(self, *, fields=None):
+        '''Account balances, positions, and orders for all linked accounts.
+        `Official documentation
+        <https://developer.tdameritrade.com/account-access/apis/get/
+        accounts-0>`__.
+
+        :param fields: Balances displayed by default, additional fields can be
+                       added here by adding values from :class:`Account.Fields`.
+        '''
+        fields = self.convert_enum_iterable(fields, self.Account.Fields)
+
+        params = {}
+        if fields:
+            params['fields'] = ','.join(fields)
+
+        path = '/trader/v1/accounts'
+        return self._get_request(path, params)
+
+

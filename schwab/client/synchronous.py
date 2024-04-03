@@ -12,7 +12,7 @@ class Client(BaseClient):
     def _get_request(self, path, params):
         self.ensure_updated_refresh_token()
 
-        dest = 'https://api.tdameritrade.com' + path
+        dest = 'https://api.schwabapi.com' + path
 
         req_num = self._req_num()
         self.logger.debug('Req %s: GET to %s, params=%s',
@@ -26,7 +26,7 @@ class Client(BaseClient):
     def _post_request(self, path, data):
         self.ensure_updated_refresh_token()
 
-        dest = 'https://api.tdameritrade.com' + path
+        dest = 'https://api.schwabapi.com' + path
 
         req_num = self._req_num()
         self.logger.debug('Req %s: POST to %s, json=%s',
@@ -40,7 +40,7 @@ class Client(BaseClient):
     def _put_request(self, path, data):
         self.ensure_updated_refresh_token()
 
-        dest = 'https://api.tdameritrade.com' + path
+        dest = 'https://api.schwabapi.com' + path
 
         req_num = self._req_num()
         self.logger.debug('Req %s: PUT to %s, json=%s',
@@ -54,7 +54,7 @@ class Client(BaseClient):
     def _patch_request(self, path, data):
         self.ensure_updated_refresh_token()
 
-        dest = 'https://api.tdameritrade.com' + path
+        dest = 'https://api.schwabapi.com' + path
 
         req_num = self._req_num()
         self.logger.debug('Req %s: PATCH to %s, json=%s',
@@ -68,7 +68,7 @@ class Client(BaseClient):
     def _delete_request(self, path):
         self.ensure_updated_refresh_token()
 
-        dest = 'https://api.tdameritrade.com' + path
+        dest = 'https://api.schwabapi.com' + path
 
         req_num = self._req_num()
         self.logger.debug('Req %s: DELETE to %s'.format(req_num, dest))
