@@ -38,9 +38,12 @@ setuptools.setup(
     ],
     extras_require={
         'dev': [
+            'asynctest',
+            'colorama',
             'coverage',
             'nose',
             'pytest',
+            'pytz',
             'sphinx_rtd_theme',
             'twine',
         ]
