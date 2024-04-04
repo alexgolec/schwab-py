@@ -139,13 +139,9 @@ class BaseClient(EnumEnforcer):
             '''Account fields passed to :meth:`get_account` and
             :meth:`get_accounts`'''
             POSITIONS = 'positions'
-            ORDERS = 'orders'
 
-    def get_account(self, account_id, *, fields=None):
-        '''Account balances, positions, and orders for a specific account.
-        `Official documentation
-        <https://developer.tdameritrade.com/account-access/apis/get/accounts/
-        %7BaccountId%7D-0>`__.
+    def get_account(self, account_hash, *, fields=None):
+        '''Account balances, positions, and orders for a given account hash..
 
         :param fields: Balances displayed by default, additional fields can be
                        added here by adding values from :class:`Account.Fields`.
@@ -156,21 +152,22 @@ class BaseClient(EnumEnforcer):
         if fields:
             params['fields'] = ','.join(fields)
 
-        path = '/trader/v1/accounts/{}'.format(account_id)
+        path = '/trader/v1/accounts/{}'.format(account_hash)
         return self._get_request(path, params)
 
     def get_account_numbers(self):
         '''
-        TODO
+        Returns a mapping from account IDs available to this token to the 
+        account hash that should be passed whenever referring to that account in 
+        API calls.
         '''
         path = '/trader/v1/accounts/accountNumbers'
         return self._get_request(path, {})
 
     def get_accounts(self, *, fields=None):
-        '''Account balances, positions, and orders for all linked accounts.
-        `Official documentation
-        <https://developer.tdameritrade.com/account-access/apis/get/
-        accounts-0>`__.
+        '''Account balances, positions, and orders for all linked accounts. Note 
+        this method does not return account hashes. See 
+        :ref:`this method <account_hashes_method>` for more detail.
 
         :param fields: Balances displayed by default, additional fields can be
                        added here by adding values from :class:`Account.Fields`.
