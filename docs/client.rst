@@ -106,3 +106,41 @@ See the official documentation for each method for a complete response schema.
 .. autoclass:: schwab.client.Client.Account
   :members:
   :undoc-members:
+
+
++++++++++++++
+Price History
++++++++++++++
+
+Schwab provides price history for equities and ETFs. It does not provide price 
+history for options, futures, or any other instruments. 
+
+In the raw API, fetching price history is somewhat complicated: the API offers a 
+single endpoint :meth:`Client.get_price_history` that accepts a complex variety 
+of inputs, but fails to document them in any meaningful way.
+
+Thankfully, we've reverse engineered this endpoint and built some helpful 
+utilities for fetching prices by minute, day, week, etc. Each method can be 
+called with or without date bounds. When called without date bounds, it returns 
+all data available. Each method offers a different lookback period, so make sure 
+to read the documentation below to learn how much data is available. 
+
+
+.. automethod:: schwab.client.Client.get_price_history_every_minute
+.. automethod:: schwab.client.Client.get_price_history_every_five_minutes
+.. automethod:: schwab.client.Client.get_price_history_every_ten_minutes
+.. automethod:: schwab.client.Client.get_price_history_every_fifteen_minutes
+.. automethod:: schwab.client.Client.get_price_history_every_thirty_minutes
+.. automethod:: schwab.client.Client.get_price_history_every_day
+.. automethod:: schwab.client.Client.get_price_history_every_week
+
+For the sake of completeness, here is the documentation for the raw price 
+history endpoint, in all its complexity.
+
+.. automethod:: schwab.client.Client.get_price_history
+.. autoclass:: schwab.client.Client.PriceHistory
+  :members:
+  :undoc-members:
+  :member-order: bysource
+
+

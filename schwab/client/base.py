@@ -182,3 +182,307 @@ class BaseClient(EnumEnforcer):
         return self._get_request(path, params)
 
 
+    ##########################################################################
+    # Price History
+
+    class PriceHistory:
+        class PeriodType(Enum):
+            DAY = 'day'
+            MONTH = 'month'
+            YEAR = 'year'
+            YEAR_TO_DATE = 'ytd'
+
+        class Period(Enum):
+            # Daily
+            ONE_DAY = 1
+            TWO_DAYS = 2
+            THREE_DAYS = 3
+            FOUR_DAYS = 4
+            FIVE_DAYS = 5
+            TEN_DAYS = 10
+
+            # Monthly
+            ONE_MONTH = 1
+            TWO_MONTHS = 2
+            THREE_MONTHS = 3
+            SIX_MONTHS = 6
+
+            # Year
+            ONE_YEAR = 1
+            TWO_YEARS = 2
+            THREE_YEARS = 3
+            FIVE_YEARS = 5
+            TEN_YEARS = 10
+            FIFTEEN_YEARS = 15
+            TWENTY_YEARS = 20
+
+            # Year to date
+            YEAR_TO_DATE = 1
+
+        class FrequencyType(Enum):
+            MINUTE = 'minute'
+            DAILY = 'daily'
+            WEEKLY = 'weekly'
+            MONTHLY = 'monthly'
+
+        class Frequency(Enum):
+            # Minute
+            EVERY_MINUTE = 1
+            EVERY_FIVE_MINUTES = 5
+            EVERY_TEN_MINUTES = 10
+            EVERY_FIFTEEN_MINUTES = 15
+            EVERY_THIRTY_MINUTES = 30
+
+            # Other frequencies
+            DAILY = 1
+            WEEKLY = 1
+            MONTHLY = 1
+
+    def get_price_history(
+            self,
+            symbol,
+            *,
+            period_type=None,
+            period=None,
+            frequency_type=None,
+            frequency=None,
+            start_datetime=None,
+            end_datetime=None,
+            need_extended_hours_data=None,
+            need_previous_close=None):
+        '''Get price history for a symbol.
+
+        :param period_type: The type of period to show.
+        :param period: The number of periods to show. Should not be provided if
+                       ``start_datetime`` and ``end_datetime``.
+        :param frequency_type: The type of frequency with which a new candle
+                               is formed.
+        :param frequency: The number of the frequencyType to be included in each
+                          candle.
+        :param start_datetime: Start date.
+        :param end_datetime: End date. Default is previous trading day.
+        :param need_extended_hours_data: If true, return extended hours data.
+                                         Default is true.
+        :param need_previous_close: If true, return the previous close price and 
+                                    date.
+        '''
+        period_type = self.convert_enum(
+            period_type, self.PriceHistory.PeriodType)
+        period = self.convert_enum(period, self.PriceHistory.Period)
+        frequency_type = self.convert_enum(
+            frequency_type, self.PriceHistory.FrequencyType)
+        frequency = self.convert_enum(
+            frequency, self.PriceHistory.Frequency)
+
+        params = {
+                'symbol': symbol,
+        }
+
+        if period_type is not None:
+            params['periodType'] = period_type
+        if period is not None:
+            params['period'] = period
+        if frequency_type is not None:
+            params['frequencyType'] = frequency_type
+        if frequency is not None:
+            params['frequency'] = frequency
+        if start_datetime is not None:
+            params['startDate'] = self._datetime_as_millis(
+                'start_datetime', start_datetime)
+        if end_datetime is not None:
+            params['endDate'] = self._datetime_as_millis(
+                'end_datetime', end_datetime)
+        if need_extended_hours_data is not None:
+            params['needExtendedHoursData'] = need_extended_hours_data
+        if need_previous_close is not None:
+            params['needPreviousClose'] = need_previous_close
+
+        path = '/marketdata/v1/pricehistory'.format(symbol)
+        return self._get_request(path, params)
+
+
+    ##########################################################################
+    # Price history utilities
+
+
+    def __normalize_start_and_end_datetimes(self, start_datetime, end_datetime):
+        if start_datetime is None:
+            start_datetime = datetime.datetime(year=1971, month=1, day=1)
+        if end_datetime is None:
+            end_datetime = (datetime.datetime.utcnow() +
+                    datetime.timedelta(days=7))
+
+        return start_datetime, end_datetime
+
+
+    def get_price_history_every_minute(
+            self, symbol, *, start_datetime=None, end_datetime=None, 
+            need_extended_hours_data=None, need_previous_close=None):
+        '''
+        Fetch price history for a stock or ETF symbol at a per-minute
+        granularity. This endpoint currently appears to return up to 48 days of
+        data.
+        '''
+
+        start_datetime, end_datetime = self.__normalize_start_and_end_datetimes(
+                start_datetime, end_datetime)
+
+        return self.get_price_history(
+                symbol,
+                period_type=self.PriceHistory.PeriodType.DAY,
+                period=self.PriceHistory.Period.ONE_DAY,
+                frequency_type=self.PriceHistory.FrequencyType.MINUTE,
+                frequency=self.PriceHistory.Frequency.EVERY_MINUTE,
+                start_datetime=start_datetime,
+                end_datetime=end_datetime,
+                need_extended_hours_data=need_extended_hours_data, 
+                need_previous_close=need_previous_close)
+
+
+    def get_price_history_every_five_minutes(
+            self, symbol, *, start_datetime=None, end_datetime=None, 
+            need_extended_hours_data=None, need_previous_close=None):
+        '''
+        Fetch price history for a stock or ETF symbol at a per-five-minutes
+        granularity. This endpoint currently appears to return approximately
+        nine months of data.
+        '''
+
+        start_datetime, end_datetime = self.__normalize_start_and_end_datetimes(
+                start_datetime, end_datetime)
+
+        return self.get_price_history(
+                symbol,
+                period_type=self.PriceHistory.PeriodType.DAY,
+                period=self.PriceHistory.Period.ONE_DAY,
+                frequency_type=self.PriceHistory.FrequencyType.MINUTE,
+                frequency=self.PriceHistory.Frequency.EVERY_FIVE_MINUTES,
+                start_datetime=start_datetime,
+                end_datetime=end_datetime,
+                need_extended_hours_data=need_extended_hours_data, 
+                need_previous_close=need_previous_close)
+
+
+    def get_price_history_every_ten_minutes(
+            self, symbol, *, start_datetime=None, end_datetime=None, 
+            need_extended_hours_data=None, need_previous_close=None):
+        '''
+        Fetch price history for a stock or ETF symbol at a per-ten-minutes
+        granularity. This endpoint currently appears to return approximately
+        nine months of data.
+        '''
+
+        start_datetime, end_datetime = self.__normalize_start_and_end_datetimes(
+                start_datetime, end_datetime)
+
+        return self.get_price_history(
+                symbol,
+                period_type=self.PriceHistory.PeriodType.DAY,
+                period=self.PriceHistory.Period.ONE_DAY,
+                frequency_type=self.PriceHistory.FrequencyType.MINUTE,
+                frequency=self.PriceHistory.Frequency.EVERY_TEN_MINUTES,
+                start_datetime=start_datetime,
+                end_datetime=end_datetime,
+                need_extended_hours_data=need_extended_hours_data, 
+                need_previous_close=need_previous_close)
+
+
+    def get_price_history_every_fifteen_minutes(
+            self, symbol, *, start_datetime=None, end_datetime=None, 
+            need_extended_hours_data=None, need_previous_close=None):
+        '''
+        Fetch price history for a stock or ETF symbol at a per-fifteen-minutes
+        granularity. This endpoint currently appears to return approximately
+        nine months of data.
+        '''
+
+        start_datetime, end_datetime = self.__normalize_start_and_end_datetimes(
+                start_datetime, end_datetime)
+
+        return self.get_price_history(
+                symbol,
+                period_type=self.PriceHistory.PeriodType.DAY,
+                period=self.PriceHistory.Period.ONE_DAY,
+                frequency_type=self.PriceHistory.FrequencyType.MINUTE,
+                frequency=self.PriceHistory.Frequency.EVERY_FIFTEEN_MINUTES,
+                start_datetime=start_datetime,
+                end_datetime=end_datetime,
+                need_extended_hours_data=need_extended_hours_data, 
+                need_previous_close=need_previous_close)
+
+
+    def get_price_history_every_thirty_minutes(
+            self, symbol, *, start_datetime=None, end_datetime=None, 
+            need_extended_hours_data=None, need_previous_close=None):
+        '''
+        Fetch price history for a stock or ETF symbol at a per-thirty-minutes
+        granularity. This endpoint currently appears to return approximately
+        nine months of data.
+        '''
+
+        start_datetime, end_datetime = self.__normalize_start_and_end_datetimes(
+                start_datetime, end_datetime)
+
+        return self.get_price_history(
+                symbol,
+                period_type=self.PriceHistory.PeriodType.DAY,
+                period=self.PriceHistory.Period.ONE_DAY,
+                frequency_type=self.PriceHistory.FrequencyType.MINUTE,
+                frequency=self.PriceHistory.Frequency.EVERY_THIRTY_MINUTES,
+                start_datetime=start_datetime,
+                end_datetime=end_datetime,
+                need_extended_hours_data=need_extended_hours_data, 
+                need_previous_close=need_previous_close)
+
+
+    def get_price_history_every_day(
+            self, symbol, *, start_datetime=None, end_datetime=None, 
+            need_extended_hours_data=None, need_previous_close=None):
+        '''
+        Fetch price history for a stock or ETF symbol at a daily granularity. 
+        The exact period of time over which this endpoint returns data is 
+        unclear, although it has been observed returning data as far back as 
+        1985 (for ``AAPL``).
+        '''
+
+        start_datetime, end_datetime = self.__normalize_start_and_end_datetimes(
+                start_datetime, end_datetime)
+
+        return self.get_price_history(
+                symbol,
+                period_type=self.PriceHistory.PeriodType.YEAR,
+                period=self.PriceHistory.Period.TWENTY_YEARS,
+                frequency_type=self.PriceHistory.FrequencyType.DAILY,
+                frequency=self.PriceHistory.Frequency.EVERY_MINUTE,
+                start_datetime=start_datetime,
+                end_datetime=end_datetime,
+                need_extended_hours_data=need_extended_hours_data, 
+                need_previous_close=need_previous_close)
+
+
+    def get_price_history_every_week(
+            self, symbol, *, start_datetime=None, end_datetime=None, 
+            need_extended_hours_data=None, need_previous_close=None):
+        '''
+        Fetch price history for a stock or ETF symbol at a weekly granularity.
+        The exact period of time over which this endpoint returns data is 
+        unclear, although it has been observed returning data as far back as 
+        1985 (for ``AAPL``).
+        '''
+
+        start_datetime, end_datetime = self.__normalize_start_and_end_datetimes(
+                start_datetime, end_datetime)
+
+        return self.get_price_history(
+                symbol,
+                period_type=self.PriceHistory.PeriodType.YEAR,
+                period=self.PriceHistory.Period.TWENTY_YEARS,
+                frequency_type=self.PriceHistory.FrequencyType.WEEKLY,
+                frequency=self.PriceHistory.Frequency.EVERY_MINUTE,
+                start_datetime=start_datetime,
+                end_datetime=end_datetime,
+                need_extended_hours_data=need_extended_hours_data, 
+                need_previous_close=need_previous_close)
+
+
+

@@ -999,6 +999,7 @@ class _TestClient:
                 'apikey': API_KEY,
                 'symbol': 'AAPL',
                 'optionType': 'S'})
+    '''
 
     # get_price_history
 
@@ -1006,16 +1007,16 @@ class _TestClient:
     def test_get_price_history_vanilla(self):
         self.client.get_price_history(SYMBOL)
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/{symbol}/pricehistory'), params={
-                'apikey': API_KEY})
+            self.make_url('/marketdata/v1/pricehistory'), params={
+                'symbol': SYMBOL})
 
     
     def test_get_price_history_period_type(self):
         self.client.get_price_history(
             SYMBOL, period_type=self.client_class.PriceHistory.PeriodType.MONTH)
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/{symbol}/pricehistory'), params={
-                'apikey': API_KEY,
+            self.make_url('/marketdata/v1/pricehistory'), params={
+                'symbol': SYMBOL,
                 'periodType': 'month'})
 
     
@@ -1023,8 +1024,8 @@ class _TestClient:
         self.client.set_enforce_enums(False)
         self.client.get_price_history(SYMBOL, period_type='month')
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/{symbol}/pricehistory'), params={
-                'apikey': API_KEY,
+            self.make_url('/marketdata/v1/pricehistory'), params={
+                'symbol': SYMBOL,
                 'periodType': 'month'})
 
     
@@ -1032,8 +1033,8 @@ class _TestClient:
         self.client.get_price_history(
             SYMBOL, period=self.client_class.PriceHistory.Period.TEN_DAYS)
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/{symbol}/pricehistory'), params={
-                'apikey': API_KEY,
+            self.make_url('/marketdata/v1/pricehistory'), params={
+                'symbol': SYMBOL,
                 'period': 10})
 
     
@@ -1041,8 +1042,8 @@ class _TestClient:
         self.client.set_enforce_enums(False)
         self.client.get_price_history(SYMBOL, period=10)
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/{symbol}/pricehistory'), params={
-                'apikey': API_KEY,
+            self.make_url('/marketdata/v1/pricehistory'), params={
+                'symbol': SYMBOL,
                 'period': 10})
 
     
@@ -1051,8 +1052,8 @@ class _TestClient:
             SYMBOL,
             frequency_type=self.client_class.PriceHistory.FrequencyType.DAILY)
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/{symbol}/pricehistory'), params={
-                'apikey': API_KEY,
+            self.make_url('/marketdata/v1/pricehistory'), params={
+                'symbol': SYMBOL,
                 'frequencyType': 'daily'})
 
     
@@ -1060,8 +1061,8 @@ class _TestClient:
         self.client.set_enforce_enums(False)
         self.client.get_price_history(SYMBOL, frequency_type='daily')
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/{symbol}/pricehistory'), params={
-                'apikey': API_KEY,
+            self.make_url('/marketdata/v1/pricehistory'), params={
+                'symbol': SYMBOL,
                 'frequencyType': 'daily'})
 
     
@@ -1070,8 +1071,8 @@ class _TestClient:
         SYMBOL,
         frequency=self.client_class.PriceHistory.Frequency.EVERY_FIVE_MINUTES)
         self.mock_session.get.assert_called_once_with(
-        self.make_url('/v1/marketdata/{symbol}/pricehistory'), params={
-            'apikey': API_KEY,
+        self.make_url('/marketdata/v1/pricehistory'), params={
+            'symbol': SYMBOL,
             'frequency': 5})
 
 
@@ -1079,8 +1080,8 @@ class _TestClient:
         self.client.set_enforce_enums(False)
         self.client.get_price_history(SYMBOL, frequency=5)
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/{symbol}/pricehistory'), params={
-                'apikey': API_KEY,
+            self.make_url('/marketdata/v1/pricehistory'), params={
+                'symbol': SYMBOL,
                 'frequency': 5})
 
     
@@ -1088,8 +1089,8 @@ class _TestClient:
         self.client.get_price_history(
             SYMBOL, start_datetime=EARLIER_DATETIME)
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/{symbol}/pricehistory'), params={
-                'apikey': API_KEY,
+            self.make_url('/marketdata/v1/pricehistory'), params={
+                'symbol': SYMBOL,
                 'startDate': EARLIER_MILLIS})
 
     
@@ -1104,8 +1105,8 @@ class _TestClient:
     def test_get_price_history_end_datetime(self):
         self.client.get_price_history(SYMBOL, end_datetime=EARLIER_DATETIME)
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/{symbol}/pricehistory'), params={
-                'apikey': API_KEY,
+            self.make_url('/marketdata/v1/pricehistory'), params={
+                'symbol': SYMBOL,
                 'endDate': EARLIER_MILLIS})
 
     
@@ -1120,19 +1121,27 @@ class _TestClient:
     def test_get_price_history_need_extended_hours_data(self):
         self.client.get_price_history(SYMBOL, need_extended_hours_data=True)
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/{symbol}/pricehistory'), params={
-                'apikey': API_KEY,
+            self.make_url('/marketdata/v1/pricehistory'), params={
+                'symbol': SYMBOL,
                 'needExtendedHoursData': True})
+
+
+    def test_get_price_history_need_previous_close(self):
+        self.client.get_price_history(SYMBOL, need_previous_close=True)
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/marketdata/v1/pricehistory'), params={
+                'symbol': SYMBOL,
+                'needPreviousClose': True})
 
 
     # get_price_history_every_minute
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_minute_vanilla(self):
         self.client.get_price_history_every_minute('AAPL')
         params = {
-                'apikey': API_KEY,
+                'symbol': 'AAPL',
                 'periodType': 'day',
                 # ONE_DAY
                 'period': 1,
@@ -1143,16 +1152,16 @@ class _TestClient:
                 'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_minute_start_datetime(self):
         self.client.get_price_history_every_minute(
                 'AAPL', start_datetime=EARLIER_DATETIME)
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'day',
                 # ONE_DAY
                 'period': 1,
@@ -1163,16 +1172,16 @@ class _TestClient:
                 'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_minute_end_datetime(self):
         self.client.get_price_history_every_minute(
                 'AAPL', end_datetime=EARLIER_DATETIME)
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'day',
                 # ONE_DAY
                 'period': 1,
@@ -1183,16 +1192,16 @@ class _TestClient:
                 'endDate': EARLIER_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_minute_empty_extendedhours(self):
         self.client.get_price_history_every_minute(
             'AAPL', need_extended_hours_data=None)
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'day',
                 # ONE_DAY
                 'period': 1,
@@ -1203,16 +1212,16 @@ class _TestClient:
                 'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_minute_extendedhours(self):
         self.client.get_price_history_every_minute(
             'AAPL', need_extended_hours_data=True)
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'day',
                 # ONE_DAY
                 'period': 1,
@@ -1224,18 +1233,59 @@ class _TestClient:
                 'needExtendedHoursData': True,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_price_history_every_minute_empty_previous_close(self):
+        self.client.get_price_history_every_minute(
+            'AAPL', need_previous_close=None)
+        params = {
+                'symbol': SYMBOL,
+                'periodType': 'day',
+                # ONE_DAY
+                'period': 1,
+                'frequencyType': 'minute',
+                # EVERY_MINUTE
+                'frequency': 1,
+                'startDate': MIN_TIMESTAMP_MILLIS,
+                'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
+        }
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/marketdata/v1/pricehistory'),
+            params=params)
+
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_price_history_every_minute_previous_close(self):
+        self.client.get_price_history_every_minute(
+            'AAPL', need_previous_close=True)
+        params = {
+                'symbol': SYMBOL,
+                'periodType': 'day',
+                # ONE_DAY
+                'period': 1,
+                'frequencyType': 'minute',
+                # EVERY_MINUTE
+                'frequency': 1,
+                'startDate': MIN_TIMESTAMP_MILLIS,
+                'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
+                'needPreviousClose': True,
+        }
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/marketdata/v1/pricehistory'),
+            params=params)
+
 
 
     # get_price_history_every_five_minutes
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_five_minutes_vanilla(self):
         self.client.get_price_history_every_five_minutes('AAPL')
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'day',
                 # ONE_DAY
                 'period': 1,
@@ -1246,16 +1296,16 @@ class _TestClient:
                 'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_five_minutes_start_datetime(self):
         self.client.get_price_history_every_five_minutes(
                 'AAPL', start_datetime=EARLIER_DATETIME)
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'day',
                 # ONE_DAY
                 'period': 1,
@@ -1266,16 +1316,16 @@ class _TestClient:
                 'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_five_minutes_end_datetime(self):
         self.client.get_price_history_every_five_minutes(
                 'AAPL', end_datetime=EARLIER_DATETIME)
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'day',
                 # ONE_DAY
                 'period': 1,
@@ -1286,16 +1336,16 @@ class _TestClient:
                 'endDate': EARLIER_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_five_minutes_empty_extendedhours(self):
         self.client.get_price_history_every_five_minutes(
             'AAPL', need_extended_hours_data=None)
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'day',
                 # ONE_DAY
                 'period': 1,
@@ -1306,16 +1356,16 @@ class _TestClient:
                 'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_five_minutes_extendedhours(self):
         self.client.get_price_history_every_five_minutes(
             'AAPL', need_extended_hours_data=True)
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'day',
                 # ONE_DAY
                 'period': 1,
@@ -1327,18 +1377,58 @@ class _TestClient:
                 'needExtendedHoursData': True,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
+            params=params)
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_price_history_every_five_minutes_empty_previous_close(self):
+        self.client.get_price_history_every_five_minutes(
+            'AAPL', need_previous_close=None)
+        params = {
+                'symbol': SYMBOL,
+                'periodType': 'day',
+                # ONE_DAY
+                'period': 1,
+                'frequencyType': 'minute',
+                # EVERY_FIVE_MINUTES
+                'frequency': 5,
+                'startDate': MIN_TIMESTAMP_MILLIS,
+                'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
+        }
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/marketdata/v1/pricehistory'),
+            params=params)
+
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_price_history_every_five_minutes_previous_close(self):
+        self.client.get_price_history_every_five_minutes(
+            'AAPL', need_previous_close=True)
+        params = {
+                'symbol': SYMBOL,
+                'periodType': 'day',
+                # ONE_DAY
+                'period': 1,
+                'frequencyType': 'minute',
+                # EVERY_FIVE_MINUTES
+                'frequency': 5,
+                'startDate': MIN_TIMESTAMP_MILLIS,
+                'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
+                'needPreviousClose': True,
+        }
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
     # get_price_history_every_ten_minutes
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_ten_minutes_vanilla(self):
         self.client.get_price_history_every_ten_minutes('AAPL')
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'day',
                 # ONE_DAY
                 'period': 1,
@@ -1349,16 +1439,16 @@ class _TestClient:
                 'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_ten_minutes_start_datetime(self):
         self.client.get_price_history_every_ten_minutes(
                 'AAPL', start_datetime=EARLIER_DATETIME)
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'day',
                 # ONE_DAY
                 'period': 1,
@@ -1369,16 +1459,16 @@ class _TestClient:
                 'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_ten_minutes_end_datetime(self):
         self.client.get_price_history_every_ten_minutes(
                 'AAPL', end_datetime=EARLIER_DATETIME)
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'day',
                 # ONE_DAY
                 'period': 1,
@@ -1389,16 +1479,16 @@ class _TestClient:
                 'endDate': EARLIER_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_ten_minutes_empty_extendedhours(self):
         self.client.get_price_history_every_ten_minutes(
             'AAPL', need_extended_hours_data=None)
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'day',
                 # ONE_DAY
                 'period': 1,
@@ -1409,16 +1499,16 @@ class _TestClient:
                 'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_ten_minutes_extendedhours(self):
         self.client.get_price_history_every_ten_minutes(
             'AAPL', need_extended_hours_data=True)
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'day',
                 # ONE_DAY
                 'period': 1,
@@ -1430,18 +1520,58 @@ class _TestClient:
                 'needExtendedHoursData': True,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
+            params=params)
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_price_history_every_ten_minutes_empty_previous_close(self):
+        self.client.get_price_history_every_ten_minutes(
+            'AAPL', need_previous_close=None)
+        params = {
+                'symbol': SYMBOL,
+                'periodType': 'day',
+                # ONE_DAY
+                'period': 1,
+                'frequencyType': 'minute',
+                # EVERY_TEN_MINUTES
+                'frequency': 10,
+                'startDate': MIN_TIMESTAMP_MILLIS,
+                'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
+        }
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/marketdata/v1/pricehistory'),
+            params=params)
+
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_price_history_every_ten_minutes_previous_close(self):
+        self.client.get_price_history_every_ten_minutes(
+            'AAPL', need_previous_close=True)
+        params = {
+                'symbol': SYMBOL,
+                'periodType': 'day',
+                # ONE_DAY
+                'period': 1,
+                'frequencyType': 'minute',
+                # EVERY_TEN_MINUTES
+                'frequency': 10,
+                'startDate': MIN_TIMESTAMP_MILLIS,
+                'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
+                'needPreviousClose': True,
+        }
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
     # get_price_history_every_fifteen_minutes
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_fifteen_minutes_vanilla(self):
         self.client.get_price_history_every_fifteen_minutes('AAPL')
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'day',
                 # ONE_DAY
                 'period': 1,
@@ -1452,16 +1582,16 @@ class _TestClient:
                 'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_fifteen_minutes_start_datetime(self):
         self.client.get_price_history_every_fifteen_minutes(
                 'AAPL', start_datetime=EARLIER_DATETIME)
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'day',
                 # ONE_DAY
                 'period': 1,
@@ -1472,16 +1602,16 @@ class _TestClient:
                 'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_fifteen_minutes_end_datetime(self):
         self.client.get_price_history_every_fifteen_minutes(
                 'AAPL', end_datetime=EARLIER_DATETIME)
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'day',
                 # ONE_DAY
                 'period': 1,
@@ -1492,16 +1622,16 @@ class _TestClient:
                 'endDate': EARLIER_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_fifteen_minutes_empty_extendedhours(self):
         self.client.get_price_history_every_fifteen_minutes(
             'AAPL', need_extended_hours_data=None)
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'day',
                 # ONE_DAY
                 'period': 1,
@@ -1512,16 +1642,16 @@ class _TestClient:
                 'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_fifteen_minutes_extendedhours(self):
         self.client.get_price_history_every_fifteen_minutes(
             'AAPL', need_extended_hours_data=True)
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'day',
                 # ONE_DAY
                 'period': 1,
@@ -1533,18 +1663,58 @@ class _TestClient:
                 'needExtendedHoursData': True,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
+            params=params)
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_price_history_every_fifteen_minutes_empty_previous_close(self):
+        self.client.get_price_history_every_fifteen_minutes(
+            'AAPL', need_previous_close=None)
+        params = {
+                'symbol': SYMBOL,
+                'periodType': 'day',
+                # ONE_DAY
+                'period': 1,
+                'frequencyType': 'minute',
+                # EVERY_FIFTEEN_MINUTES
+                'frequency': 15,
+                'startDate': MIN_TIMESTAMP_MILLIS,
+                'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
+        }
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/marketdata/v1/pricehistory'),
+            params=params)
+
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_price_history_every_fifteen_minutes_previous_close(self):
+        self.client.get_price_history_every_fifteen_minutes(
+            'AAPL', need_previous_close=True)
+        params = {
+                'symbol': SYMBOL,
+                'periodType': 'day',
+                # ONE_DAY
+                'period': 1,
+                'frequencyType': 'minute',
+                # EVERY_FIFTEEN_MINUTES
+                'frequency': 15,
+                'startDate': MIN_TIMESTAMP_MILLIS,
+                'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
+                'needPreviousClose': True,
+        }
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
     # get_price_history_every_thirty_minutes
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_thirty_minutes_vanilla(self):
         self.client.get_price_history_every_thirty_minutes('AAPL')
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'day',
                 # ONE_DAY
                 'period': 1,
@@ -1555,16 +1725,16 @@ class _TestClient:
                 'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_thirty_minutes_start_datetime(self):
         self.client.get_price_history_every_thirty_minutes(
                 'AAPL', start_datetime=EARLIER_DATETIME)
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'day',
                 # ONE_DAY
                 'period': 1,
@@ -1575,16 +1745,16 @@ class _TestClient:
                 'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_thirty_minutes_end_datetime(self):
         self.client.get_price_history_every_thirty_minutes(
                 'AAPL', end_datetime=EARLIER_DATETIME)
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'day',
                 # ONE_DAY
                 'period': 1,
@@ -1595,16 +1765,16 @@ class _TestClient:
                 'endDate': EARLIER_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_thirty_minutes_empty_extendedhours(self):
         self.client.get_price_history_every_thirty_minutes(
             'AAPL', need_extended_hours_data=None)
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'day',
                 # ONE_DAY
                 'period': 1,
@@ -1615,16 +1785,16 @@ class _TestClient:
                 'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_thirty_minutes_extendedhours(self):
         self.client.get_price_history_every_thirty_minutes(
             'AAPL', need_extended_hours_data=True)
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'day',
                 # ONE_DAY
                 'period': 1,
@@ -1636,18 +1806,58 @@ class _TestClient:
                 'needExtendedHoursData': True,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
+            params=params)
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_price_history_every_thirty_minutes_empty_previous_close(self):
+        self.client.get_price_history_every_thirty_minutes(
+            'AAPL', need_previous_close=None)
+        params = {
+                'symbol': SYMBOL,
+                'periodType': 'day',
+                # ONE_DAY
+                'period': 1,
+                'frequencyType': 'minute',
+                # EVERY_THIRTY_MINUTES
+                'frequency': 30,
+                'startDate': MIN_TIMESTAMP_MILLIS,
+                'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
+        }
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/marketdata/v1/pricehistory'),
+            params=params)
+
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_price_history_every_thirty_minutes_previous_close(self):
+        self.client.get_price_history_every_thirty_minutes(
+            'AAPL', need_previous_close=True)
+        params = {
+                'symbol': SYMBOL,
+                'periodType': 'day',
+                # ONE_DAY
+                'period': 1,
+                'frequencyType': 'minute',
+                # EVERY_THIRTY_MINUTES
+                'frequency': 30,
+                'startDate': MIN_TIMESTAMP_MILLIS,
+                'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
+                'needPreviousClose': True,
+        }
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
     # get_price_history_every_day
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_day_vanilla(self):
         self.client.get_price_history_every_day('AAPL')
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'year',
                 # TWENTY_YEARS
                 'period': 20,
@@ -1658,16 +1868,16 @@ class _TestClient:
                 'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_day_start_datetime(self):
         self.client.get_price_history_every_day(
                 'AAPL', start_datetime=EARLIER_DATETIME)
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'year',
                 # TWENTY_YEARS
                 'period': 20,
@@ -1678,16 +1888,16 @@ class _TestClient:
                 'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_day_end_datetime(self):
         self.client.get_price_history_every_day(
                 'AAPL', end_datetime=EARLIER_DATETIME)
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'year',
                 # TWENTY_YEARS
                 'period': 20,
@@ -1698,16 +1908,16 @@ class _TestClient:
                 'endDate': EARLIER_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_day_empty_extendedhours(self):
         self.client.get_price_history_every_day(
             'AAPL', need_extended_hours_data=None)
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'year',
                 # TWENTY_YEARS
                 'period': 20,
@@ -1718,16 +1928,16 @@ class _TestClient:
                 'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_day_extendedhours(self):
         self.client.get_price_history_every_day(
             'AAPL', need_extended_hours_data=True)
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'year',
                 # TWENTY_YEARS
                 'period': 20,
@@ -1739,18 +1949,58 @@ class _TestClient:
                 'needExtendedHoursData': True,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
+            params=params)
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_price_history_every_day_empty_previous_close(self):
+        self.client.get_price_history_every_day(
+            'AAPL', need_previous_close=None)
+        params = {
+                'symbol': SYMBOL,
+                'periodType': 'year',
+                # TWENTY_YEARS
+                'period': 20,
+                'frequencyType': 'daily',
+                # DAILY
+                'frequency': 1,
+                'startDate': MIN_TIMESTAMP_MILLIS,
+                'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
+        }
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/marketdata/v1/pricehistory'),
+            params=params)
+
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_price_history_every_day_previous_close(self):
+        self.client.get_price_history_every_day(
+            'AAPL', need_previous_close=True)
+        params = {
+                'symbol': SYMBOL,
+                'periodType': 'year',
+                # TWENTY_YEARS
+                'period': 20,
+                'frequencyType': 'daily',
+                # DAILY
+                'frequency': 1,
+                'startDate': MIN_TIMESTAMP_MILLIS,
+                'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
+                'needPreviousClose': True,
+        }
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
     # get_price_history_every_week
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_week_vanilla(self):
         self.client.get_price_history_every_week('AAPL')
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'year',
                 # TWENTY_YEARS
                 'period': 20,
@@ -1761,16 +2011,16 @@ class _TestClient:
                 'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_week_start_datetime(self):
         self.client.get_price_history_every_week(
                 'AAPL', start_datetime=EARLIER_DATETIME)
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'year',
                 # TWENTY_YEARS
                 'period': 20,
@@ -1781,16 +2031,16 @@ class _TestClient:
                 'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_week_end_datetime(self):
         self.client.get_price_history_every_week(
                 'AAPL', end_datetime=EARLIER_DATETIME)
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'year',
                 # TWENTY_YEARS
                 'period': 20,
@@ -1801,16 +2051,16 @@ class _TestClient:
                 'endDate': EARLIER_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_week_empty_extendedhours(self):
         self.client.get_price_history_every_week(
             'AAPL', need_extended_hours_data=None)
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'year',
                 # TWENTY_YEARS
                 'period': 20,
@@ -1821,16 +2071,16 @@ class _TestClient:
                 'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
     def test_get_price_history_every_week_extendedhours(self):
         self.client.get_price_history_every_week(
             'AAPL', need_extended_hours_data=True)
         params = {
-                'apikey': API_KEY,
+                'symbol': SYMBOL,
                 'periodType': 'year',
                 # TWENTY_YEARS
                 'period': 20,
@@ -1842,10 +2092,51 @@ class _TestClient:
                 'needExtendedHoursData': True,
         }
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/AAPL/pricehistory'),
+            self.make_url('/marketdata/v1/pricehistory'),
+            params=params)
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_price_history_every_week_empty_previous_close(self):
+        self.client.get_price_history_every_week(
+            'AAPL', need_previous_close=None)
+        params = {
+                'symbol': SYMBOL,
+                'periodType': 'year',
+                # TWENTY_YEARS
+                'period': 20,
+                'frequencyType': 'weekly',
+                # DAILY
+                'frequency': 1,
+                'startDate': MIN_TIMESTAMP_MILLIS,
+                'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
+        }
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/marketdata/v1/pricehistory'),
             params=params)
 
 
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_price_history_every_week_previous_close(self):
+        self.client.get_price_history_every_week(
+            'AAPL', need_previous_close=True)
+        params = {
+                'symbol': SYMBOL,
+                'periodType': 'year',
+                # TWENTY_YEARS
+                'period': 20,
+                'frequencyType': 'weekly',
+                # DAILY
+                'frequency': 1,
+                'startDate': MIN_TIMESTAMP_MILLIS,
+                'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
+                'needPreviousClose': True,
+        }
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/marketdata/v1/pricehistory'),
+            params=params)
+
+
+    '''
     # get_quote
 
     
