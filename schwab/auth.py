@@ -72,7 +72,8 @@ def _register_token_redactions(token):
     register_redactions(token)
 
 
-def client_from_token_file(token_path, api_key, asyncio=False, enforce_enums=True):
+def client_from_token_file(token_path, api_key, app_secret, asyncio=False,
+                           enforce_enums=True):
     '''
     Returns a session from an existing token file. The session will perform
     an auth refresh as needed. It will also update the token on disk whenever
@@ -96,7 +97,7 @@ def client_from_token_file(token_path, api_key, asyncio=False, enforce_enums=Tru
     load = __token_loader(token_path)
 
     return client_from_access_functions(
-        api_key, load, __update_token(token_path), asyncio=asyncio,
+        api_key, app_secret, load, __update_token(token_path), asyncio=asyncio,
         enforce_enums=enforce_enums)
 
 
@@ -137,9 +138,9 @@ def __fetch_and_register_token_from_redirect(
     # Return a new session configured to refresh credentials
     return client_class(
         api_key,
-        session_class(api_key, token=token,
-                      auto_refresh_url=TOKEN_ENDPOINT,
-                      auto_refresh_kwargs={'client_id': api_key},
+        session_class(api_key,
+                      client_secret=app_secret,
+                      token=token,
                       update_token=oauth_client_update_token),
         token_metadata=metadata_manager, enforce_enums=enforce_enums)
 
@@ -167,7 +168,7 @@ class TokenMetadata:
         self.unwrapped_token_write_func = unwrapped_token_write_func
 
     @classmethod
-    def from_loaded_token(cls, token, unwrapped_token_write_func=None):
+    def from_loaded_token(cls, token, app_secret, unwrapped_token_write_func=None):
         '''
         Returns a new ``TokenMetadata`` object extracted from the metadata of
         the loaded token object. If the token has a legacy format which contains
@@ -264,6 +265,7 @@ class TokenMetadata:
         session_class = session.__class__
         return session_class(
             api_key,
+            client_secret=app_secret,
             token=new_token,
             token_endpoint=TOKEN_ENDPOINT,
             update_token=token_write_func)
@@ -485,7 +487,7 @@ def easy_client(api_key, app_secret, callback_url, token_path,
             sys.exit(1)
 
 
-def client_from_access_functions(api_key, token_read_func,
+def client_from_access_functions(api_key, app_secret, token_read_func,
                                  token_write_func, asyncio=False,
                                  enforce_enums=True):
     '''
@@ -525,7 +527,8 @@ def client_from_access_functions(api_key, token_read_func,
     token = token_read_func()
 
     # Extract metadata and unpack the token, if necessary
-    metadata = TokenMetadata.from_loaded_token(token, token_write_func)
+    metadata = TokenMetadata.from_loaded_token(
+            token, app_secret, token_write_func)
     if TokenMetadata.is_metadata_aware_token(token):
         token = token['token']
 
@@ -550,7 +553,9 @@ def client_from_access_functions(api_key, token_read_func,
     return client_class(
         api_key,
         session_class(api_key,
-            token=token,
-            token_endpoint=TOKEN_ENDPOINT,
-            update_token=oauth_client_update_token),
-        token_metadata=metadata, enforce_enums=enforce_enums)
+                      client_secret=app_secret,
+                      token=token,
+                      token_endpoint=TOKEN_ENDPOINT,
+                      update_token=oauth_client_update_token),
+        token_metadata=metadata,
+        enforce_enums=enforce_enums)
