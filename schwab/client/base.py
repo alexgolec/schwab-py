@@ -484,5 +484,54 @@ class BaseClient(EnumEnforcer):
                 need_extended_hours_data=need_extended_hours_data, 
                 need_previous_close=need_previous_close)
 
+    ##########################################################################
+    # Market Hours
+
+    class Markets(Enum):
+        '''Values for :func:`get_hours_for_multiple_markets` and
+        :func:`get_hours_for_single_market`.'''
+        EQUITY = 'equity'
+        OPTION = 'option'
+        FUTURE = 'future'
+        BOND = 'bond'
+        FOREX = 'forex'
+
+    def get_hours_for_multiple_markets(self, markets, date):
+        '''Retrieve market hours for specified markets.
+        
+        :param markets: Market to return hours for. Iterable of
+                        :class:`Markets`.
+        :param date: The date for which market hours information is requested.
+                     Accepts ``datetime.date`` and ``datetime.datetime``.
+        '''
+        markets = self.convert_enum_iterable(markets, self.Markets)
+
+        params = {
+            'apikey': self.api_key,
+            'markets': ','.join(markets),
+            'date': self._format_date('date', date),
+        }
+
+        path = '/marketdata/v1/markets'
+        return self._get_request(path, params)
+
+    def get_hours_for_single_market(self, market, date):
+        '''Retrieve market hours for specified single market.
+        
+        :param markets: Market to return hours for. Instance of
+                        :class:`Markets`.
+        :param date: The date for which market hours information is requested.
+                     Accepts ``datetime.date`` and ``datetime.datetime``.
+        '''
+        market = self.convert_enum(market, self.Markets)
+
+        params = {
+            'apikey': self.api_key,
+            'date': self._format_date('date', date),
+        }
+
+        path = '/marketdata/v1/markets/{}'.format(market)
+        return self._get_request(path, params)
+
 
 
