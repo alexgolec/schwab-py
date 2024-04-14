@@ -635,3 +635,60 @@ class BaseClient(EnumEnforcer):
         return self._post_request(path, order_spec)
 
 
+    ##########################################################################
+    # Quotes
+
+    class GetQuote:
+        class Fields(Enum):
+            QUOTE = 'quote'
+            FUNDAMENTAL = 'fundamental'
+
+    def get_quote(self, symbol, *, fields=None):
+        '''
+        Get quote for a symbol. Note due to limitations in URL encoding, this
+        method is not recommended for instruments with symbols symbols
+        containing non-alphanumeric characters, for example as futures like
+        ``/ES``. To get quotes for those symbols, use :meth:`Client.get_quotes`.
+
+        :param symbol: Single symbol to fetch
+        :param fields: Fields to request. If unset, return all available data. 
+                       i.e. all fields. See :class:`GetQuote.Field` for options.
+        '''
+        fields = self.convert_enum_iterable(fields, self.GetQuote.Fields)
+        if fields:
+            params = {'fields': fields}
+        else:
+            params = {}
+
+        path = '/marketdata/v1/{}/quotes'.format(symbol)
+        return self._get_request(path, params)
+
+    def get_quotes(self, symbols, *, fields=None, indicative=None):
+        '''Get quote for a symbol. This method supports all symbols, including
+        those containing non-alphanumeric characters like ``/ES``.
+
+        :param symbols: Iterable of symbols to fetch.
+        :param fields: Fields to request. If unset, return all available data. 
+                       i.e. all fields. See :class:`GetQuote.Field` for options.
+        '''
+        if isinstance(symbols, str):
+            symbols = [symbols]
+
+        params = {
+            'symbols': ','.join(symbols)
+        }
+
+        fields = self.convert_enum_iterable(fields, self.GetQuote.Fields)
+        if fields:
+            params['fields'] = fields
+
+        if indicative is not None:
+            if type(indicative) is not bool:
+                raise ValueError(
+                        'value of \'indicative\' must be either True or False')
+            params['indicative'] = 'true' if indicative else 'false'
+
+        path = '/marketdata/v1/quotes'
+        return self._get_request(path, params)
+
+
