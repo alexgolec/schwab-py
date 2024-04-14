@@ -26,8 +26,7 @@ this will likely cause issues with the underlying OAuth2 session management**
 
 .. code-block:: python
 
-  from schwab.auth import easy_client
-  from schwab.client import Client
+  from schwab.auth import client_from_manual_flow
 
   # Follow the instructions on the screen to authenticate your client.
   c = client_from_manual_flow(
@@ -53,8 +52,7 @@ of slightly increased application complexity.
 
 .. code-block:: python
 
-  from schwab.auth import easy_client
-  from schwab.client import Client
+  from schwab.auth import client_from_manual_flow
 
   async def main():
       c = easy_client(
