@@ -692,3 +692,165 @@ class BaseClient(EnumEnforcer):
         return self._get_request(path, params)
 
 
+    ##########################################################################
+    # Option Chains
+
+    class Options:
+        class ContractType(Enum):
+            CALL = 'CALL'
+            PUT = 'PUT'
+            ALL = 'ALL'
+
+        class Strategy(Enum):
+            SINGLE = 'SINGLE'
+            ANALYTICAL = 'ANALYTICAL'
+            COVERED = 'COVERED'
+            VERTICAL = 'VERTICAL'
+            CALENDAR = 'CALENDAR'
+            STRANGLE = 'STRANGLE'
+            STRADDLE = 'STRADDLE'
+            BUTTERFLY = 'BUTTERFLY'
+            CONDOR = 'CONDOR'
+            DIAGONAL = 'DIAGONAL'
+            COLLAR = 'COLLAR'
+            ROLL = 'ROLL'
+
+        class StrikeRange(Enum):
+            IN_THE_MONEY = 'ITM'
+            NEAR_THE_MONEY = 'NTM'
+            OUT_OF_THE_MONEY = 'OTM'
+            STRIKES_ABOVE_MARKET = 'SAK'
+            STRIKES_BELOW_MARKET = 'SBK'
+            STRIKES_NEAR_MARKET = 'SNK'
+            ALL = 'ALL'
+
+        class Type(Enum):
+            STANDARD = 'S'
+            NON_STANDARD = 'NS'
+            ALL = 'ALL'
+
+        class ExpirationMonth(Enum):
+            JANUARY = 'JAN'
+            FEBRUARY = 'FEB'
+            MARCH = 'MAR'
+            APRIL = 'APR'
+            MAY = 'MAY'
+            JUNE = 'JUN'
+            JULY = 'JUL'
+            AUGUST = 'AUG'
+            SEPTEMBER = 'SEP'
+            OCTOBER = 'OCT'
+            NOVEMBER = 'NOV'
+            DECEMBER = 'DEC'
+
+        class Entitlement(Enum):
+            PAYING_PRO = 'PP'
+            NON_PRO = 'NP'
+            NON_PAYING_PRO = 'PN'
+
+    def get_option_chain(
+            self,
+            symbol,
+            *,
+            contract_type=None,
+            strike_count=None,
+            include_underlying_quote=None,
+            strategy=None,
+            interval=None,
+            strike=None,
+            strike_range=None,
+            from_date=None,
+            to_date=None,
+            volatility=None,
+            underlying_price=None,
+            interest_rate=None,
+            days_to_expiration=None,
+            exp_month=None,
+            option_type=None,
+            entitlement=None):
+        '''Get option chain for an optionable Symbol.
+
+        :param contract_type: Type of contracts to return in the chain. See
+                              :class:`Options.ContractType` for choices.
+        :param strike_count: The number of strikes to return above and below
+                             the at-the-money price.
+        :param include_underlying_quote: Include a quote for the underlying 
+                                         alongside the options chain?
+        :param strategy: If passed, returns a Strategy Chain. See
+                        :class:`Options.Strategy` for choices.
+        :param interval: Strike interval for spread strategy chains (see
+                         ``strategy`` param).
+        :param strike: Return options only at this strike price.
+        :param strike_range: Return options for the given range. See
+                             :class:`Options.StrikeRange` for choices.
+        :param from_date: Only return expirations after this date. For
+                          strategies, expiration refers to the nearest term
+                          expiration in the strategy. Accepts ``datetime.date``
+                          and ``datetime.datetime``.
+        :param to_date: Only return expirations before this date. For
+                        strategies, expiration refers to the nearest term
+                        expiration in the strategy. Accepts ``datetime.date``
+                        and ``datetime.datetime``.
+        :param volatility: Volatility to use in calculations. Applies only to
+                           ``ANALYTICAL`` strategy chains.
+        :param underlying_price: Underlying price to use in calculations.
+                                 Applies only to ``ANALYTICAL`` strategy chains.
+        :param interest_rate: Interest rate to use in calculations. Applies only
+                              to ``ANALYTICAL`` strategy chains.
+        :param days_to_expiration: Days to expiration to use in calculations.
+                                   Applies only to ``ANALYTICAL`` strategy
+                                   chains
+        :param exp_month: Return only options expiring in the specified month. See
+                          :class:`Options.ExpirationMonth` for choices.
+        :param option_type: Types of options to return. See
+                            :class:`Options.Type` for choices.
+        :param entitlement: Entitlement of the client.
+        '''
+        contract_type = self.convert_enum(
+            contract_type, self.Options.ContractType)
+        strategy = self.convert_enum(strategy, self.Options.Strategy)
+        strike_range = self.convert_enum(
+            strike_range, self.Options.StrikeRange)
+        option_type = self.convert_enum(option_type, self.Options.Type)
+        exp_month = self.convert_enum(exp_month, self.Options.ExpirationMonth)
+
+        params = {
+            'apikey': self.api_key,
+            'symbol': symbol,
+        }
+
+        if contract_type is not None:
+            params['contractType'] = contract_type
+        if strike_count is not None:
+            params['strikeCount'] = strike_count
+        if include_underlying_quote is not None:
+            params['includeUnderlyingQuote'] = include_underlying_quote
+        if strategy is not None:
+            params['strategy'] = strategy
+        if interval is not None:
+            params['interval'] = interval
+        if strike is not None:
+            params['strike'] = strike
+        if strike_range is not None:
+            params['range'] = strike_range
+        if from_date is not None:
+            params['fromDate'] = self._format_date('from_date', from_date)
+        if to_date is not None:
+            params['toDate'] = self._format_date('to_date', to_date)
+        if volatility is not None:
+            params['volatility'] = volatility
+        if underlying_price is not None:
+            params['underlyingPrice'] = underlying_price
+        if interest_rate is not None:
+            params['interestRate'] = interest_rate
+        if days_to_expiration is not None:
+            params['daysToExpiration'] = days_to_expiration
+        if exp_month is not None:
+            params['expMonth'] = exp_month
+        if option_type is not None:
+            params['optionType'] = option_type
+
+        path = '/marketdata/v1/chains'
+        return self._get_request(path, params)
+
+
