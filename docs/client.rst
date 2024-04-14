@@ -143,4 +143,60 @@ history endpoint, in all its complexity.
   :undoc-members:
   :member-order: bysource
 
+.. _orders-section:
+
+++++++
+Orders
+++++++
+
+
+.. _placing_new_orders:
+
+------------------
+Placing New Orders
+------------------
+
+Placing new orders can be a complicated task. The :meth:`Client.place_order` 
+method is used to create all orders, from equities to options. The precise order 
+type is defined by a complex order spec. Schwab provides some `example order 
+specs`_ to illustrate the process and provides a schema in the `place order 
+documentation 
+<https://developer.schwab.com/products/trader-api--individual/details/specifications/Retail%20Trader%20API%20Production>`__, 
+but beyond that we're on our own.
+
+``schwab-api`` includes some helpers, described in :ref:`order_templates`, which 
+provide an incomplete utility for creating various order types. While it only 
+scratches the surface of what's possible, we encourage you to use that module 
+instead of creating your own order specs.
+
+.. _`example order specs`: https://developer.schwab.com/products/trader-api--individual/details/documentation/Retail%20Trader%20API%20Production
+
+.. automethod:: schwab.client.Client.place_order
+
+.. _accessing_existing_orders:
+
+-------------------------
+Accessing Existing Orders
+-------------------------
+
+.. automethod:: schwab.client.Client.get_orders_for_account
+.. automethod:: schwab.client.Client.get_orders_for_all_linked_accounts
+.. automethod:: schwab.client.Client.get_order
+.. autoclass:: schwab.client.Client.Order
+  :members:
+  :undoc-members:
+
+-----------------------
+Editing Existing Orders
+-----------------------
+
+Endpoints for canceling and replacing existing orders.
+Annoyingly, while these endpoints require an order ID, it seems that when
+placing new orders the API does not return any metadata about the new order. As 
+a result, if you want to cancel or replace an order after you've created it, you 
+must search for it using the methods described in :ref:`accessing_existing_orders`.
+
+.. automethod:: schwab.client.Client.cancel_order
+.. automethod:: schwab.client.Client.replace_order
+
 

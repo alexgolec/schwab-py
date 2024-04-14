@@ -22,6 +22,8 @@ know exactly what you're doing.
   :caption: Contents:
 
   client
+  order-builder
+  order-templates
 
 
 
