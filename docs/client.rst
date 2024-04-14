@@ -1,6 +1,13 @@
 .. highlight:: python
 .. py:module:: schwab.client
 
+
+.. image:: _static/warning.png
+   :width: 40
+
+**WARNING!!! schwab-py is pre-alpha! Use at your own risk!**
+
+
 .. _client:
 
 ===========
@@ -13,6 +20,56 @@ A naive, unopinionated wrapper around the
 client provides access to all endpoints of the API in as easy and direct a way 
 as possible.
 
+
+**Do not attempt to use more than one Client object per token file, as
+this will likely cause issues with the underlying OAuth2 session management**
+
+.. code-block:: python
+
+  from schwab.auth import easy_client
+  from schwab.client import Client
+
+  # Follow the instructions on the screen to authenticate your client.
+  c = client_from_manual_flow(
+          api_key='APIKEY',
+          app_secret='APP_SECRET',
+          callback_url='https://127.0.0.1',
+          token_path='/tmp/token.json')
+
+  resp = c.get_price_history_every_day('AAPL')
+  assert resp.status_code == httpx.codes.OK
+  history = resp.json()
+
+Note we we create a new client using the ``auth`` package as described in
+:ref:`auth`. Creating a client directly is possible, but not recommended.
+
++++++++++++++++++++
+Asyncio Support
++++++++++++++++++++
+
+An asynchronous variant is available through a keyword to the client
+constructor. This allows for higher-performance API usage, at the cost
+of slightly increased application complexity.
+
+.. code-block:: python
+
+  from schwab.auth import easy_client
+  from schwab.client import Client
+
+  async def main():
+      c = easy_client(
+              api_key='APIKEY',
+              redirect_uri='https://localhost',
+              token_path='/tmp/token.json',
+              asyncio=True)
+
+      resp = await c.c.get_price_history_every_day('AAPL')
+      assert resp.status_code == httpx.codes.OK
+      history = resp.json()
+
+  if __name__ == '__main__':
+      import asyncio
+      asyncio.run_until_complete(main())
 
 +++++++++++++++++++
 Calling Conventions
@@ -85,6 +142,18 @@ number to the account hash that must be passed when referring to that account in
 API calls.
 
 
+++++++++++++++++++
+Timeout Management
+++++++++++++++++++
+
+Timeouts for HTTP calls are managed under the hood by the ``httpx`` library.  
+``schwab-py`` defaults to 30 seconds, which experience has shown should be more 
+than enough to allow even the slowest API calls to complete. A different timeout 
+specification can be set using this method:
+
+.. automethod:: schwab.client.Client.set_timeout
+
+
 ++++++++++++
 Account Info
 ++++++++++++
@@ -144,6 +213,30 @@ history endpoint, in all its complexity.
   :member-order: bysource
 
 .. _orders-section:
+
+++++++++++++++
+Current Quotes
+++++++++++++++
+
+.. automethod:: schwab.client.Client.get_quote
+.. automethod:: schwab.client.Client.get_quotes
+
+.. _option_chain:
+
++++++++++++++
+Option Chains
++++++++++++++
+
+Unfortunately, option chains are well beyond the ability of your humble author. 
+You are encouraged to read the official API documentation to learn more.
+
+If you *are* knowledgeable enough to write something more substantive here, 
+please follow the instructions in :ref:`contributing` to send in a patch.
+
+.. automethod:: schwab.client.Client.get_option_chain
+.. autoclass:: schwab.client.Client.Options
+  :members:
+  :undoc-members:
 
 ++++++
 Orders

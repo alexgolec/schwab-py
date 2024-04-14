@@ -1,6 +1,11 @@
 ``schwab-py``: An Unofficial Charles Schwab API Client
 ======================================================
 
+.. image:: _static/warning.png
+   :width: 40
+
+**WARNING!!! schwab-py is pre-alpha! Use at your own risk!**
+
 .. image:: _static/github-logo.png
    :width: 40
    :target: https://github.com/alexgolec/tda-api
