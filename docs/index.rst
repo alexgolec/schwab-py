@@ -26,6 +26,8 @@ know exactly what you're doing.
   :maxdepth: 2
   :caption: Contents:
 
+  getting-started
+  auth
   client
   order-builder
   order-templates

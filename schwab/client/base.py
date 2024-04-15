@@ -102,20 +102,6 @@ class BaseClient(EnumEnforcer):
 
         return int(dt.timestamp() * 1000)
 
-    def ensure_updated_refresh_token(self, update_interval_seconds=None):
-        '''
-        The client automatically performs a token refresh
-        '''
-        if not self.token_metadata:
-            return None
-
-        new_session = self.token_metadata.ensure_refresh_token_update(
-            self.api_key, self.session, update_interval_seconds)
-        if new_session:
-            self.session = new_session
-
-        return new_session is not None
-
     def set_timeout(self, timeout):
         '''Sets the timeout configuration for this client. Applies to all HTTP 
         calls.

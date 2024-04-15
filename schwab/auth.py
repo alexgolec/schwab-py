@@ -13,8 +13,7 @@ import time
 import warnings
 
 from schwab.client import AsyncClient, Client
-#from tda.debug import register_redactions
-#from tda.utils import LazyLog
+from schwab.debug import register_redactions
 
 
 TOKEN_ENDPOINT = 'https://api.schwabapi.com/v1/oauth/token'
@@ -49,29 +48,6 @@ def __token_loader(token_path):
     return load_token
 
 
-def _normalize_api_key(api_key):
-    api_key_suffix = '@AMER.OAUTHAP'
-
-    if not api_key.endswith(api_key_suffix):
-        key_split = api_key.split('@')
-        if len(key_split) != 1:
-            '''
-            get_logger().warning(
-                    'API key ends in nonstandard suffix "%s". Ignoring',
-                        LazyLog(lambda: '@'.join(key_split[1:])))
-            '''
-            api_key = key_split[0]
-
-        get_logger().info('Appending %s to API key', api_key_suffix)
-        api_key = api_key + api_key_suffix
-
-    return api_key
-
-
-def _register_token_redactions(token):
-    register_redactions(token)
-
-
 def client_from_token_file(token_path, api_key, app_secret, asyncio=False,
                            enforce_enums=True):
     '''
@@ -81,10 +57,9 @@ def client_from_token_file(token_path, api_key, app_secret, asyncio=False,
 
     :param token_path: Path to an existing token. Updated tokens will be written
                        to this path. If you do not yet have a token, use
-                       :func:`~tda.auth.client_from_login_flow` or
-                       :func:`~tda.auth.easy_client` to create one.
-    :param api_key: Your TD Ameritrade application's API key, also known as the
-                    client ID.
+                       :func:`~schwab.auth.client_from_login_flow` or
+                       :func:`~schwab.auth.easy_client` to create one.
+    :param api_key: Your Schwab application's app key.
     :param asyncio: If set to ``True``, this will enable async support allowing
                     the client to be used in an async environment. Defaults to
                     ``False``
@@ -110,7 +85,7 @@ def __fetch_and_register_token_from_redirect(
         client_id=api_key, auth=(api_key, app_secret))
 
     # Don't emit token details in debug logs
-    #_register_token_redactions(token)
+    register_redactions(token)
 
     # Set up token writing and perform the initial token write
     update_token = (
@@ -212,64 +187,6 @@ class TokenMetadata:
             'token': token,
         }
 
-    def ensure_refresh_token_update(
-            self, api_key, session, update_interval_seconds=None):
-        '''
-        If the refresh token is older than update_interval_seconds, update it by
-        issuing a call to the token refresh endpoint and return a new session
-        wrapped around the resulting token. Returns None if the refresh token
-        was not updated.
-        '''
-        logger = get_logger()
-
-        if update_interval_seconds is None:
-            # 85 days is less than the documented 90 day expiration window of
-            # the token, but hopefully long enough to not trigger TDA's
-            # thresholds for excessive refresh token updates.
-            update_interval_seconds = 60 * 60 * 24 * 85
-
-        now = int(time.time())
-
-        logger.info(
-            'Updating refresh token:\n'+
-            ' - Current timestamp is %s\n'+
-            ' - Token creation timestamp is %s\n'+
-            ' - Update interval is %s seconds',
-                now, self.creation_timestamp, update_interval_seconds)
-
-        if not (self.creation_timestamp is None
-                or now - self.creation_timestamp >
-                update_interval_seconds):
-            logger.info('Skipping refresh token update')
-            return None
-
-        old_token = session.token
-        oauth = OAuth2Client(api_key)
-
-        new_token = oauth.fetch_token(
-            TOKEN_ENDPOINT,
-            grant_type='refresh_token',
-            refresh_token=old_token['refresh_token'],
-            access_type='offline')
-
-        logger.info('Updated refresh token')
-
-        self.creation_timestamp = now
-
-        # Don't emit token details in debug logs
-        #_register_token_redactions(new_token)
-
-        token_write_func = self.wrapped_token_write_func()
-        token_write_func(new_token)
-
-        session_class = session.__class__
-        return session_class(
-            api_key,
-            client_secret=app_secret,
-            token=new_token,
-            token_endpoint=TOKEN_ENDPOINT,
-            update_token=token_write_func)
-
 
 # TODO: Raise an exception when passing both token_path and token_write_func
 def client_from_login_flow(webdriver, api_key, app_secret, callback_url, token_path,
@@ -282,18 +199,20 @@ def client_from_login_flow(webdriver, api_key, app_secret, callback_url, token_p
     refresh the token as necessary, writing each updated version to
     ``token_path``.
 
+    **Warning:** Schwab appears to block logins performed within a webdriver. 
+    This library has been included as a direct copy from ``tda-api``, but it may 
+    be removed in the future.
+
     :param webdriver: `selenium <https://selenium-python.readthedocs.io>`__
                       webdriver which will be used to perform the login flow.
-    :param api_key: Your TD Ameritrade application's API key, also known as the
-                    client ID.
-    :param callback_url: Your TD Ameritrade application's redirect URL. Note
-                         this must *exactly* match the value you've entered in
-                         your application configuration, otherwise login will
-                         fail with a security error.
+    :param api_key: Your Schwab application's app key.
+    :param callback_url: Your Schwab application's callback URL. Note this must
+                         *exactly* match the value you've entered in your
+                         application configuration, otherwise login will fail
+                         with a security error.
     :param token_path: Path to which the new token will be written. If the token
                        file already exists, it will be overwritten with a new
                        one. Updated tokens will be written to this path as well.
-
     :param asyncio: If set to ``True``, this will enable async support allowing
                     the client to be used in an async environment. Defaults to
                     ``False``
@@ -305,8 +224,6 @@ def client_from_login_flow(webdriver, api_key, app_secret, callback_url, token_p
     get_logger().info('Creating new token with redirect URL \'%s\' ' +
                        'and token path \'%s\'', callback_url, token_path)
 
-    #api_key = _normalize_api_key(api_key)
-
     oauth = OAuth2Client(api_key, callback_url=callback_url)
     authorization_url, state = oauth.create_authorization_url(
         'https://api.schwabapi.com/v1/oauth/authorize')
@@ -317,7 +234,7 @@ def client_from_login_flow(webdriver, api_key, app_secret, callback_url, token_p
           'log in. Successful login will be detected automatically.')
     print()
     print('If you encounter any issues, see here for troubleshooting: ' +
-          'https://tda-api.readthedocs.io/en/stable/auth.html' +
+          'https://schwab-py.readthedocs.io/en/stable/auth.html' +
           '#troubleshooting')
     print('\n**************************************************************\n')
 
@@ -325,10 +242,10 @@ def client_from_login_flow(webdriver, api_key, app_secret, callback_url, token_p
 
     # Tolerate redirects to HTTPS on the callback URL
     if callback_url.startswith('http://'):
-        print(('WARNING: Your redirect URL ({}) will transmit data over HTTP, ' +
+        print(('WARNING: Your callback URL ({}) will transmit data over HTTP, ' +
                'which is a potentially severe security vulnerability. ' +
-               'Please go to your app\'s configuration with TDAmeritrade ' +
-               'and update your redirect URL to begin with \'https\' ' +
+               'Please go to your app\'s configuration with Schwab ' +
+               'and update your callback URL to begin with \'https\' ' +
                'to stop seeing this message.').format(callback_url))
 
         callback_urls = (callback_url, 'https' + callback_url[4:])
@@ -363,12 +280,11 @@ def client_from_manual_flow(api_key, app_secret, callback_url, token_path,
     Note this method is more complicated and error prone, and should be avoided
     in favor of :func:`client_from_login_flow` wherever possible.
 
-    :param api_key: Your TD Ameritrade application's API key, also known as the
-                    client ID.
-    :param callback_url: Your TD Ameritrade application's redirect URL. Note
-                         this must *exactly* match the value you've entered in
-                         your application configuration, otherwise login will
-                         fail with a security error.
+    :param api_key: Your Schwab application's app key.
+    :param callback_url: Your Schwab application's callback URL. Note this must
+                         *exactly* match the value you've entered in your
+                         application configuration, otherwise login will fail
+                         with a security error.
     :param token_path: Path to which the new token will be written. If the token
                        file already exists, it will be overwritten with a new
                        one. Updated tokens will be written to this path as well.
@@ -380,10 +296,8 @@ def client_from_manual_flow(api_key, app_secret, callback_url, token_path,
                           need it. For most users, it is advised to use enums
                           to avoid errors.
     '''
-    get_logger().info('Creating new token with redirect URL \'%s\' ' +
+    get_logger().info('Creating new token with callback URL \'%s\' ' +
                        'and token path \'%s\'', callback_url, token_path)
-
-    #api_key = _normalize_api_key(api_key)
 
     oauth = OAuth2Client(api_key, redirect_uri=callback_url)
     authorization_url, state = oauth.create_authorization_url(
@@ -405,7 +319,7 @@ def client_from_manual_flow(api_key, app_secret, callback_url, token_path,
     print(' 3. When asked whether to allow your app access to your account,')
     print('    select "Allow".')
     print()
-    print(' 4. Your browser should be redirected to your redirect URI. Copy')
+    print(' 4. Your browser should be redirected to your callback URI. Copy')
     print('    the ENTIRE address, paste it into the following prompt, and press')
     print('    Enter/Return.')
     print()
@@ -415,10 +329,10 @@ def client_from_manual_flow(api_key, app_secret, callback_url, token_path,
     print('\n**************************************************************\n')
 
     if callback_url.startswith('http://'):
-        print(('WARNING: Your redirect URL ({}) will transmit data over HTTP, ' +
+        print(('WARNING: Your callback URL ({}) will transmit data over HTTP, ' +
                'which is a potentially severe security vulnerability. ' +
                'Please go to your app\'s configuration with TDAmeritrade ' +
-               'and update your redirect URL to begin with \'https\' ' +
+               'and update your callback URL to begin with \'https\' ' +
                'to stop seeing this message.').format(callback_url))
 
     redirected_url = prompt('Redirect URL> ').strip()
@@ -435,21 +349,24 @@ def easy_client(api_key, app_secret, callback_url, token_path,
     from it. Otherwise open a login flow to fetch a new token. Returns a client
     configured to refresh the token to ``token_path``.
 
+    **Warning:** Schwab appears to block logins performed within a webdriver. 
+    This library has been included as a direct copy from ``tda-api``, but it may 
+    be removed in the future.
+
     *Reminder:* You should never create the token file yourself or modify it in
     any way. If ``token_path`` refers to an existing file, this method will
     assume that file is valid token and will attempt to parse it.
 
-    :param api_key: Your TD Ameritrade application's API key, also known as the
-                    client ID.
-    :param callback_url: Your TD Ameritrade application's redirect URL. Note
-                         this must *exactly* match the value you've entered in
-                         your application configuration, otherwise login will
-                         fail with a security error.
+    :param api_key: Your Schwab application's app key.
+    :param callback_url: Your Schwab application's redirect URL. Note this must
+                         *exactly* match the value you've entered in your
+                         application configuration, otherwise login will fail
+                         with a security error.
     :param token_path: Path that new token will be read from and written to. If
                        If this file exists, this method will assume it's valid
                        and will attempt to parse it as a token. If it does not,
                        this method will create a new one using
-                       :func:`~tda.auth.client_from_login_flow`. Updated tokens
+                       :func:`~schwab.auth.client_from_login_flow`. Updated tokens
                        will be written to this path as well.
     :param webdriver_func: Function that returns a webdriver for use in fetching
                            a new token. Will only be called if the token file
@@ -505,11 +422,10 @@ def client_from_access_functions(api_key, app_secret, token_read_func,
     deserialize it, without inspecting it in any way.
 
     Note the read and write methods must take particular arguments. Please see 
-    `this example <https://github.com/alexgolec/tda-api/tree/master/examples/
+    `this example <https://github.com/alexgolec/schwab-py/tree/master/examples/
     client_from_access_functions.py>`__ for details.
 
-    :param api_key: Your TD Ameritrade application's API key, also known as the
-                    client ID.
+    :param api_key: Your Schwab application's app key.
     :param token_read_func: Function that takes no arguments and returns a token
                             object.
     :param token_write_func: Function that writes the token on update. Will be
@@ -533,7 +449,7 @@ def client_from_access_functions(api_key, app_secret, token_read_func,
         token = token['token']
 
     # Don't emit token details in debug logs
-    #_register_token_redactions(token)
+    register_redactions(token)
 
     # Return a new session configured to refresh credentials
     #api_key = _normalize_api_key(api_key)

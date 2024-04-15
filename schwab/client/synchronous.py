@@ -10,8 +10,6 @@ import json
 
 class Client(BaseClient):
     def _get_request(self, path, params):
-        self.ensure_updated_refresh_token()
-
         dest = 'https://api.schwabapi.com' + path
 
         req_num = self._req_num()
@@ -24,8 +22,6 @@ class Client(BaseClient):
         return resp
 
     def _post_request(self, path, data):
-        self.ensure_updated_refresh_token()
-
         dest = 'https://api.schwabapi.com' + path
 
         req_num = self._req_num()
@@ -38,8 +34,6 @@ class Client(BaseClient):
         return resp
 
     def _put_request(self, path, data):
-        self.ensure_updated_refresh_token()
-
         dest = 'https://api.schwabapi.com' + path
 
         req_num = self._req_num()
@@ -52,8 +46,6 @@ class Client(BaseClient):
         return resp
 
     def _patch_request(self, path, data):
-        self.ensure_updated_refresh_token()
-
         dest = 'https://api.schwabapi.com' + path
 
         req_num = self._req_num()
@@ -66,8 +58,6 @@ class Client(BaseClient):
         return resp
 
     def _delete_request(self, path):
-        self.ensure_updated_refresh_token()
-
         dest = 'https://api.schwabapi.com' + path
 
         req_num = self._req_num()
