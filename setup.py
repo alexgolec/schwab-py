@@ -16,7 +16,7 @@ setuptools.setup(
     description='Unofficial API wrapper for the Schwab HTTP API',
     long_description=long_description,
     long_description_content_type='text/x-rst',
-    url='https://github.com/alexgolec/schwab',
+    url='https://github.com/alexgolec/schwab-py',
     packages=setuptools.find_packages(),
     classifiers=[
         'Programming Language :: Python :: 3',
