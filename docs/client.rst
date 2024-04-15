@@ -61,7 +61,7 @@ of slightly increased application complexity.
               token_path='/tmp/token.json',
               asyncio=True)
 
-      resp = await c.c.get_price_history_every_day('AAPL')
+      resp = await c.get_price_history_every_day('AAPL')
       assert resp.status_code == httpx.codes.OK
       history = resp.json()
 
