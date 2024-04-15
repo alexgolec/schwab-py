@@ -465,7 +465,7 @@ def easy_client(api_key, app_secret, callback_url, token_path,
     logger = get_logger()
 
     if os.path.isfile(token_path):
-        c = client_from_token_file(token_path, api_key, app-secret,
+        c = client_from_token_file(token_path, api_key, app_secret,
                                    asyncio=asyncio, enforce_enums=enforce_enums)
         logger.info(
                 'Returning client loaded from token file \'%s\'', token_path)
