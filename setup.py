@@ -13,7 +13,7 @@ setuptools.setup(
     version=version,
     author='Alex Golec',
     author_email='bottomless.septic.tank@gmail.com',
-    description='Unofficial API wrapper for the upcoming Schwab HTTP API',
+    description='Unofficial API wrapper for the Schwab HTTP API',
     long_description=long_description,
     long_description_content_type='text/x-rst',
     url='https://github.com/alexgolec/schwab',
@@ -50,9 +50,9 @@ setuptools.setup(
     },
     keywords='finance trading equities bonds options research',
     project_urls={
-        'Documentation': 'https://schwab-api.readthedocs.io/en/latest/',
-        'Source': 'https://github.com/alexgolec/schwab-api',
-        'Tracker': 'https://github.com/alexgolec/schwab-api/issues',
+        'Documentation': 'https://schwab-py.readthedocs.io/en/latest/',
+        'Source': 'https://github.com/alexgolec/schwab-py',
+        'Tracker': 'https://github.com/alexgolec/schwab-py/issues',
     },
     license='MIT',
     scripts=[
