@@ -139,6 +139,45 @@ hashes using the ``get_account_numbers`` method :ref:`(link)
 number to the account hash that must be passed when referring to that account in 
 API calls.
 
+Here is an example of how to fetch an account hash and use it to place an order:
+
+.. code-block:: python
+
+  import atexit
+  import httpx
+  from selenium import webdriver
+
+  from schwab.auth import easy_client
+  from schwab.orders.equities import equity_buy_market
+
+  def make_webdriver():
+      driver = webdriver.Firefox()
+      atexit.register(lambda: driver.quit())
+      return driver
+
+  c = easy_client(
+          token_path='/path/to/token.json',
+          api_key='api-key',
+          app_secret='app-secret',
+          callback_url='https://callback.com',
+          webdriver_func=make_webdriver)
+
+  resp = c.get_account_numbers()
+  assert resp.status_code == httpx.codes.OK
+
+  # The response has the following structure. If you have multiple linked
+  # accounts, you'll need to inspect this object to find the hash you want:
+  # [
+  #    {
+  #        "accountNumber": "123456789",
+  #        "hashValue":"123ABCXYZ"
+  #    }
+  #]
+  account_hash = resp.json()[0]['hashValue']
+
+  c.place_order(account_hash, equity_buy_market('AAPL', 1))
+
+
 
 ++++++++++++++++++
 Timeout Management
