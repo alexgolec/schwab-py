@@ -94,9 +94,14 @@ class BaseClient(EnumEnforcer):
         naive or timezone-aware'''
         self._assert_type(var_name, dt, [self._DATE, self._DATETIME])
 
-        d = datetime.date(year=dt.year, month=dt.month, day=dt.day)
+        if isinstance(dt, self._DATE):
+            d = datetime.date(year=dt.year, month=dt.month, day=dt.day)
+        elif isinstance(d, self._DATETIME):
+            d = datetime.date(
+                    year=dt.year, month=dt.month, day=dt.day, hour=dt.hour, 
+                    minute=dt.minute, second=dt.second)
 
-        return d.isoformat()
+        return d.strftime('%Y-%m-%dT%H:%M:%SZ')
 
     def _datetime_as_millis(self, var_name, dt):
         'Converts datetime objects to compatible millisecond values'
@@ -166,6 +171,252 @@ class BaseClient(EnumEnforcer):
         path = '/trader/v1/accounts'
         return self._get_request(path, params)
 
+
+    ##########################################################################
+    # Orders
+
+    def cancel_order(self, order_id, account_hash):
+        '''Cancel a specific order for a specific account'''
+        path = '/trader/v1/accounts/{}/orders/{}'.format(account_hash, order_id)
+        return self._delete_request(path)
+
+    def get_order(self, order_id, account_hash):
+        '''Get a specific order for a specific account by its order ID'''
+        path = '/trader/v1/accounts/{}/orders/{}'.format(account_hash, order_id)
+        return self._get_request(path, {})
+
+    class Order:
+        class Status(Enum):
+            '''Order statuses passed to :meth:`get_orders_for_account` and
+            :meth:`get_orders_for_all_linked_accounts`'''
+            AWAITING_PARENT_ORDER = 'AWAITING_PARENT_ORDER'
+            AWAITING_CONDITION = 'AWAITING_CONDITION'
+            AWAITING_MANUAL_REVIEW = 'AWAITING_MANUAL_REVIEW'
+            ACCEPTED = 'ACCEPTED'
+            AWAITING_UR_OUT = 'AWAITING_UR_OUT'
+            PENDING_ACTIVATION = 'PENDING_ACTIVATION'
+            QUEUED = 'QUEUED'
+            WORKING = 'WORKING'
+            REJECTED = 'REJECTED'
+            PENDING_CANCEL = 'PENDING_CANCEL'
+            CANCELED = 'CANCELED'
+            PENDING_REPLACE = 'PENDING_REPLACE'
+            REPLACED = 'REPLACED'
+            FILLED = 'FILLED'
+            EXPIRED = 'EXPIRED'
+
+    def _make_order_query(self,
+                          *,
+                          max_results=None,
+                          from_entered_datetime=None,
+                          to_entered_datetime=None,
+                          status=None):
+        status = self.convert_enum(status, self.Order.Status)
+
+        if from_entered_datetime is None:
+            from_entered_datetime = datetime.datetime(
+                year=2024, month=4, day=1)
+        if to_entered_datetime is None:
+            to_entered_datetime = datetime.datetime.utcnow()
+
+        params = {
+            'fromEnteredTime': self._format_datetime(
+                'from_entered_datetime', from_entered_datetime),
+            'toEnteredTime': self._format_datetime(
+                'to_entered_datetime', to_entered_datetime),
+        }
+
+        if max_results:
+            params['maxResults'] = max_results
+
+        if status:
+            params['status'] = status
+
+        return params
+
+    def get_orders_for_account(self,
+                               account_hash,
+                               *,
+                               max_results=None,
+                               from_entered_datetime=None,
+                               to_entered_datetime=None,
+                               status=None):
+        '''Orders for a specific account. Optionally specify a single status on 
+        which to filter.
+
+        :param max_results: The maximum number of orders to retrieve.
+        :param from_entered_datetime: Specifies that no orders entered before
+                                      this time should be returned. Date must
+                                      be within 60 days from today's date.
+                                      ``toEnteredTime`` must also be set.
+        :param to_entered_datetime: Specifies that no orders entered after this
+                                    time should be returned. ``fromEnteredTime``
+                                    must also be set.
+        :param status: Restrict query to orders with this status. See
+                       :class:`Order.Status` for options.
+        :param statuses: Restrict query to orders with any of these statuses.
+                         See :class:`Order.Status` for options.
+        '''
+        path = '/trader/v1/accounts/{}/orders'.format(account_hash)
+        return self._get_request(path, self._make_order_query(
+            max_results=max_results,
+            from_entered_datetime=from_entered_datetime,
+            to_entered_datetime=to_entered_datetime,
+            status=status))
+
+    def get_orders_for_all_linked_accounts(self,
+                                           *,
+                                           max_results=None,
+                                           from_entered_datetime=None,
+                                           to_entered_datetime=None,
+                                           status=None,
+                                           statuses=None):
+        '''Orders for all linked accounts. Optionally specify a single status on 
+        which to filter.
+
+        :param max_results: The maximum number of orders to retrieve.
+        :param from_entered_datetime: Specifies that no orders entered before
+                                      this time should be returned. Date must
+                                      be within 60 days from today's date.
+                                      ``toEnteredTime`` must also be set.
+        :param to_entered_datetime: Specifies that no orders entered after this
+                                    time should be returned. ``fromEnteredTime``
+                                    must also be set.
+        :param status: Restrict query to orders with this status. See
+                       :class:`Order.Status` for options.
+        '''
+        path = '/trader/v1/orders'
+        return self._get_request(path, self._make_order_query(
+            max_results=max_results,
+            from_entered_datetime=from_entered_datetime,
+            to_entered_datetime=to_entered_datetime,
+            status=status))
+
+    def place_order(self, account_hash, order_spec):
+        '''Place an order for a specific account. If order creation was
+        successful, the response will contain the ID of the generated order. See
+        :meth:`schwab.utils.Utils.extract_order_id` for more details. Note unlike
+        most methods in this library, responses for successful calls to this
+        method typically do not contain ``json()`` data, and attempting to
+        extract it will likely result in an exception.'''
+        if isinstance(order_spec, OrderBuilder):
+            order_spec = order_spec.build()
+
+        path = '/trader/v1/accounts/{}/orders'.format(account_hash)
+        return self._post_request(path, order_spec)
+
+    def replace_order(self, account_hash, order_id, order_spec):
+        '''Replace an existing order for an account. The existing order will be
+        replaced by the new order. Once replaced, the old order will be canceled
+        and a new order will be created.'''
+        if isinstance(order_spec, OrderBuilder):
+            order_spec = order_spec.build()
+
+        path = '/trader/v1/accounts/{}/orders/{}'.format(account_hash, order_id)
+        return self._put_request(path, order_spec)
+
+    def preview_order(self, account_hash, order_spec):
+        '''Preview an order, i.e. test whether an order would be accepted by the 
+        API and see the structure it would result in.'''
+        if isinstance(order_spec, OrderBuilder):
+            order_spec = order_spec.build()
+
+        path = '/trader/v1/accounts/{}/previewOrder'.format(account_hash)
+        return self._post_request(path, order_spec)
+
+
+    ##########################################################################
+    # Transaction History
+
+    class Transactions:
+        class TransactionType(Enum):
+            TRADE = 'TRADE'
+            RECEIVE_AND_DELIVER = 'RECEIVE_AND_DELIVER'
+            DIVIDEND_OR_INTEREST = 'DIVIDEND_OR_INTEREST'
+            ACH_RECEIPT = 'ACH_RECEIPT'
+            ACH_DISBURSEMENT = 'ACH_DISBURSEMENT'
+            CASH_RECEIPT = 'CASH_RECEIPT'
+            CASH_DISBURSEMENT = 'CASH_DISBURSEMENT'
+            ELECTRONIC_FUND = 'ELECTRONIC_FUND'
+            WIRE_OUT = 'WIRE_OUT'
+            WIRE_IN = 'WIRE_IN'
+            JOURNAL = 'JOURNAL'
+            MEMORANDUM = 'MEMORANDUM'
+            MARGIN_CALL = 'MARGIN_CALL'
+            MONEY_MARKET = 'MONEY_MARKET'
+            SMA_ADJUSTMENT = 'SMA_ADJUSTMENT'
+
+    def get_transactions(
+            self,
+            account_hash,
+            *,
+            start_date=None,
+            end_date=None,
+            transaction_types=None,
+            symbol=None):
+        '''Transaction for a specific account.
+
+        :param account_hash: Account hash corresponding to the account whose 
+                             transactions should be returned.
+        :param start_date: Only transactions after this date will be returned.
+                           Date must be within 60 days of the current date. If 
+                           this parameter is not set, it will be set to 60 days 
+                           prior to now.
+                           Accepts ``datetime.date`` and ``datetime.datetime``.
+        :param end_date: Only transactions before this date will be returned. If 
+                         this parameter is not set, it will be set to the 
+                         current time.
+                         Accepts ``datetime.date`` and ``datetime.datetime``.
+        :param transaction_types: Only transactions with one of the specified 
+                                  types will be returned.
+        :param symbol: Only transactions with the specified symbol will be
+                        returned.
+        '''
+        # Transaction types
+        if transaction_types is None:
+            transaction_types = [
+                    t.value for t in self.Transactions.TransactionType]
+        else:
+            transaction_types = self.convert_enum_iterable(
+                transaction_types, self.Transactions.TransactionType)
+
+        # Start date
+        if start_date is None:
+            start_date = self._format_date(
+                    'start_date',
+                    datetime.datetime.now() - datetime.timedelta(days=60))
+        else:
+            start_date = self._format_date('start_date', start_date)
+
+        # End date
+        if end_date is None:
+            end_date = self._format_date('end_date', datetime.datetime.now())
+        else:
+            end_date = self._format_date('end_date', end_date)
+
+        params = {
+                'types':  ','.join(transaction_types),
+                'startDate': start_date,
+                'endDate': end_date,
+        }
+
+        if symbol is not None:
+            params['symbol'] = symbol
+
+        path = '/trader/v1/accounts/{}/transactions'.format(account_hash)
+        return self._get_request(path, params)
+
+    def get_transaction(self, account_hash, transaction_id):
+        '''Transaction for a specific account.
+
+        :param account_hash: Account hash corresponding to the account whose 
+                             transactions should be returned.
+        :param transaction_id: ID of the transaction for which to return to 
+                               return data.
+        '''
+        path = '/trader/v1/accounts/{}/transactions/{}'.format(
+            account_hash, transaction_id)
+        return self._get_request(path, {})
 
     ##########################################################################
     # Price History
@@ -468,159 +719,6 @@ class BaseClient(EnumEnforcer):
                 end_datetime=end_datetime,
                 need_extended_hours_data=need_extended_hours_data, 
                 need_previous_close=need_previous_close)
-
-
-    ##########################################################################
-    # Orders
-
-    def cancel_order(self, order_id, account_hash):
-        '''Cancel a specific order for a specific account'''
-        path = '/trader/v1/accounts/{}/orders/{}'.format(account_hash, order_id)
-        return self._delete_request(path)
-
-    def get_order(self, order_id, account_hash):
-        '''Get a specific order for a specific account by its order ID'''
-        path = '/trader/v1/accounts/{}/orders/{}'.format(account_hash, order_id)
-        return self._get_request(path, {})
-
-    class Order:
-        class Status(Enum):
-            '''Order statuses passed to :meth:`get_orders_for_account` and
-            :meth:`get_orders_for_all_linked_accounts`'''
-            AWAITING_PARENT_ORDER = 'AWAITING_PARENT_ORDER'
-            AWAITING_CONDITION = 'AWAITING_CONDITION'
-            AWAITING_MANUAL_REVIEW = 'AWAITING_MANUAL_REVIEW'
-            ACCEPTED = 'ACCEPTED'
-            AWAITING_UR_OUT = 'AWAITING_UR_OUT'
-            PENDING_ACTIVATION = 'PENDING_ACTIVATION'
-            QUEUED = 'QUEUED'
-            WORKING = 'WORKING'
-            REJECTED = 'REJECTED'
-            PENDING_CANCEL = 'PENDING_CANCEL'
-            CANCELED = 'CANCELED'
-            PENDING_REPLACE = 'PENDING_REPLACE'
-            REPLACED = 'REPLACED'
-            FILLED = 'FILLED'
-            EXPIRED = 'EXPIRED'
-
-    def _make_order_query(self,
-                          *,
-                          max_results=None,
-                          from_entered_datetime=None,
-                          to_entered_datetime=None,
-                          status=None):
-        status = self.convert_enum(status, self.Order.Status)
-
-        if from_entered_datetime is None:
-            from_entered_datetime = datetime.datetime(
-                year=2024, month=4, day=1)
-        if to_entered_datetime is None:
-            to_entered_datetime = datetime.datetime.utcnow()
-
-        params = {
-            'fromEnteredTime': self._format_datetime(
-                'from_entered_datetime', from_entered_datetime),
-            'toEnteredTime': self._format_datetime(
-                'to_entered_datetime', to_entered_datetime),
-        }
-
-        if max_results:
-            params['maxResults'] = max_results
-
-        if status:
-            params['status'] = status
-
-        return params
-
-    def get_orders_for_account(self,
-                               account_hash,
-                               *,
-                               max_results=None,
-                               from_entered_datetime=None,
-                               to_entered_datetime=None,
-                               status=None):
-        '''Orders for a specific account. Optionally specify a single status on 
-        which to filter.
-
-        :param max_results: The maximum number of orders to retrieve.
-        :param from_entered_datetime: Specifies that no orders entered before
-                                      this time should be returned. Date must
-                                      be within 60 days from today's date.
-                                      ``toEnteredTime`` must also be set.
-        :param to_entered_datetime: Specifies that no orders entered after this
-                                    time should be returned. ``fromEnteredTime``
-                                    must also be set.
-        :param status: Restrict query to orders with this status. See
-                       :class:`Order.Status` for options.
-        :param statuses: Restrict query to orders with any of these statuses.
-                         See :class:`Order.Status` for options.
-        '''
-        path = '/trader/v1/accounts/{}/orders'.format(account_hash)
-        return self._get_request(path, self._make_order_query(
-            max_results=max_results,
-            from_entered_datetime=from_entered_datetime,
-            to_entered_datetime=to_entered_datetime,
-            status=status))
-
-    def get_orders_for_all_linked_accounts(self,
-                                           *,
-                                           max_results=None,
-                                           from_entered_datetime=None,
-                                           to_entered_datetime=None,
-                                           status=None,
-                                           statuses=None):
-        '''Orders for all linked accounts. Optionally specify a single status on 
-        which to filter.
-
-        :param max_results: The maximum number of orders to retrieve.
-        :param from_entered_datetime: Specifies that no orders entered before
-                                      this time should be returned. Date must
-                                      be within 60 days from today's date.
-                                      ``toEnteredTime`` must also be set.
-        :param to_entered_datetime: Specifies that no orders entered after this
-                                    time should be returned. ``fromEnteredTime``
-                                    must also be set.
-        :param status: Restrict query to orders with this status. See
-                       :class:`Order.Status` for options.
-        '''
-        path = '/trader/v1/orders'
-        return self._get_request(path, self._make_order_query(
-            max_results=max_results,
-            from_entered_datetime=from_entered_datetime,
-            to_entered_datetime=to_entered_datetime,
-            status=status))
-
-    def place_order(self, account_hash, order_spec):
-        '''Place an order for a specific account. If order creation was
-        successful, the response will contain the ID of the generated order. See
-        :meth:`schwab.utils.Utils.extract_order_id` for more details. Note unlike
-        most methods in this library, responses for successful calls to this
-        method typically do not contain ``json()`` data, and attempting to
-        extract it will likely result in an exception.'''
-        if isinstance(order_spec, OrderBuilder):
-            order_spec = order_spec.build()
-
-        path = '/trader/v1/accounts/{}/orders'.format(account_hash)
-        return self._post_request(path, order_spec)
-
-    def replace_order(self, account_hash, order_id, order_spec):
-        '''Replace an existing order for an account. The existing order will be
-        replaced by the new order. Once replaced, the old order will be canceled
-        and a new order will be created.'''
-        if isinstance(order_spec, OrderBuilder):
-            order_spec = order_spec.build()
-
-        path = '/trader/v1/accounts/{}/orders/{}'.format(account_hash, order_id)
-        return self._put_request(path, order_spec)
-
-    def preview_order(self, account_hash, order_spec):
-        '''Preview an order, i.e. test whether an order would be accepted by the 
-        API and see the structure it would result in.'''
-        if isinstance(order_spec, OrderBuilder):
-            order_spec = order_spec.build()
-
-        path = '/trader/v1/accounts/{}/previewOrder'.format(account_hash)
-        return self._post_request(path, order_spec)
 
 
     ##########################################################################

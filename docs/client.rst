@@ -330,3 +330,21 @@ must search for it using the methods described in :ref:`accessing_existing_order
 .. automethod:: schwab.client.Client.replace_order
 
 
++++++++++++++++
+Other Endpoints
++++++++++++++++
+
+Note If your account limited to delayed quotes, these quotes will also be 
+delayed.
+
+-------------------
+Transaction History
+-------------------
+
+.. automethod:: schwab.client.Client.get_transaction
+.. automethod:: schwab.client.Client.get_transactions
+.. autoclass:: schwab.client.Client.Transactions
+  :members:
+  :undoc-members:
+
+
