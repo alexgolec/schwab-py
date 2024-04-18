@@ -13,6 +13,8 @@ import schwab
 import time
 import warnings
 
+from schwab.orders.generic import OrderBuilder
+
 from ..utils import EnumEnforcer
 
 
@@ -598,7 +600,7 @@ class BaseClient(EnumEnforcer):
         if isinstance(order_spec, OrderBuilder):
             order_spec = order_spec.build()
 
-        path = '/v1/trader/accounts/{}/orders'.format(account_hash)
+        path = '/trader/v1/accounts/{}/orders'.format(account_hash)
         return self._post_request(path, order_spec)
 
     def replace_order(self, account_hash, order_id, order_spec):
@@ -617,7 +619,7 @@ class BaseClient(EnumEnforcer):
         if isinstance(order_spec, OrderBuilder):
             order_spec = order_spec.build()
 
-        path = '/v1/trader/accounts/{}/previewOrder'.format(account_hash)
+        path = '/trader/v1/accounts/{}/previewOrder'.format(account_hash)
         return self._post_request(path, order_spec)
 
 
