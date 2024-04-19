@@ -347,4 +347,8 @@ Transaction History
   :members:
   :undoc-members:
 
+----------------
+User Preferences
+----------------
 
+.. automethod:: schwab.client.Client.get_user_preferences

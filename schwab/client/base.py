@@ -418,6 +418,7 @@ class BaseClient(EnumEnforcer):
             account_hash, transaction_id)
         return self._get_request(path, {})
 
+
     ##########################################################################
     # Price History
 
@@ -539,7 +540,6 @@ class BaseClient(EnumEnforcer):
 
     ##########################################################################
     # Price history utilities
-
 
     def __normalize_start_and_end_datetimes(self, start_datetime, end_datetime):
         if start_datetime is None:
@@ -940,3 +940,11 @@ class BaseClient(EnumEnforcer):
         return self._get_request(path, params)
 
 
+    ##########################################################################
+    # User Info and Preferences
+
+    def get_user_preferences(self, account_id):
+        '''Preferences for the logged in account, including all linked
+        accounts.'''
+        path = '/trader/v1/userPreference'
+        return self._get_request(path, ())
