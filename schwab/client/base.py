@@ -96,12 +96,8 @@ class BaseClient(EnumEnforcer):
 
         if isinstance(dt, self._DATE):
             d = datetime.date(year=dt.year, month=dt.month, day=dt.day)
-        elif isinstance(d, self._DATETIME):
-            d = datetime.date(
-                    year=dt.year, month=dt.month, day=dt.day, hour=dt.hour, 
-                    minute=dt.minute, second=dt.second)
 
-        return d.strftime('%Y-%m-%dT%H:%M:%SZ')
+        return d.strftime('%Y-%m-%d')
 
     def _datetime_as_millis(self, var_name, dt):
         'Converts datetime objects to compatible millisecond values'
