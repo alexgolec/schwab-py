@@ -137,12 +137,12 @@ class Utils(EnumEnforcer):
             return None
 
         m = re.match(
-            r'https://api.tdameritrade.com/v1/accounts/(\d+)/orders/(\d+)',
+            r'https://api.schwabapi.com/trader/v1/accounts/([/w]+)/orders/(/d+)',
             location)
 
         if m is None:
             return None
-        account_id, order_id = int(m.group(1)), int(m.group(2))
+        account_id, order_id = m.group(1), int(m.group(2))
 
         if str(account_id) != str(self.account_id):
             raise AccountIdMismatchException(
