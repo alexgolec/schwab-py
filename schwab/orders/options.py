@@ -88,7 +88,7 @@ class OptionSymbol:
                 'float')
 
         # convert strike to Schwab's format
-        # Examples: 
+        # Unit Test Examples (4 variations): 
         # QQQ  240424P00500000 (Apr 24, 2024 Put Strike 500)
         # SPXW  240422C05040000 (Apr 22, 2024 Call Strike 5040)
         # QQQ   240621P00404780 (Jun 21, 2024 Put Strike 404.78)
