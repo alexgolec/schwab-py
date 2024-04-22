@@ -94,8 +94,6 @@ class OptionSymbol:
         # QQQ   240621P00404780 (Jun 21, 2024 Put Strike 404.78)
         # SPXW  240422C05040500 (Apr 22, 2024 Call Strike 5040.50)
         
-        strike = int(strike_price_as_string) / 1000
-
         if isinstance(strike, int) and strike < 1000:
             self.strike = '00' + int(strike) * 1000
         elif isinstance(strike, int) and strike >= 1000:
