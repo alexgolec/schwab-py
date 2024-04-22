@@ -94,13 +94,13 @@ class OptionSymbol:
         # QQQ   240621P00404780 (Jun 21, 2024 Put Strike 404.78)
         # SPXW  240422C05040500 (Apr 22, 2024 Call Strike 5040.50)
         
-        if isinstance(strike, int) and strike < 1000:
+        if strike.is_integer() and strike < 1000:
             self.strike = '00' + int(strike) * 1000
-        elif isinstance(strike, int) and strike >= 1000:
+        elif strike.is_integer() and strike >= 1000:
             self.strike = '0' + int(strike) * 1000
-        elif isinstance(strike, float) and strike < 1000:
+        elif not strike.is_integer() and strike < 1000:
             self.strike = '00' + int(strike) * 1000
-        else: # isinstance(strike, float) and strike < 1000 i.e. it's a float and strike is < 1000
+        else: # not strike.is_integer() and strike < 1000 i.e. it's a float and strike is < 1000
             self.strike = '0' + int(strike) * 1000
 
 
