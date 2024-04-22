@@ -100,7 +100,7 @@ class OptionSymbol:
             self.strike = '0' + strike * 1000
         elif not strike.is_integer() and strike < 1000:
             self.strike = '00' + strike * 1000
-        else: # not strike.is_integer() and strike < 1000 i.e. it's a float and strike is < 1000
+        else: # not strike.is_integer() and strike >= 1000 i.e. it's a float and strike is < 1000
             self.strike = '0' + strike * 1000
 
 
