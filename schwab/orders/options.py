@@ -142,7 +142,7 @@ class OptionSymbol:
         # handle adjusting strike values based on Schwab's formatting, we need to take formats like:
         # "QQQ  240424P00500000" results in strike 500
         # "SPXW  240422C05040000" results in strike 5040
-        strike = int(strike / 1000)
+        strike = int(strike) / 1000
 
         return OptionSymbol(underlying, expiration_date, contract_type, strike)
 
