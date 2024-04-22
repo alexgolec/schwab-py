@@ -102,10 +102,10 @@ class OptionSymbol:
     def parse_symbol(cls, symbol):
         '''
         If Strike price < 1000:
-            Parse a string option symbol of the for ``[Underlying]  [Two digit year]
+            Parse a string option symbol of the for ``[Underlying][2 spaces]Two digit year]
             [Two digit month][Two digit day]['P' or 'C'][Strike price] * 1000 and prepend 2x (0s)``.
         Else (Strike is >= 1000)
-            Parse a string option symbol of the for ``[Underlying]  [Two digit year]
+            Parse a string option symbol of the for ``[Underlying][2 spaces][Two digit year]
             [Two digit month][Two digit day]['P' or 'C'][Strike price] * 1000 and prepend 1x (0s)``.
         
         '''
