@@ -22,7 +22,7 @@ class OptionSymbol:
     have the following format: ``[Underlying][2 spaces][Two digit year][Two digit
     month][Two digit day]['P' or 'C'][Strike price] -- Strike Price is multiple by 1000 and pre-pended with two zeroes if < 1000 strike or one zero if > 1000 ``. Examples include:
 
-     * ``QQQ  240420P00500000``: QQQ Apr 20, 2024 500 Call (note the two zeroes in front because strike is < 1000)
+     * ``QQQ  240420P00500000``: QQQ Apr 20, 2024 500 Put (note the two zeroes in front because strike is < 1000)
      * ``SPXW  240420C05040000``: SPX Weekly Apr 20, 2024 5040 Call (note the one zero in front because strike is > 1000)
      
     Note while each of the individual parts is validated by itself, the
@@ -89,14 +89,22 @@ class OptionSymbol:
 
         # convert strike to Schwab's format
         # Examples: 
-        # QQQ  240424P00500000
-        # SPXW  240422C05040000
-        if int(strike_price_as_string) < 1000:
-            self.strike = '00' + int(strike_price_as_string) * 1000
-        else:
-            self.strike = '0' + int(strike_price_as_string) * 1000
+        # QQQ  240424P00500000 (Apr 24, 2024 Put Strike 500)
+        # SPXW  240422C05040000 (Apr 22, 2024 Call Strike 5040)
+        # QQQ   240621P00404780 (Jun 21, 2024 Put Strike 404.78)
+        # SPXW  240422C05040500 (Apr 22, 2024 Call Strike 5040.50)
+        
+        strike = int(strike_price_as_string) / 1000
 
-        self.strike_price = strike_price_as_string
+        if isinstance(strike, int) and strike < 1000:
+            self.strike = '00' + int(strike) * 1000
+        elif isinstance(strike, int) and strike > 1000:
+            self.strike = '0' + int(strike) * 1000
+        elif isinstance(strike, float) and strike < 1000:
+            self.strike = '00' + int(strike) * 1000
+        else: # isinstance(strike, float) and strike < 1000 i.e. it's a float and strike is < 1000
+            self.strike = '0' + int(strike) * 1000
+
 
     @classmethod
     def parse_symbol(cls, symbol):
@@ -138,11 +146,6 @@ class OptionSymbol:
                     format_error_str)
 
         expiration_date = _parse_expiration_date(expiration_date)
-
-        # handle adjusting strike values based on Schwab's formatting, we need to take formats like:
-        # "QQQ  240424P00500000" results in strike 500
-        # "SPXW  240422C05040000" results in strike 5040
-        strike = int(strike) / 1000
 
         return OptionSymbol(underlying, expiration_date, contract_type, strike)
 
