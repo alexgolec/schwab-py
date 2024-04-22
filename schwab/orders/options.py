@@ -98,7 +98,7 @@ class OptionSymbol:
 
         if isinstance(strike, int) and strike < 1000:
             self.strike = '00' + int(strike) * 1000
-        elif isinstance(strike, int) and strike > 1000:
+        elif isinstance(strike, int) and strike >= 1000:
             self.strike = '0' + int(strike) * 1000
         elif isinstance(strike, float) and strike < 1000:
             self.strike = '00' + int(strike) * 1000
