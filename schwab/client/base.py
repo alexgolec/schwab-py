@@ -92,16 +92,9 @@ class BaseClient(EnumEnforcer):
     def _format_date(self, var_name, dt):
         '''Formats datetime objects appropriately, depending on whether they are
         naive or timezone-aware'''
-        self._assert_type(var_name, dt, [self._DATE, self._DATETIME])
+        self._assert_type(var_name, dt, [self._DATE])
 
-        if isinstance(dt, self._DATE):
-            d = datetime.date(year=dt.year, month=dt.month, day=dt.day)
-        elif isinstance(d, self._DATETIME):
-            d = datetime.date(
-                    year=dt.year, month=dt.month, day=dt.day, hour=dt.hour, 
-                    minute=dt.minute, second=dt.second)
-
-        return d.strftime('%Y-%m-%dT%H:%M:%SZ')
+        return dt.strftime('%Y-%m-%d')
 
     def _datetime_as_millis(self, var_name, dt):
         'Converts datetime objects to compatible millisecond values'
@@ -382,17 +375,17 @@ class BaseClient(EnumEnforcer):
 
         # Start date
         if start_date is None:
-            start_date = self._format_date(
+            start_date = self._format_datetime(
                     'start_date',
                     datetime.datetime.now() - datetime.timedelta(days=60))
         else:
-            start_date = self._format_date('start_date', start_date)
+            start_date = self._format_datetime('start_date', start_date)
 
         # End date
         if end_date is None:
-            end_date = self._format_date('end_date', datetime.datetime.now())
+            end_date = self._format_datetime('end_date', datetime.datetime.now())
         else:
-            end_date = self._format_date('end_date', end_date)
+            end_date = self._format_datetime('end_date', end_date)
 
         params = {
                 'types':  ','.join(transaction_types),
