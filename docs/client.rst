@@ -352,3 +352,12 @@ User Preferences
 ----------------
 
 .. automethod:: schwab.client.Client.get_user_preferences
+
+-------------
+Market Movers
+-------------
+
+.. automethod:: schwab.client.Client.get_movers
+.. autoclass:: schwab.client.Client.Movers
+  :members:
+  :undoc-members:

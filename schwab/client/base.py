@@ -420,6 +420,244 @@ class BaseClient(EnumEnforcer):
 
 
     ##########################################################################
+    # User Info and Preferences
+
+    def get_user_preferences(self, account_id):
+        '''Preferences for the logged in account, including all linked
+        accounts.'''
+        path = '/trader/v1/userPreference'
+        return self._get_request(path, ())
+
+
+    ##########################################################################
+    # Quotes
+
+    class GetQuote:
+        class Fields(Enum):
+            QUOTE = 'quote'
+            FUNDAMENTAL = 'fundamental'
+
+    def get_quote(self, symbol, *, fields=None):
+        '''
+        Get quote for a symbol. Note due to limitations in URL encoding, this
+        method is not recommended for instruments with symbols symbols
+        containing non-alphanumeric characters, for example as futures like
+        ``/ES``. To get quotes for those symbols, use :meth:`Client.get_quotes`.
+
+        :param symbol: Single symbol to fetch
+        :param fields: Fields to request. If unset, return all available data. 
+                       i.e. all fields. See :class:`GetQuote.Field` for options.
+        '''
+        fields = self.convert_enum_iterable(fields, self.GetQuote.Fields)
+        if fields:
+            params = {'fields': fields}
+        else:
+            params = {}
+
+        path = '/marketdata/v1/{}/quotes'.format(symbol)
+        return self._get_request(path, params)
+
+    def get_quotes(self, symbols, *, fields=None, indicative=None):
+        '''Get quote for a symbol. This method supports all symbols, including
+        those containing non-alphanumeric characters like ``/ES``.
+
+        :param symbols: Iterable of symbols to fetch.
+        :param fields: Fields to request. If unset, return all available data. 
+                       i.e. all fields. See :class:`GetQuote.Field` for options.
+        '''
+        if isinstance(symbols, str):
+            symbols = [symbols]
+
+        params = {
+            'symbols': ','.join(symbols)
+        }
+
+        fields = self.convert_enum_iterable(fields, self.GetQuote.Fields)
+        if fields:
+            params['fields'] = fields
+
+        if indicative is not None:
+            if type(indicative) is not bool:
+                raise ValueError(
+                        'value of \'indicative\' must be either True or False')
+            params['indicative'] = 'true' if indicative else 'false'
+
+        path = '/marketdata/v1/quotes'
+        return self._get_request(path, params)
+
+
+    ##########################################################################
+    # Option Chains
+
+    class Options:
+        class ContractType(Enum):
+            CALL = 'CALL'
+            PUT = 'PUT'
+            ALL = 'ALL'
+
+        class Strategy(Enum):
+            SINGLE = 'SINGLE'
+            ANALYTICAL = 'ANALYTICAL'
+            COVERED = 'COVERED'
+            VERTICAL = 'VERTICAL'
+            CALENDAR = 'CALENDAR'
+            STRANGLE = 'STRANGLE'
+            STRADDLE = 'STRADDLE'
+            BUTTERFLY = 'BUTTERFLY'
+            CONDOR = 'CONDOR'
+            DIAGONAL = 'DIAGONAL'
+            COLLAR = 'COLLAR'
+            ROLL = 'ROLL'
+
+        class StrikeRange(Enum):
+            IN_THE_MONEY = 'ITM'
+            NEAR_THE_MONEY = 'NTM'
+            OUT_OF_THE_MONEY = 'OTM'
+            STRIKES_ABOVE_MARKET = 'SAK'
+            STRIKES_BELOW_MARKET = 'SBK'
+            STRIKES_NEAR_MARKET = 'SNK'
+            ALL = 'ALL'
+
+        class Type(Enum):
+            STANDARD = 'S'
+            NON_STANDARD = 'NS'
+            ALL = 'ALL'
+
+        class ExpirationMonth(Enum):
+            JANUARY = 'JAN'
+            FEBRUARY = 'FEB'
+            MARCH = 'MAR'
+            APRIL = 'APR'
+            MAY = 'MAY'
+            JUNE = 'JUN'
+            JULY = 'JUL'
+            AUGUST = 'AUG'
+            SEPTEMBER = 'SEP'
+            OCTOBER = 'OCT'
+            NOVEMBER = 'NOV'
+            DECEMBER = 'DEC'
+
+        class Entitlement(Enum):
+            PAYING_PRO = 'PP'
+            NON_PRO = 'NP'
+            NON_PAYING_PRO = 'PN'
+
+    def get_option_chain(
+            self,
+            symbol,
+            *,
+            contract_type=None,
+            strike_count=None,
+            include_underlying_quote=None,
+            strategy=None,
+            interval=None,
+            strike=None,
+            strike_range=None,
+            from_date=None,
+            to_date=None,
+            volatility=None,
+            underlying_price=None,
+            interest_rate=None,
+            days_to_expiration=None,
+            exp_month=None,
+            option_type=None,
+            entitlement=None):
+        '''Get option chain for an optionable Symbol.
+
+        :param contract_type: Type of contracts to return in the chain. See
+                              :class:`Options.ContractType` for choices.
+        :param strike_count: The number of strikes to return above and below
+                             the at-the-money price.
+        :param include_underlying_quote: Include a quote for the underlying 
+                                         alongside the options chain?
+        :param strategy: If passed, returns a Strategy Chain. See
+                        :class:`Options.Strategy` for choices.
+        :param interval: Strike interval for spread strategy chains (see
+                         ``strategy`` param).
+        :param strike: Return options only at this strike price.
+        :param strike_range: Return options for the given range. See
+                             :class:`Options.StrikeRange` for choices.
+        :param from_date: Only return expirations after this date. For
+                          strategies, expiration refers to the nearest term
+                          expiration in the strategy. Accepts ``datetime.date``
+                          and ``datetime.datetime``.
+        :param to_date: Only return expirations before this date. For
+                        strategies, expiration refers to the nearest term
+                        expiration in the strategy. Accepts ``datetime.date``
+                        and ``datetime.datetime``.
+        :param volatility: Volatility to use in calculations. Applies only to
+                           ``ANALYTICAL`` strategy chains.
+        :param underlying_price: Underlying price to use in calculations.
+                                 Applies only to ``ANALYTICAL`` strategy chains.
+        :param interest_rate: Interest rate to use in calculations. Applies only
+                              to ``ANALYTICAL`` strategy chains.
+        :param days_to_expiration: Days to expiration to use in calculations.
+                                   Applies only to ``ANALYTICAL`` strategy
+                                   chains
+        :param exp_month: Return only options expiring in the specified month. See
+                          :class:`Options.ExpirationMonth` for choices.
+        :param option_type: Types of options to return. See
+                            :class:`Options.Type` for choices.
+        :param entitlement: Entitlement of the client.
+        '''
+        contract_type = self.convert_enum(
+            contract_type, self.Options.ContractType)
+        strategy = self.convert_enum(strategy, self.Options.Strategy)
+        strike_range = self.convert_enum(
+            strike_range, self.Options.StrikeRange)
+        option_type = self.convert_enum(option_type, self.Options.Type)
+        exp_month = self.convert_enum(exp_month, self.Options.ExpirationMonth)
+
+        params = {
+            'apikey': self.api_key,
+            'symbol': symbol,
+        }
+
+        if contract_type is not None:
+            params['contractType'] = contract_type
+        if strike_count is not None:
+            params['strikeCount'] = strike_count
+        if include_underlying_quote is not None:
+            params['includeUnderlyingQuote'] = include_underlying_quote
+        if strategy is not None:
+            params['strategy'] = strategy
+        if interval is not None:
+            params['interval'] = interval
+        if strike is not None:
+            params['strike'] = strike
+        if strike_range is not None:
+            params['range'] = strike_range
+        if from_date is not None:
+            params['fromDate'] = self._format_date('from_date', from_date)
+        if to_date is not None:
+            params['toDate'] = self._format_date('to_date', to_date)
+        if volatility is not None:
+            params['volatility'] = volatility
+        if underlying_price is not None:
+            params['underlyingPrice'] = underlying_price
+        if interest_rate is not None:
+            params['interestRate'] = interest_rate
+        if days_to_expiration is not None:
+            params['daysToExpiration'] = days_to_expiration
+        if exp_month is not None:
+            params['expMonth'] = exp_month
+        if option_type is not None:
+            params['optionType'] = option_type
+
+        path = '/marketdata/v1/chains'
+        return self._get_request(path, params)
+
+
+    ##########################################################################
+    # Option Expiration Chain
+
+    def get_option_expiration_chain(self, symbol):
+        '''Preferences for the logged in account, including all linked
+        accounts.'''
+        path = '/marketdata/v1/expirationchain'
+        return self._get_request(path, {'symbol': symbol})
+
+    ##########################################################################
     # Price History
 
     class PriceHistory:
@@ -722,229 +960,59 @@ class BaseClient(EnumEnforcer):
 
 
     ##########################################################################
-    # Quotes
+    # Movers
 
-    class GetQuote:
-        class Fields(Enum):
-            QUOTE = 'quote'
-            FUNDAMENTAL = 'fundamental'
+    class Movers:
+        class Index(Enum):
+            DJI = '$DJI'
+            COMPX = '$COMPX'
+            SPX = '$SPX'
+            NYSE = 'NYSE'
+            NASDAQ = 'NASDAQ'
+            OTCBB = 'OTCBB'
+            INDEX_ALL = 'INDEX_ALL'
+            EQUITY_ALL = 'EQUITY_ALL'
+            OPTION_ALL = 'OPTION_ALL'
+            OPTION_PUT = 'OPTION_PUT'
+            OPTION_CALL = 'OPTION_CALL'
 
-    def get_quote(self, symbol, *, fields=None):
+        class SortOrder(Enum):
+            '''Sort by a particular attribute'''
+            VOLUME = 'VOLUME'
+            TRADES = 'TRADES'
+            PERCENT_CHANGE_UP = 'PERCENT_CHANGE_UP'
+            PERCENT_CHANGE_DOWN = 'PERCENT_CHANGE_DOWN'
+
+        class Frequency(Enum):
+            '''To return movers with the specified directions of up or down'''
+            ZERO = 0
+            ONE = 1
+            FIVE = 5
+            TEN = 10
+            THIRTY = 30
+            SIXTY = 60
+        
+
+    def get_movers(self, index, sort_order=None, frequency=None):
+        '''Get a list of the top ten movers for a given index.
+
+        :param index: Category of mover. See :class:`Movers.Index` for valid 
+                      values.
+        :param sort_order: Order in which to return values. See 
+                           :class:`Movers.SortOrder for valid values`
+        :param frequency: Only return movers that saw this magnitude or greater. 
+                          See :class:`Movers.Frequency` for valid values.
         '''
-        Get quote for a symbol. Note due to limitations in URL encoding, this
-        method is not recommended for instruments with symbols symbols
-        containing non-alphanumeric characters, for example as futures like
-        ``/ES``. To get quotes for those symbols, use :meth:`Client.get_quotes`.
+        index = self.convert_enum(index, self.Movers.Index)
+        sort_order = self.convert_enum(sort_order, self.Movers.SortOrder)
+        frequency = self.convert_enum(frequency, self.Movers.Frequency)
 
-        :param symbol: Single symbol to fetch
-        :param fields: Fields to request. If unset, return all available data. 
-                       i.e. all fields. See :class:`GetQuote.Field` for options.
-        '''
-        fields = self.convert_enum_iterable(fields, self.GetQuote.Fields)
-        if fields:
-            params = {'fields': fields}
-        else:
-            params = {}
+        path = '/marketdata/v1/movers/{}'.format(index)
 
-        path = '/marketdata/v1/{}/quotes'.format(symbol)
+        params = {}
+        if sort_order is not None:
+            params['sort'] = sort_order
+        if frequency is not None:
+            params['frequency'] = frequency
+
         return self._get_request(path, params)
-
-    def get_quotes(self, symbols, *, fields=None, indicative=None):
-        '''Get quote for a symbol. This method supports all symbols, including
-        those containing non-alphanumeric characters like ``/ES``.
-
-        :param symbols: Iterable of symbols to fetch.
-        :param fields: Fields to request. If unset, return all available data. 
-                       i.e. all fields. See :class:`GetQuote.Field` for options.
-        '''
-        if isinstance(symbols, str):
-            symbols = [symbols]
-
-        params = {
-            'symbols': ','.join(symbols)
-        }
-
-        fields = self.convert_enum_iterable(fields, self.GetQuote.Fields)
-        if fields:
-            params['fields'] = fields
-
-        if indicative is not None:
-            if type(indicative) is not bool:
-                raise ValueError(
-                        'value of \'indicative\' must be either True or False')
-            params['indicative'] = 'true' if indicative else 'false'
-
-        path = '/marketdata/v1/quotes'
-        return self._get_request(path, params)
-
-
-    ##########################################################################
-    # Option Chains
-
-    class Options:
-        class ContractType(Enum):
-            CALL = 'CALL'
-            PUT = 'PUT'
-            ALL = 'ALL'
-
-        class Strategy(Enum):
-            SINGLE = 'SINGLE'
-            ANALYTICAL = 'ANALYTICAL'
-            COVERED = 'COVERED'
-            VERTICAL = 'VERTICAL'
-            CALENDAR = 'CALENDAR'
-            STRANGLE = 'STRANGLE'
-            STRADDLE = 'STRADDLE'
-            BUTTERFLY = 'BUTTERFLY'
-            CONDOR = 'CONDOR'
-            DIAGONAL = 'DIAGONAL'
-            COLLAR = 'COLLAR'
-            ROLL = 'ROLL'
-
-        class StrikeRange(Enum):
-            IN_THE_MONEY = 'ITM'
-            NEAR_THE_MONEY = 'NTM'
-            OUT_OF_THE_MONEY = 'OTM'
-            STRIKES_ABOVE_MARKET = 'SAK'
-            STRIKES_BELOW_MARKET = 'SBK'
-            STRIKES_NEAR_MARKET = 'SNK'
-            ALL = 'ALL'
-
-        class Type(Enum):
-            STANDARD = 'S'
-            NON_STANDARD = 'NS'
-            ALL = 'ALL'
-
-        class ExpirationMonth(Enum):
-            JANUARY = 'JAN'
-            FEBRUARY = 'FEB'
-            MARCH = 'MAR'
-            APRIL = 'APR'
-            MAY = 'MAY'
-            JUNE = 'JUN'
-            JULY = 'JUL'
-            AUGUST = 'AUG'
-            SEPTEMBER = 'SEP'
-            OCTOBER = 'OCT'
-            NOVEMBER = 'NOV'
-            DECEMBER = 'DEC'
-
-        class Entitlement(Enum):
-            PAYING_PRO = 'PP'
-            NON_PRO = 'NP'
-            NON_PAYING_PRO = 'PN'
-
-    def get_option_chain(
-            self,
-            symbol,
-            *,
-            contract_type=None,
-            strike_count=None,
-            include_underlying_quote=None,
-            strategy=None,
-            interval=None,
-            strike=None,
-            strike_range=None,
-            from_date=None,
-            to_date=None,
-            volatility=None,
-            underlying_price=None,
-            interest_rate=None,
-            days_to_expiration=None,
-            exp_month=None,
-            option_type=None,
-            entitlement=None):
-        '''Get option chain for an optionable Symbol.
-
-        :param contract_type: Type of contracts to return in the chain. See
-                              :class:`Options.ContractType` for choices.
-        :param strike_count: The number of strikes to return above and below
-                             the at-the-money price.
-        :param include_underlying_quote: Include a quote for the underlying 
-                                         alongside the options chain?
-        :param strategy: If passed, returns a Strategy Chain. See
-                        :class:`Options.Strategy` for choices.
-        :param interval: Strike interval for spread strategy chains (see
-                         ``strategy`` param).
-        :param strike: Return options only at this strike price.
-        :param strike_range: Return options for the given range. See
-                             :class:`Options.StrikeRange` for choices.
-        :param from_date: Only return expirations after this date. For
-                          strategies, expiration refers to the nearest term
-                          expiration in the strategy. Accepts ``datetime.date``
-                          and ``datetime.datetime``.
-        :param to_date: Only return expirations before this date. For
-                        strategies, expiration refers to the nearest term
-                        expiration in the strategy. Accepts ``datetime.date``
-                        and ``datetime.datetime``.
-        :param volatility: Volatility to use in calculations. Applies only to
-                           ``ANALYTICAL`` strategy chains.
-        :param underlying_price: Underlying price to use in calculations.
-                                 Applies only to ``ANALYTICAL`` strategy chains.
-        :param interest_rate: Interest rate to use in calculations. Applies only
-                              to ``ANALYTICAL`` strategy chains.
-        :param days_to_expiration: Days to expiration to use in calculations.
-                                   Applies only to ``ANALYTICAL`` strategy
-                                   chains
-        :param exp_month: Return only options expiring in the specified month. See
-                          :class:`Options.ExpirationMonth` for choices.
-        :param option_type: Types of options to return. See
-                            :class:`Options.Type` for choices.
-        :param entitlement: Entitlement of the client.
-        '''
-        contract_type = self.convert_enum(
-            contract_type, self.Options.ContractType)
-        strategy = self.convert_enum(strategy, self.Options.Strategy)
-        strike_range = self.convert_enum(
-            strike_range, self.Options.StrikeRange)
-        option_type = self.convert_enum(option_type, self.Options.Type)
-        exp_month = self.convert_enum(exp_month, self.Options.ExpirationMonth)
-
-        params = {
-            'apikey': self.api_key,
-            'symbol': symbol,
-        }
-
-        if contract_type is not None:
-            params['contractType'] = contract_type
-        if strike_count is not None:
-            params['strikeCount'] = strike_count
-        if include_underlying_quote is not None:
-            params['includeUnderlyingQuote'] = include_underlying_quote
-        if strategy is not None:
-            params['strategy'] = strategy
-        if interval is not None:
-            params['interval'] = interval
-        if strike is not None:
-            params['strike'] = strike
-        if strike_range is not None:
-            params['range'] = strike_range
-        if from_date is not None:
-            params['fromDate'] = self._format_date('from_date', from_date)
-        if to_date is not None:
-            params['toDate'] = self._format_date('to_date', to_date)
-        if volatility is not None:
-            params['volatility'] = volatility
-        if underlying_price is not None:
-            params['underlyingPrice'] = underlying_price
-        if interest_rate is not None:
-            params['interestRate'] = interest_rate
-        if days_to_expiration is not None:
-            params['daysToExpiration'] = days_to_expiration
-        if exp_month is not None:
-            params['expMonth'] = exp_month
-        if option_type is not None:
-            params['optionType'] = option_type
-
-        path = '/marketdata/v1/chains'
-        return self._get_request(path, params)
-
-
-    ##########################################################################
-    # User Info and Preferences
-
-    def get_user_preferences(self, account_id):
-        '''Preferences for the logged in account, including all linked
-        accounts.'''
-        path = '/trader/v1/userPreference'
-        return self._get_request(path, ())
