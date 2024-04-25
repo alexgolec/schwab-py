@@ -82,32 +82,28 @@ class BaseClient(EnumEnforcer):
                     ', '.join(exp_type_names), name, value_type_name)
             raise ValueError(error_str)
 
-    def _format_datetime(self, var_name, dt):
-        '''Formats datetime objects appropriately, depending on whether they are
-        naive or timezone-aware'''
-        self._assert_type(var_name, dt, [self._DATETIME])
-
-        return dt.strftime('%Y-%m-%dT%H:%M:%SZ')
-
-    def _format_date(self, var_name, dt):
-        '''Formats datetime objects appropriately, depending on whether they are
-        naive or timezone-aware'''
+    def _format_date_as_iso(self, var_name, dt):
+        '''Formats datetime or date objects as yyyy-MM-dd'T'HH:mm:ss.SSSZ'''
         self._assert_type(var_name, dt, [self._DATE, self._DATETIME])
 
         if isinstance(dt, self._DATE):
-            d = datetime.date(year=dt.year, month=dt.month, day=dt.day)
-        elif isinstance(d, self._DATETIME):
-            d = datetime.date(
-                    year=dt.year, month=dt.month, day=dt.day, hour=dt.hour, 
-                    minute=dt.minute, second=dt.second)
+            dt = datetime.datetime(year=dt.year, month=dt.month, day=dt.day)
 
-        return d.strftime('%Y-%m-%dT%H:%M:%SZ')
+        return dt.strftime('%Y-%m-%dT%H:%M:%SZ')
 
-    def _datetime_as_millis(self, var_name, dt):
+    def _format_date_as_day(self, var_name, dt):
+        '''Formats datetime or date objects as YYYY-MM-DD'''
+        self._assert_type(var_name, dt, [self._DATE])
+
+        return dt.strftime('%Y-%m-%d')
+
+
+    def _format_date_as_millis(self, var_name, dt):
         'Converts datetime objects to compatible millisecond values'
         self._assert_type(var_name, dt, [self._DATETIME])
 
         return int(dt.timestamp() * 1000)
+
 
     def set_timeout(self, timeout):
         '''Sets the timeout configuration for this client. Applies to all HTTP 
@@ -214,13 +210,14 @@ class BaseClient(EnumEnforcer):
         status = self.convert_enum(status, self.Order.Status)
 
         if from_entered_datetime is None:
-            from_entered_datetime = datetime.datetime(
-                year=2024, month=4, day=1)
+            from_entered_datetime = (
+                    datetime.datetime.utcnow() -
+                    datetime.timedelta(days=60))
         if to_entered_datetime is None:
             to_entered_datetime = datetime.datetime.utcnow()
 
         params = {
-            'fromEnteredTime': self._format_datetime(
+            'fromEnteredTime': self._format_date_as_iso(
                 'from_entered_datetime', from_entered_datetime),
             'toEnteredTime': self._format_datetime(
                 'to_entered_datetime', to_entered_datetime),
@@ -382,17 +379,18 @@ class BaseClient(EnumEnforcer):
 
         # Start date
         if start_date is None:
-            start_date = self._format_date(
+            start_date = self._format_date_as_iso(
                     'start_date',
                     datetime.datetime.now() - datetime.timedelta(days=60))
         else:
-            start_date = self._format_date('start_date', start_date)
+            start_date = self._format_date_as_iso('start_date', start_date)
 
         # End date
         if end_date is None:
-            end_date = self._format_date('end_date', datetime.datetime.now())
+            end_date = self._format_date_as_iso(
+                    'end_date', datetime.datetime.now())
         else:
-            end_date = self._format_date('end_date', end_date)
+            end_date = self._format_date_as_iso('end_date', end_date)
 
         params = {
                 'types':  ','.join(transaction_types),
@@ -579,12 +577,10 @@ class BaseClient(EnumEnforcer):
                              :class:`Options.StrikeRange` for choices.
         :param from_date: Only return expirations after this date. For
                           strategies, expiration refers to the nearest term
-                          expiration in the strategy. Accepts ``datetime.date``
-                          and ``datetime.datetime``.
+                          expiration in the strategy. Accepts ``datetime.date``.
         :param to_date: Only return expirations before this date. For
                         strategies, expiration refers to the nearest term
-                        expiration in the strategy. Accepts ``datetime.date``
-                        and ``datetime.datetime``.
+                        expiration in the strategy. Accepts ``datetime.date``.
         :param volatility: Volatility to use in calculations. Applies only to
                            ``ANALYTICAL`` strategy chains.
         :param underlying_price: Underlying price to use in calculations.
@@ -628,9 +624,9 @@ class BaseClient(EnumEnforcer):
         if strike_range is not None:
             params['range'] = strike_range
         if from_date is not None:
-            params['fromDate'] = self._format_date('from_date', from_date)
+            params['fromDate'] = self._format_date_as_day('from_date', from_date)
         if to_date is not None:
-            params['toDate'] = self._format_date('to_date', to_date)
+            params['toDate'] = self._format_date_as_day('to_date', to_date)
         if volatility is not None:
             params['volatility'] = volatility
         if underlying_price is not None:
@@ -762,10 +758,10 @@ class BaseClient(EnumEnforcer):
         if frequency is not None:
             params['frequency'] = frequency
         if start_datetime is not None:
-            params['startDate'] = self._datetime_as_millis(
+            params['startDate'] = self._format_date_as_millis(
                 'start_datetime', start_datetime)
         if end_datetime is not None:
-            params['endDate'] = self._datetime_as_millis(
+            params['endDate'] = self._format_date_as_millis(
                 'end_datetime', end_datetime)
         if need_extended_hours_data is not None:
             params['needExtendedHoursData'] = need_extended_hours_data
@@ -1042,7 +1038,7 @@ class BaseClient(EnumEnforcer):
                 'markets': ','.join(markets)
         }
         if date is not None:
-            params['date'] = date.strftime('%Y-%m-%d')
+            params['date'] = self._format_date_as_day('date', date)
 
         return self._get_request('/marketdata/v1/markets', params)
 
