@@ -361,3 +361,14 @@ Market Movers
 .. autoclass:: schwab.client.Client.Movers
   :members:
   :undoc-members:
+
+
+------------
+Market Hours
+------------
+
+.. automethod:: schwab.client.Client.get_market_hours
+.. autoclass:: schwab.client.Client.MarketHours
+  :members:
+  :undoc-members:
+

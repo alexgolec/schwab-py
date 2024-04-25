@@ -993,7 +993,7 @@ class BaseClient(EnumEnforcer):
             SIXTY = 60
         
 
-    def get_movers(self, index, sort_order=None, frequency=None):
+    def get_movers(self, index, *, sort_order=None, frequency=None):
         '''Get a list of the top ten movers for a given index.
 
         :param index: Category of mover. See :class:`Movers.Index` for valid 
@@ -1016,3 +1016,32 @@ class BaseClient(EnumEnforcer):
             params['frequency'] = frequency
 
         return self._get_request(path, params)
+
+
+    ##########################################################################
+    # Market Hours
+
+    class MarketHours:
+        class Market(Enum):
+            EQUITY = 'equity'
+            OPTION = 'option'
+            BOND = 'bond'
+            FUTURE = 'future'
+            FOREX = 'forex'
+
+    def get_market_hours(self, markets, *, date=None):
+        '''Get a list of the top ten movers for a given index.
+
+        :param markets: Markets for which to return trading hours.
+        :param date: Date for which to return market hours. Accepts values up to 
+                     one year from today. Accepts ``datetime.date``.
+        '''
+        markets = self.convert_enum_iterable(markets, self.MarketHours.Market)
+
+        params = {
+                'markets': ','.join(markets)
+        }
+        if date is not None:
+            params['date'] = date.strftime('%Y-%m-%d')
+
+        return self._get_request('/marketdata/v1/markets/', params)
