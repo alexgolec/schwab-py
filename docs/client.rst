@@ -275,6 +275,16 @@ please follow the instructions in :ref:`contributing` to send in a patch.
   :members:
   :undoc-members:
 
++++++++++++++++++++++++++++++++++++++
+Instrument Searching and Fundamentals
++++++++++++++++++++++++++++++++++++++
+
+.. automethod:: schwab.client.Client.get_instruments
+.. automethod:: schwab.client.Client.get_instrument_by_cusip
+.. autoclass:: schwab.client.Client.Instrument
+  :members:
+  :undoc-members:
+
 ++++++
 Orders
 ++++++

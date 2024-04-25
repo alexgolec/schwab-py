@@ -1044,4 +1044,78 @@ class BaseClient(EnumEnforcer):
         if date is not None:
             params['date'] = date.strftime('%Y-%m-%d')
 
-        return self._get_request('/marketdata/v1/markets/', params)
+        return self._get_request('/marketdata/v1/markets', params)
+
+
+    ##########################################################################
+    # Instrument
+
+    class Instrument:
+        class Projection(Enum):
+            SYMBOL_SEARCH = 'symbol-search'
+            SYMBOL_REGEX = 'symbol-regex'
+            DESCRIPTION_SEARCH = 'desc-search'
+            DESCRIPTION_REGEX = 'desc-regex'
+            SEARCH = 'search'
+            FUNDAMENTAL = 'fundamental'
+
+    def get_instruments(self, symbols, projection):
+        '''Get instrument details by using different search methods. Also used 
+        to get fundamental instrument data by use of the ``FUNDAMENTAL`` 
+        projection.
+
+        :param symbol: For ``FUNDAMENTAL`` projection, the symbol for which to 
+                       get fundamentals. For other projections, a search term. 
+                       See below for details.
+        :param projection: Search mode, or ``FUNDAMENTAL`` for instrument 
+                           fundamentals. See :class:`Instrument.Projection`.
+
+        This method is a bit of a chimera because it supports both symbol 
+        search and fundamentals lookup. The format and interpretation of the 
+        ``symbol`` parameter differs according ot the value of the 
+        ``projection`` parameter:
+
+        .. list-table::
+           :widths: 25 25 50
+           :header-rows: 1
+
+           * - ``projection`` value
+             - Accepted values of ``symbol``
+             - ``symbol`` interpretation
+           * - ``SYMBOL_SEARCH``
+             - String, or array of strings
+             - Symbols for which to search results
+           * - ``SYMBOL_REGEX``
+             - Single string
+             - Regular expression to match against symbols
+           * - ``DESCRIPTION_SEARCH``
+             - Single string
+             - String to search for in symbol description
+           * - ``DESCRIPTION_REGEX``
+             - Single string
+             - Regex to search for in symbol description
+           * - ``SEARCH``
+             - Single string
+             - Regular expression to match against symbols
+           * - ``FUNDAMENTAL``
+             - String, or array of strings
+             - Symbols for which to return fundamentals. Exact match.
+        '''
+        projection = self.convert_enum(projection, self.Instrument.Projection)
+
+        params = {
+                'symbol': ','.join(symbols),
+                'projection': projection,
+        }
+
+        return self._get_request('/marketdata/v1/instruments', params)
+
+
+    def get_instrument_by_cusip(self, cusip):
+        '''Get instrument information for a single instrument by CUSIP.
+
+        :param cusip: String representing CUSIP of instrument for which to fetch 
+                      data. Note leading zeroes must be preserved.
+        '''
+        return self._get_request(
+                '/marketdata/v1/instruments/{}'.format(cusip), {})
