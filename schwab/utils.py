@@ -79,11 +79,11 @@ class UnsuccessfulOrderException(ValueError):
     '''
 
 
-class AccountIdMismatchException(ValueError):
+class AccountHashMismatchException(ValueError):
     '''
     Raised by :meth:`Utils.extract_order_id` when attempting to extract an
-    order ID from a :meth:`Client.place_order` with a different account ID than
-    the one with which the :class:`Utils` was initialized.
+    order ID from a :meth:`Client.place_order` with a different account hash
+    than the one with which the :class:`Utils` was initialized.
     '''
 
 
@@ -101,18 +101,18 @@ class Utils(EnumEnforcer):
 
     def __init__(self, client, account_hash):
         '''Creates a new ``Utils`` instance. For convenience, this object
-        assumes the user wants to work with a single account ID at a time.'''
+        assumes the user wants to work with a single account hash at a time.'''
         super().__init__(True)
 
         self.client = client
         self.account_hash = account_hash
 
     def set_account_hash(self, account_hash):
-        '''Set the account ID used by this ``Utils`` instance.'''
+        '''Set the account hash used by this ``Utils`` instance.'''
         self.account_hash = account_hash
 
     def extract_order_id(self, place_order_response):
-        '''Attempts to extract the order ID from a response object returned by
+        '''Attempts to extract the order hash from a response object returned by
         :meth:`Client.place_order() <schwab.client.Client.place_order>`. Return
         ``None`` if the order location is not contained in the response.
 
@@ -123,7 +123,7 @@ class Utils(EnumEnforcer):
                                      successful.
 
         :raise ValueError: if the order was not succesful or if the order's
-                           account ID is not equal to the account ID set in this
+                           account hash is not equal to the account hash set in this
                            ``Utils`` object.
         '''
         if place_order_response.is_error:
