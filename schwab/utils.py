@@ -99,33 +99,32 @@ class Utils(EnumEnforcer):
     '''Helper for placing orders on equities. Provides easy-to-use
     implementations for common tasks such as market and limit orders.'''
 
-    def __init__(self, client, account_id):
+    def __init__(self, client, account_hash):
         '''Creates a new ``Utils`` instance. For convenience, this object
         assumes the user wants to work with a single account ID at a time.'''
         super().__init__(True)
 
         self.client = client
-        self.account_id = account_id
+        self.account_hash = account_hash
 
-    def set_account_id(self, account_id):
+    def set_account_hash(self, account_hash):
         '''Set the account ID used by this ``Utils`` instance.'''
-        self.account_id = account_id
+        self.account_hash = account_hash
 
     def extract_order_id(self, place_order_response):
         '''Attempts to extract the order ID from a response object returned by
-        :meth:`Client.place_order() <tda.client.Client.place_order>`. Return
+        :meth:`Client.place_order() <schwab.client.Client.place_order>`. Return
         ``None`` if the order location is not contained in the response.
 
         :param place_order_response: Order response as returned by
                                      :meth:`Client.place_order()
-                                     <tda.client.Client.place_order>`. Note this
+                                     <schwab.client.Client.place_order>`. Note this
                                      method requires that the order was
                                      successful.
 
         :raise ValueError: if the order was not succesful or if the order's
                            account ID is not equal to the account ID set in this
                            ``Utils`` object.
-
         '''
         if place_order_response.is_error:
             raise UnsuccessfulOrderException(
@@ -137,15 +136,15 @@ class Utils(EnumEnforcer):
             return None
 
         m = re.match(
-            r'https://api.tdameritrade.com/v1/accounts/(\d+)/orders/(\d+)',
-            location)
+                r'https://api.schwabapi.com/trader/v1/accounts/([/w]+)/orders/(/d+)',
+                location)
 
         if m is None:
             return None
-        account_id, order_id = int(m.group(1)), int(m.group(2))
+        account_hash, order_id = m.group(1), int(m.group(2))
 
-        if str(account_id) != str(self.account_id):
+        if str(account_hash) != str(self.account_hash):
             raise AccountIdMismatchException(
-                'order request account ID != Utils.account_id')
+                'order request account hash != Utils.account_hash')
 
         return order_id
