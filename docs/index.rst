@@ -30,6 +30,7 @@ know exactly what you're doing.
   auth
   client
   order-builder
+  util
   order-templates
 
 
