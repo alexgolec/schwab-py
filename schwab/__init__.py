@@ -4,6 +4,7 @@ from . import client
 from . import debug
 from . import orders
 #from . import streaming
+from . import utils
 
 from .version import version as __version__
 

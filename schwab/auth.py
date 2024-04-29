@@ -304,7 +304,7 @@ def client_from_manual_flow(api_key, app_secret, callback_url, token_path,
         'https://api.schwabapi.com/v1/oauth/authorize')
 
     print('\n**************************************************************\n')
-    print('This is the manual login and token creation flow for tda-api.')
+    print('This is the manual login and token creation flow for schwab-py.')
     print('Please follow these instructions exactly:')
     print()
     print(' 1. Open the following link by copy-pasting it into the browser')
@@ -324,8 +324,7 @@ def client_from_manual_flow(api_key, app_secret, callback_url, token_path,
     print('    Enter/Return.')
     print()
     print('If you encounter any issues, see here for troubleshooting:')
-    print('https://tda-api.readthedocs.io/en/stable/auth.html')
-    print('#troubleshooting')
+    print('https://schwab-py.readthedocs.io/en/latest/auth.html#troubleshooting')
     print('\n**************************************************************\n')
 
     if callback_url.startswith('http://'):

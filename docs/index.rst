@@ -29,8 +29,11 @@ know exactly what you're doing.
   getting-started
   auth
   client
-  order-builder
   order-templates
+  order-builder
+  util
+  help
+  contributing
 
 
 
