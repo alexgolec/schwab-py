@@ -86,7 +86,7 @@ class BaseClient(EnumEnforcer):
         '''Formats datetime or date objects as yyyy-MM-dd'T'HH:mm:ss.SSSZ'''
         self._assert_type(var_name, dt, [self._DATE, self._DATETIME])
 
-        if isinstance(dt, self._DATE):
+        if not isinstance(dt, self._DATETIME):
             dt = datetime.datetime(year=dt.year, month=dt.month, day=dt.day)
 
         return dt.strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -211,15 +211,15 @@ class BaseClient(EnumEnforcer):
 
         if from_entered_datetime is None:
             from_entered_datetime = (
-                    datetime.datetime.utcnow() -
+                    datetime.datetime.now(datetime.UTC) -
                     datetime.timedelta(days=60))
         if to_entered_datetime is None:
-            to_entered_datetime = datetime.datetime.utcnow()
+            to_entered_datetime = datetime.datetime.now(datetime.UTC)
 
         params = {
             'fromEnteredTime': self._format_date_as_iso(
                 'from_entered_datetime', from_entered_datetime),
-            'toEnteredTime': self._format_datetime(
+            'toEnteredTime': self._format_date_as_iso(
                 'to_entered_datetime', to_entered_datetime),
         }
 
@@ -381,14 +381,14 @@ class BaseClient(EnumEnforcer):
         if start_date is None:
             start_date = self._format_date_as_iso(
                     'start_date',
-                    datetime.datetime.now() - datetime.timedelta(days=60))
+                    datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=60))
         else:
             start_date = self._format_date_as_iso('start_date', start_date)
 
         # End date
         if end_date is None:
             end_date = self._format_date_as_iso(
-                    'end_date', datetime.datetime.now())
+                    'end_date', datetime.datetime.now(datetime.UTC))
         else:
             end_date = self._format_date_as_iso('end_date', end_date)
 
