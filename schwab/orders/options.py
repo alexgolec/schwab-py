@@ -18,15 +18,21 @@ def _parse_expiration_date(expiration_date):
 
 
 class OptionSymbol:
-    '''
-    Construct an option symbol from its constituent parts. Options symbols
-    have the following format: ``[Underlying]_[Two digit month][Two digit
-    day][Two digit year]['P' or 'C'][Strike price]``. Examples include:
+    '''Construct an option symbol from its constituent parts. Options symbols
+    have the following format: ``[Underlying][2 spaces][Two digit year]
+    [Two digit month][Two digit day]['P' or 'C'][Strike price]``
 
-     * ``GOOG_012122P620``: GOOG Jan 21 2022 620 Put
-     * ``TSLA_112020C1360``: TSLA Nov 20 2020 1360 Call
-     * ``SPY_121622C335``: SPY Dec 16 2022 335 Call
+    The format of the strike price is modified based on its amount:
+     * If less than 1000, Strike Price is multiple by 1000 and pre-pended with
+       two zeroes
+     * If greater than 1000, it's prepended with one zero.
 
+     Examples include:
+     * ``QQQ  240420P00500000``: QQQ Apr 20, 2024 500 Put (note the two zeroes
+       in front because strike is less than 1000)
+     * ``SPXW  240420C05040000``: SPX Weekly Apr 20, 2024 5040 Call (note the
+       one zero in front because strike is greater than 1000)
+     
     Note while each of the individual parts is validated by itself, the
     option symbol itself may not represent a traded option:
 
@@ -41,12 +47,13 @@ class OptionSymbol:
     :param underlying_symbol: Symbol of the underlying. Not validated.
     :param expiration_date: Expiration date. Accepts ``datetime.date``,
                             ``datetime.datetime``, or strings with the
-                            format ``[Two digit month][Two digit day][Two
-                            digit year]``.
+                            format ``[Two digit year][Two digit month][Two
+                            digit day]``.
     :param contract_type: ``P` or `PUT`` for put and ``C` or `CALL`` for call.
     :param strike_price_as_string: Strike price, represented by a string as
                                    you would see at the end of a real option
                                    symbol.
+
     '''
 
     def __init__(self, underlying_symbol, expiration_date, contract_type,

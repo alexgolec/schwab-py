@@ -35,6 +35,7 @@ setuptools.setup(
         'prompt_toolkit',
         'python-dateutil',
         'selenium',
+        'websockets'
     ],
     extras_require={
         'dev': [

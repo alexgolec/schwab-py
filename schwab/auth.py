@@ -91,7 +91,7 @@ def __fetch_and_register_token_from_redirect(
     update_token = (
         __update_token(token_path) if token_write_func is None
         else token_write_func)
-    metadata_manager = TokenMetadata(int(time.time()), update_token)
+    metadata_manager = TokenMetadata(token, int(time.time()), update_token)
     update_token = metadata_manager.wrapped_token_write_func()
     update_token(token)
 
@@ -129,11 +129,8 @@ class TokenMetadata:
     Provides the functionality required to maintain and update our view of the
     token's metadata.
     '''
-    # XXX: Token metadata is currently not considered sensitive enough to wrap
-    #      register for redactions. If we add anything sensitive to the token
-    #      metadata, we'll need to update the redaction registration logic.
-
-    def __init__(self, creation_timestamp, unwrapped_token_write_func=None):
+    def __init__(
+            self, token, creation_timestamp, unwrapped_token_write_func=None):
         self.creation_timestamp = creation_timestamp
 
         # The token write function is ultimately stored in the session. When we
@@ -141,6 +138,10 @@ class TokenMetadata:
         # to the unwrapped token writer function to allow us to inject the
         # appropriate write function.
         self.unwrapped_token_write_func = unwrapped_token_write_func
+
+        # The current token. Updated whenever the wrapped token update function 
+        # is called.
+        self.token = token
 
     @classmethod
     def from_loaded_token(cls, token, app_secret, unwrapped_token_write_func=None):
@@ -150,35 +151,29 @@ class TokenMetadata:
         no metadata, assign default values.
         '''
         logger = get_logger()
-        if cls.is_metadata_aware_token(token):
-            logger.info(
-                    'Loaded metadata aware token with creation timestamp %s',
-                    token['creation_timestamp'])
-            return TokenMetadata(
-                token['creation_timestamp'], unwrapped_token_write_func)
-        elif cls.is_legacy_token(token):
-            logger.info('Loaded legacy token')
-            return TokenMetadata(None, unwrapped_token_write_func)
-        else:
-            logger.warn('Unrecognized token format')
-            return TokenMetadata(None, unwrapped_token_write_func)
-
-    @classmethod
-    def is_legacy_token(cls, token):
-        return 'creation_timestamp' not in token
-
-    @classmethod
-    def is_metadata_aware_token(cls, token):
-        return 'creation_timestamp' in token and 'token' in token
+        logger.info(
+                'Loaded metadata aware token with creation timestamp %s',
+                token['creation_timestamp'])
+        return TokenMetadata(
+            token['token'],
+            token['creation_timestamp'],
+            unwrapped_token_write_func)
 
     def wrapped_token_write_func(self):
         '''
-        Hook the call to the token write function so that the write function is
-        passed the metadata-aware version of the token.
+        Returns a version of the unwrapped write function which wraps the token 
+        in metadata and updates our view on the most recent token.
         '''
         def wrapped_token_write_func(token, *args, **kwargs):
-            return self.unwrapped_token_write_func(
+            # If the write function is going to raise an exception, let it do so 
+            # here before we update our reference to the current token.
+            ret = self.unwrapped_token_write_func(
                 self.wrap_token_in_metadata(token), *args, **kwargs)
+
+            self.token = token
+
+            return ret
+
         return wrapped_token_write_func
 
     def wrap_token_in_metadata(self, token):
@@ -444,8 +439,7 @@ def client_from_access_functions(api_key, app_secret, token_read_func,
     # Extract metadata and unpack the token, if necessary
     metadata = TokenMetadata.from_loaded_token(
             token, app_secret, token_write_func)
-    if TokenMetadata.is_metadata_aware_token(token):
-        token = token['token']
+    token = token['token']
 
     # Don't emit token details in debug logs
     register_redactions(token)

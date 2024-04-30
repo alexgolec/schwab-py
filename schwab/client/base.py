@@ -420,7 +420,7 @@ class BaseClient(EnumEnforcer):
     ##########################################################################
     # User Info and Preferences
 
-    def get_user_preferences(self, account_id):
+    def get_user_preferences(self):
         '''Preferences for the logged in account, including all linked
         accounts.'''
         path = '/trader/v1/userPreference'

@@ -118,7 +118,7 @@ def _enable_bug_report_logging(output=sys.stderr, loggers=None):
         loggers = (
             schwab.auth.get_logger(),
             schwab.client.base.get_logger(),
-            #schwab.streaming.get_logger(),
+            schwab.streaming.get_logger(),
             get_logger())
 
     class RecordingHandler(logging.Handler):
