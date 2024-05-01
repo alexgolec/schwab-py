@@ -5,31 +5,31 @@ from schwab.orders.generic import OrderBuilder
 
 def _parse_expiration_date(expiration_date):
     try:
-        date = datetime.datetime.strptime(expiration_date, '%y%m%d')
+        date = datetime.datetime.strptime(expiration_date, '%Y%m%d')
         return datetime.date(year=date.year, month=date.month, day=date.day)
     except ValueError:
         pass
 
     raise ValueError(
         'expiration date must follow format ' +
-        '[Two digit year][Two digit month]' +
+        '[Four digit year][Two digit month]' +
         '[Two digit day]')
 
 
 class OptionSymbol:
     '''Construct an option symbol from its constituent parts. Options symbols
-    have the following format: ``[Underlying][2 spaces][Two digit year]
+    have the following format: ``[Underlying][2 spaces][Four digit year]
     [Two digit month][Two digit day]['P' or 'C'][Strike price]``
 
     The format of the strike price is modified based on its amount:
      * If less than 1000, Strike Price is multiplied by 1000 and pre-pended with
        two zeroes
-     * If greater than 1000, it's prepended with one zero.
+     * If >= 1000, it's multiplied by 1000 and prepended with one zero.
 
      Examples include:
-     * ``QQQ  240420P00500000``: QQQ Apr 20, 2024 500 Put (note the two zeroes
+     * ``QQQ  20240420P00500000``: QQQ Apr 20, 2024 500 Put (note the two zeroes
        in front because strike is less than 1000)
-     * ``SPXW  240420C05040000``: SPX Weekly Apr 20, 2024 5040 Call (note the
+     * ``SPXW  20240420C05040000``: SPX Weekly Apr 20, 2024 5040 Call (note the
        one zero in front because strike is greater than 1000)
      
     Note while each of the individual parts is validated by itself, the
@@ -46,7 +46,7 @@ class OptionSymbol:
     :param underlying_symbol: Symbol of the underlying. Not validated.
     :param expiration_date: Expiration date. Accepts ``datetime.date``,
                             ``datetime.datetime``, or strings with the
-                            format ``[Two digit year][Two digit month][Two
+                            format ``[Four digit year][Two digit month][Two
                             digit day]``.
     :param contract_type: ``P` or `PUT`` for put and ``C` or `CALL`` for call.
     :param strike_price_as_string: Strike price, represented by a string as
@@ -78,8 +78,8 @@ class OptionSymbol:
             self.expiration_date = expiration_date
         else:
             raise ValueError(
-                'expiration_date must be a string with format %y%m%d ' +
-                '(e.g. 240119) or one of datetime.date or ' +
+                'expiration_date must be a string with format %Y%m%d ' +
+                '(e.g. 20240119) or one of datetime.date or ' +
                 'datetime.datetime')
 
         assert (isinstance(self.expiration_date, datetime.date))
@@ -99,7 +99,7 @@ class OptionSymbol:
         if strike < 1000:
             strike_price_as_string = '00' + str(int(strike * 1000))
         else:
-            strike_price_as_string = '0' + strike_price_as_string
+            strike_price_as_string = '0' + str(int(strike * 1000))
 
         self.strike_price = strike_price_as_string
 
@@ -147,7 +147,7 @@ class OptionSymbol:
         '''
         return '{}  {}{}{}'.format(
             self.underlying_symbol,
-            self.expiration_date.strftime('%y%m%d'),
+            self.expiration_date.strftime('%Y%m%d'),
             self.contract_type,
             self.strike_price
         )
