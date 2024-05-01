@@ -145,7 +145,7 @@ class OptionSymbol:
         '''
         Returns the option symbol represented by this builder.
         '''
-        return '{} {}{}{}'.format(
+        return '{}  {}{}{}'.format(
             self.underlying_symbol,
             self.expiration_date.strftime('%y%m%d'),
             self.contract_type,
