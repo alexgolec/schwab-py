@@ -32,13 +32,20 @@ unofficial python wrapper around the previous TDAmeritrade API. This library is
 currently the most popular method of accessing this API, with a community of 
 hundreds of active users on our Discord server. 
 
-~~While the details of the forthcoming Schwab API have not yet been announced, 
+.. raw:: html
+
+   <s>
+While the detail of the forthcoming Schwab API have not yet been announced, 
 this repository serves as a placeholder for a python wrapper around it. It 
-currently has no functionality.~~ The Schwab API has now been released. 
-We are currently processing the details and are actively working on adding 
-complete functionality. Stay tuned for updates as they become available.
+currently has no functionality.
 
+.. raw:: html
 
+   </s>
+
+The Schwab API has now been released. 
+The details are being processed and complete functionality is being worked 
+on actively. Stay tuned for updates as they become available.
 
 **Disclaimer:** *schwab-api is an unofficial API wrapper. It is in no way 
 endorsed by or affiliated with TD Ameritrade, Charles Schwab or any associated 
