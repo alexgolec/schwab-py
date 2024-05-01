@@ -136,7 +136,7 @@ class Utils(EnumEnforcer):
             return None
 
         m = re.match(
-                r'https://api.schwabapi.com/trader/v1/accounts/([/w]+)/orders/(/d+)',
+                r'https://api.schwabapi.com/trader/v1/accounts/(\w+)/orders/(\d+)',
                 location)
 
         if m is None:
@@ -144,7 +144,7 @@ class Utils(EnumEnforcer):
         account_hash, order_id = m.group(1), int(m.group(2))
 
         if str(account_hash) != str(self.account_hash):
-            raise AccountIdMismatchException(
+            raise AccountHashMismatchException(
                 'order request account hash != Utils.account_hash')
 
         return order_id
