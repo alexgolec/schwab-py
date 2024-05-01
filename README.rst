@@ -20,7 +20,7 @@ access to their TDAmeritrade accounts, trading in equities, ETFs, and options,
 plus a wide range of historical data. 
 
 Since this purchase, Schwab has begun to transition TDAmeritrade customers onto 
-their own service. In late 2022, the announced the TDAmeritrade REST API will be 
+their own service. In late 2022, they announced the TDAmeritrade REST API will be 
 included in this transition, which will happen over the course of 2023. 
 
 
@@ -32,9 +32,11 @@ unofficial python wrapper around the previous TDAmeritrade API. This library is
 currently the most popular method of accessing this API, with a community of 
 hundreds of active users on our Discord server. 
 
-While the details of the forthcoming Schwab API have not yet been announced, 
+~~While the details of the forthcoming Schwab API have not yet been announced, 
 this repository serves as a placeholder for a python wrapper around it. It 
-currently has no functionality. Stay tuned for updates as they become available.
+currently has no functionality.~~ The Schwab API has now been released. 
+We are currently processing the details and are actively working on adding 
+complete functionality. Stay tuned for updates as they become available.
 
 
 
