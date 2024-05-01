@@ -4,17 +4,16 @@ from schwab.orders.generic import OrderBuilder
 
 
 def _parse_expiration_date(expiration_date):
-    date = None
     try:
-        date = datetime.datetime.strptime(expiration_date, '%m%d%y')
+        date = datetime.datetime.strptime(expiration_date, '%y%m%d')
         return datetime.date(year=date.year, month=date.month, day=date.day)
     except ValueError:
         pass
 
     raise ValueError(
         'expiration date must follow format ' +
-        '[Month with leading zero][Day with leading zero]' +
-        '[two digit year]')
+        '[Two digit year][Two digit month]' +
+        '[Two digit day]')
 
 
 class OptionSymbol:
@@ -23,9 +22,9 @@ class OptionSymbol:
     [Two digit month][Two digit day]['P' or 'C'][Strike price]``
 
     The format of the strike price is modified based on its amount:
-     * If less than 1000, Strike Price is multiple by 1000 and pre-pended with
+     * If less than 1000, Strike Price is multiplied by 1000 and pre-pended with
        two zeroes
-     * If greater than 1000, it's prepended with one zero.
+     * If >= 1000, it's multiplied by 1000 and prepended with one zero.
 
      Examples include:
      * ``QQQ  240420P00500000``: QQQ Apr 20, 2024 500 Put (note the two zeroes
@@ -79,30 +78,23 @@ class OptionSymbol:
             self.expiration_date = expiration_date
         else:
             raise ValueError(
-                'expiration_date must be a string with format %m%d%y ' +
-                '(e.g. 01092020) or one of datetime.date or ' +
+                'expiration_date must be a string with format %y%m%d ' +
+                '(e.g. 240119) or one of datetime.date or ' +
                 'datetime.datetime')
 
-        assert(isinstance(self.expiration_date, datetime.date))
+        assert (isinstance(self.expiration_date, datetime.date))
 
-        strike = None
         try:
             strike = float(strike_price_as_string)
+            if strike <= 0:
+                raise ValueError('Strike price must be a positive number.')
         except ValueError:
-            pass
-        if (strike is None or not isinstance(strike_price_as_string, str)
-                or strike <= 0):
-            raise ValueError(
-                'Strike price must be a string representing a positive ' +
-                'float')
-
-        # Remove extraneous zeroes at the end
-        strike_copy = strike_price_as_string
-        while strike_copy[-1] == '0':
-            strike_copy = strike_copy[:-1]
-        if strike_copy[-1] == '.':
-            strike_price_as_string = strike_copy[:-1]
-
+            raise ValueError('Strike price must be a string representing a positive float')
+        # Prepend zeroes based on strike price
+        if strike < 1000:
+            strike_price_as_string = '00' + str(int(strike * 1000))
+        else:
+            strike_price_as_string = '0' + str(int(strike * 1000))
         self.strike_price = strike_price_as_string
 
     @classmethod
@@ -147,9 +139,9 @@ class OptionSymbol:
         '''
         Returns the option symbol represented by this builder.
         '''
-        return '{}_{}{}{}'.format(
+        return '{}  {}{}{}'.format(
             self.underlying_symbol,
-            self.expiration_date.strftime('%m%d%y'),
+            self.expiration_date.strftime('%y%m%d'),
             self.contract_type,
             self.strike_price
         )
