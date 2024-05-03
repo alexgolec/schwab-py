@@ -12,10 +12,6 @@ jobs:
       matrix:
         platform: [ubuntu-latest, macos-latest, windows-latest]
         python:
-        - version: "3.8"
-          toxenv: py38
-        - version: "3.9"
-          toxenv: py39
         - version: "3.10"
           toxenv: py310
         - version: "3.11"
@@ -43,14 +39,14 @@ jobs:
       run: tox
 
     - name: Report coverage
-      if: matrix.python.version == '3.8'
+      if: matrix.python.version == '3.10'
       run: |
         coverage combine
         coverage report
         coverage xml
 
     - name: Upload coverage to Codecov  
-      if: matrix.python.version == '3.8'
+      if: matrix.python.version == '3.10'
       uses: codecov/codecov-action@v4.0.1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}

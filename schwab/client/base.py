@@ -211,10 +211,10 @@ class BaseClient(EnumEnforcer):
 
         if from_entered_datetime is None:
             from_entered_datetime = (
-                    datetime.datetime.now(datetime.UTC) -
+                    datetime.datetime.now(datetime.timezone.utc) -
                     datetime.timedelta(days=60))
         if to_entered_datetime is None:
-            to_entered_datetime = datetime.datetime.now(datetime.UTC)
+            to_entered_datetime = datetime.datetime.now(datetime.timezone.utc)
 
         params = {
             'fromEnteredTime': self._format_date_as_iso(
@@ -381,14 +381,15 @@ class BaseClient(EnumEnforcer):
         if start_date is None:
             start_date = self._format_date_as_iso(
                     'start_date',
-                    datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=60))
+                    datetime.datetime.now(datetime.timezone.utc)
+                    - datetime.timedelta(days=60))
         else:
             start_date = self._format_date_as_iso('start_date', start_date)
 
         # End date
         if end_date is None:
             end_date = self._format_date_as_iso(
-                    'end_date', datetime.datetime.now(datetime.UTC))
+                    'end_date', datetime.datetime.now(datetime.timezone.utc))
         else:
             end_date = self._format_date_as_iso('end_date', end_date)
 
