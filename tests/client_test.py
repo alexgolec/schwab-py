@@ -32,8 +32,11 @@ MIN_TIMESTAMP_MILLIS = int(MIN_DATETIME.timestamp()) * 1000
 
 NOW_DATETIME = datetime.datetime(2020, 1, 2, 3, 4, 5)
 NOW_DATE = datetime.date(2020, 1, 2)
-NOW_DATETIME_ISO = '2020-01-02T03:04:05+0000'
+NOW_DATETIME_ISO = '2020-01-02T03:04:05Z'
 NOW_DATE_ISO = '2020-01-02'
+
+NOW_DATETIME_MINUS_60_DAYS = NOW_DATE - datetime.timedelta(days=60)
+NOW_DATETIME_MINUS_60_DAYS_ISO = '2019-11-03T03:04:05Z'
 
 NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS = \
         int((NOW_DATETIME + datetime.timedelta(days=7)).timestamp()) * 1000
@@ -42,6 +45,10 @@ NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS = \
 class mockdatetime(datetime.datetime):
     @classmethod
     def utcnow(cls):
+        return NOW_DATETIME
+
+    @classmethod
+    def now(cls, timezone):
         return NOW_DATETIME
 
 
@@ -89,340 +96,56 @@ class _TestClient:
 
 
     '''
-    # get_order
-
-    
-    def test_get_order(self):
-        self.client.get_order(ORDER_ID, ACCOUNT_ID)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/orders/{orderId}'),
-            params={})
-
-    def test_get_order_str(self):
-        self.client.get_order(str(ORDER_ID), str(ACCOUNT_ID))
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/orders/{orderId}'),
-            params={})
-
-    # cancel_order
-
-    def test_cancel_order(self):
-        self.client.cancel_order(ORDER_ID, ACCOUNT_ID)
-        self.mock_session.delete.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/orders/{orderId}'))
-
-    def test_cancel_order_str(self):
-        self.client.cancel_order(str(ORDER_ID), str(ACCOUNT_ID))
-        self.mock_session.delete.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/orders/{orderId}'))
-
-    # get_orders_by_path
-
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_path_vanilla(self):
-        self.client.get_orders_by_path(ACCOUNT_ID)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/orders'), params={
-                'fromEnteredTime': MIN_ISO,
-                'toEnteredTime': NOW_DATETIME_ISO
-            })
-
-    
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_path_vanilla_str(self):
-        self.client.get_orders_by_path(str(ACCOUNT_ID))
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/orders'), params={
-                'fromEnteredTime': MIN_ISO,
-                'toEnteredTime': NOW_DATETIME_ISO
-            })
-
-    
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_path_from_not_datetime(self):
-        with self.assertRaises(ValueError) as cm:
-            self.client.get_orders_by_path(
-                ACCOUNT_ID, from_entered_datetime='2020-01-01')
-        self.assertEqual(str(cm.exception),
-                         "expected type 'datetime.datetime' for " +
-                         "from_entered_datetime, got 'builtins.str'")
-
-    
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_path_to_not_datetime(self):
-        with self.assertRaises(ValueError) as cm:
-            self.client.get_orders_by_path(
-                ACCOUNT_ID, to_entered_datetime='2020-01-01')
-        self.assertEqual(str(cm.exception),
-                         "expected type 'datetime.datetime' for " +
-                         "to_entered_datetime, got 'builtins.str'")
-
-    
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_path_max_results(self):
-        self.client.get_orders_by_path(ACCOUNT_ID, max_results=100)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/orders'), params={
-                'fromEnteredTime': MIN_ISO,
-                'toEnteredTime': NOW_DATETIME_ISO,
-                'maxResults': 100,
-            })
-
-    
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_path_from_entered_datetime(self):
-        self.client.get_orders_by_path(
-            ACCOUNT_ID, from_entered_datetime=EARLIER_DATETIME)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/orders'), params={
-                'fromEnteredTime': EARLIER_ISO,
-                'toEnteredTime': NOW_DATETIME_ISO,
-            })
-
-    
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_path_to_entered_datetime(self):
-        self.client.get_orders_by_path(
-            ACCOUNT_ID, to_entered_datetime=EARLIER_DATETIME)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/orders'), params={
-                'fromEnteredTime': MIN_ISO,
-                'toEnteredTime': EARLIER_ISO,
-            })
-
-    
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_path_status_and_statuses(self):
-        self.assertRaises(ValueError, lambda: self.client.get_orders_by_path(
-            ACCOUNT_ID, to_entered_datetime=EARLIER_DATETIME,
-            status='EXPIRED', statuses=[self.client_class.Order.Status.FILLED]))
-
-    
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_path_status(self):
-        self.client.get_orders_by_path(
-            ACCOUNT_ID, status=self.client_class.Order.Status.FILLED)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/orders'), params={
-                'fromEnteredTime': MIN_ISO,
-                'toEnteredTime': NOW_DATETIME_ISO,
-                'status': 'FILLED'
-            })
-
-    
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_path_status_unchecked(self):
-        self.client.set_enforce_enums(False)
-        self.client.get_orders_by_path(ACCOUNT_ID, status='FILLED')
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/orders'), params={
-                'fromEnteredTime': MIN_ISO,
-                'toEnteredTime': NOW_DATETIME_ISO,
-                'status': 'FILLED'
-            })
-
-    
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_path_statuses(self):
-        self.client.get_orders_by_path(
-            ACCOUNT_ID, statuses=[
-                self.client_class.Order.Status.FILLED,
-                self.client_class.Order.Status.EXPIRED])
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/orders'), params={
-                'fromEnteredTime': MIN_ISO,
-                'toEnteredTime': NOW_DATETIME_ISO,
-                'status': 'FILLED,EXPIRED'
-            })
-
-    
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_path_statuses_scalar(self):
-        self.client.get_orders_by_path(
-            ACCOUNT_ID, statuses=self.client_class.Order.Status.FILLED)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/orders'), params={
-                'fromEnteredTime': MIN_ISO,
-                'toEnteredTime': NOW_DATETIME_ISO,
-                'status': 'FILLED'
-            })
-
-    
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_path_statuses_unchecked(self):
-        self.client.set_enforce_enums(False)
-        self.client.get_orders_by_path(
-            ACCOUNT_ID, statuses=['FILLED', 'EXPIRED'])
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/orders'), params={
-                'fromEnteredTime': MIN_ISO,
-                'toEnteredTime': NOW_DATETIME_ISO,
-                'status': 'FILLED,EXPIRED'
-            })
-
-    # get_orders_by_query
-
-    
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_query_vanilla(self):
-        self.client.get_orders_by_query()
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/orders'), params={
-                'fromEnteredTime': MIN_ISO,
-                'toEnteredTime': NOW_DATETIME_ISO
-            })
-
-    
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_query_max_results(self):
-        self.client.get_orders_by_query(max_results=100)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/orders'), params={
-                'fromEnteredTime': MIN_ISO,
-                'toEnteredTime': NOW_DATETIME_ISO,
-                'maxResults': 100,
-            })
-
-    
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_query_from_entered_datetime(self):
-        self.client.get_orders_by_query(from_entered_datetime=EARLIER_DATETIME)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/orders'), params={
-                'fromEnteredTime': EARLIER_ISO,
-                'toEnteredTime': NOW_DATETIME_ISO,
-            })
-
-    
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_query_to_entered_datetime(self):
-        self.client.get_orders_by_query(to_entered_datetime=EARLIER_DATETIME)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/orders'), params={
-                'fromEnteredTime': MIN_ISO,
-                'toEnteredTime': EARLIER_ISO,
-            })
-
-    
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_query_status_and_statuses(self):
-        with self.assertRaises(
-                ValueError, msg='at most one of status or statuses may be set'):
-            self.client.get_orders_by_query(
-                to_entered_datetime=EARLIER_DATETIME,
-                status='EXPIRED', statuses=[
-                    self.client_class.Order.Status.FILLED,
-                    self.client_class.Order.Status.EXPIRED])
-
-    
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_query_status(self):
-        self.client.get_orders_by_query(status=self.client_class.Order.Status.FILLED)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/orders'), params={
-                'fromEnteredTime': MIN_ISO,
-                'toEnteredTime': NOW_DATETIME_ISO,
-                'status': 'FILLED'
-            })
-
-    
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_query_status_unchecked(self):
-        self.client.set_enforce_enums(False)
-        self.client.get_orders_by_query(status='FILLED')
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/orders'), params={
-                'fromEnteredTime': MIN_ISO,
-                'toEnteredTime': NOW_DATETIME_ISO,
-                'status': 'FILLED'
-            })
-
-    
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_query_statuses(self):
-        self.client.get_orders_by_query(statuses=[
-            self.client_class.Order.Status.FILLED,
-            self.client_class.Order.Status.EXPIRED])
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/orders'), params={
-                'fromEnteredTime': MIN_ISO,
-                'toEnteredTime': NOW_DATETIME_ISO,
-                'status': 'FILLED,EXPIRED'
-            })
-
-    
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_query_statuses_scalar(self):
-        self.client.get_orders_by_query(statuses=self.client_class.Order.Status.FILLED)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/orders'), params={
-                'fromEnteredTime': MIN_ISO,
-                'toEnteredTime': NOW_DATETIME_ISO,
-                'status': 'FILLED'
-            })
-
-    
-    @patch('tda.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_query_statuses_unchecked(self):
-        self.client.set_enforce_enums(False)
-        self.client.get_orders_by_query(statuses=['FILLED', 'EXPIRED'])
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/orders'), params={
-                'fromEnteredTime': MIN_ISO,
-                'toEnteredTime': NOW_DATETIME_ISO,
-                'status': 'FILLED,EXPIRED'
-            })
-
     # place_order
 
     
     def test_place_order(self):
         order_spec = {'order': 'spec'}
-        self.client.place_order(ACCOUNT_ID, order_spec)
+        self.client.place_order(ACCOUNT_HASH, order_spec)
         self.mock_session.post.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/orders'), json=order_spec)
+            self.make_url('/v1/accounts/{accountHash}/orders'), json=order_spec)
 
     
     def test_place_order_order_builder(self):
         order_spec = OrderBuilder(enforce_enums=False).set_order_type('LIMIT')
         expected_spec = {'orderType': 'LIMIT'}
-        self.client.place_order(ACCOUNT_ID, order_spec)
+        self.client.place_order(ACCOUNT_HASH, order_spec)
         self.mock_session.post.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/orders'),
+            self.make_url('/v1/accounts/{accountHash}/orders'),
             json=expected_spec)
 
     
     def test_place_order_str(self):
         order_spec = {'order': 'spec'}
-        self.client.place_order(str(ACCOUNT_ID), order_spec)
+        self.client.place_order(str(ACCOUNT_HASH), order_spec)
         self.mock_session.post.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/orders'), json=order_spec)
+            self.make_url('/v1/accounts/{accountHash}/orders'), json=order_spec)
 
     # replace_order
 
     
     def test_replace_order(self):
         order_spec = {'order': 'spec'}
-        self.client.replace_order(ACCOUNT_ID, ORDER_ID, order_spec)
+        self.client.replace_order(ACCOUNT_HASH, ORDER_ID, order_spec)
         self.mock_session.put.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/orders/{orderId}'),
+            self.make_url('/v1/accounts/{accountHash}/orders/{orderId}'),
             json=order_spec)
 
     
     def test_replace_order_order_builder(self):
         order_spec = OrderBuilder(enforce_enums=False).set_order_type('LIMIT')
         expected_spec = {'orderType': 'LIMIT'}
-        self.client.replace_order(ACCOUNT_ID, ORDER_ID, order_spec)
+        self.client.replace_order(ACCOUNT_HASH, ORDER_ID, order_spec)
         self.mock_session.put.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/orders/{orderId}'),
+            self.make_url('/v1/accounts/{accountHash}/orders/{orderId}'),
             json=expected_spec)
 
     
     def test_replace_order_str(self):
         order_spec = {'order': 'spec'}
-        self.client.replace_order(str(ACCOUNT_ID), str(ORDER_ID), order_spec)
+        self.client.replace_order(str(ACCOUNT_HASH), str(ORDER_ID), order_spec)
         self.mock_session.put.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/orders/{orderId}'),
+            self.make_url('/v1/accounts/{accountHash}/orders/{orderId}'),
             json=order_spec)
 
     # create_saved_order
@@ -430,103 +153,103 @@ class _TestClient:
     
     def test_create_saved_order(self):
         order_spec = {'order': 'spec'}
-        self.client.create_saved_order(ACCOUNT_ID, order_spec)
+        self.client.create_saved_order(ACCOUNT_HASH, order_spec)
         self.mock_session.post.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/savedorders'),
+            self.make_url('/v1/accounts/{accountHash}/savedorders'),
             json=order_spec)
 
     
     def test_create_saved_order_order_builder(self):
         order_spec = OrderBuilder(enforce_enums=False).set_order_type('LIMIT')
         expected_spec = {'orderType': 'LIMIT'}
-        self.client.create_saved_order(ACCOUNT_ID, order_spec)
+        self.client.create_saved_order(ACCOUNT_HASH, order_spec)
         self.mock_session.post.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/savedorders'),
+            self.make_url('/v1/accounts/{accountHash}/savedorders'),
             json=expected_spec)
 
     
     def test_create_saved_order_str(self):
         order_spec = {'order': 'spec'}
-        self.client.create_saved_order(str(ACCOUNT_ID), order_spec)
+        self.client.create_saved_order(str(ACCOUNT_HASH), order_spec)
         self.mock_session.post.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/savedorders'),
+            self.make_url('/v1/accounts/{accountHash}/savedorders'),
             json=order_spec)
 
     # delete_saved_order
 
     
     def test_delete_saved_order(self):
-        self.client.delete_saved_order(ACCOUNT_ID, SAVED_ORDER_ID)
+        self.client.delete_saved_order(ACCOUNT_HASH, SAVED_ORDER_ID)
         self.mock_session.delete.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/savedorders/{savedOrderId}'))
+            self.make_url('/v1/accounts/{accountHash}/savedorders/{savedOrderId}'))
 
     
     def test_delete_saved_order_str(self):
-        self.client.delete_saved_order(str(ACCOUNT_ID), str(SAVED_ORDER_ID))
+        self.client.delete_saved_order(str(ACCOUNT_HASH), str(SAVED_ORDER_ID))
         self.mock_session.delete.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/savedorders/{savedOrderId}'))
+            self.make_url('/v1/accounts/{accountHash}/savedorders/{savedOrderId}'))
 
     # delete_saved_order
 
     
     def test_get_saved_order(self):
-        self.client.get_saved_order(ACCOUNT_ID, SAVED_ORDER_ID)
+        self.client.get_saved_order(ACCOUNT_HASH, SAVED_ORDER_ID)
         self.mock_session.get.assert_called_once_with(
             self.make_url(
-                '/v1/accounts/{accountId}/savedorders/{savedOrderId}'),
+                '/v1/accounts/{accountHash}/savedorders/{savedOrderId}'),
             params={})
 
     
     def test_get_saved_order_str(self):
-        self.client.get_saved_order(str(ACCOUNT_ID), str(SAVED_ORDER_ID))
+        self.client.get_saved_order(str(ACCOUNT_HASH), str(SAVED_ORDER_ID))
         self.mock_session.get.assert_called_once_with(
             self.make_url(
-                '/v1/accounts/{accountId}/savedorders/{savedOrderId}'),
+                '/v1/accounts/{accountHash}/savedorders/{savedOrderId}'),
             params={})
 
     # get_saved_orders_by_path
 
     
     def test_get_saved_orders_by_path(self):
-        self.client.get_saved_orders_by_path(ACCOUNT_ID)
+        self.client.get_saved_orders_by_path(ACCOUNT_HASH)
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/savedorders'), params={})
+            self.make_url('/v1/accounts/{accountHash}/savedorders'), params={})
 
     
     def test_get_saved_orders_by_path_str(self):
-        self.client.get_saved_orders_by_path(str(ACCOUNT_ID))
+        self.client.get_saved_orders_by_path(str(ACCOUNT_HASH))
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/savedorders'), params={})
+            self.make_url('/v1/accounts/{accountHash}/savedorders'), params={})
 
     # replace_saved_order
 
     
     def test_replace_saved_order(self):
         order_spec = {'order': 'spec'}
-        self.client.replace_saved_order(ACCOUNT_ID, SAVED_ORDER_ID, order_spec)
+        self.client.replace_saved_order(ACCOUNT_HASH, SAVED_ORDER_ID, order_spec)
         self.mock_session.put.assert_called_once_with(
             self.make_url(
-                '/v1/accounts/{accountId}/savedorders/{savedOrderId}'),
+                '/v1/accounts/{accountHash}/savedorders/{savedOrderId}'),
             json=order_spec)
 
     
     def test_replace_saved_order_order_builder(self):
         order_spec = OrderBuilder(enforce_enums=False).set_order_type('LIMIT')
         expected_spec = {'orderType': 'LIMIT'}
-        self.client.replace_saved_order(ACCOUNT_ID, SAVED_ORDER_ID, order_spec)
+        self.client.replace_saved_order(ACCOUNT_HASH, SAVED_ORDER_ID, order_spec)
         self.mock_session.put.assert_called_once_with(
             self.make_url(
-                '/v1/accounts/{accountId}/savedorders/{savedOrderId}'),
+                '/v1/accounts/{accountHash}/savedorders/{savedOrderId}'),
             json=expected_spec)
 
     
     def test_replace_saved_order_str(self):
         order_spec = {'order': 'spec'}
         self.client.replace_saved_order(
-            str(ACCOUNT_ID), str(SAVED_ORDER_ID), order_spec)
+            str(ACCOUNT_HASH), str(SAVED_ORDER_ID), order_spec)
         self.mock_session.put.assert_called_once_with(
             self.make_url(
-                '/v1/accounts/{accountId}/savedorders/{savedOrderId}'),
+                '/v1/accounts/{accountHash}/savedorders/{savedOrderId}'),
             json=order_spec)
     '''
 
@@ -546,7 +269,7 @@ class _TestClient:
             self.make_url('/trader/v1/accounts/{accountHash}'),
             params={'fields': 'positions'})
 
-    
+
     def test_get_account_fields_scalar(self):
         self.client.get_account(
                 ACCOUNT_HASH, fields=self.client_class.Account.Fields.POSITIONS)
@@ -554,7 +277,7 @@ class _TestClient:
             self.make_url('/trader/v1/accounts/{accountHash}'),
             params={'fields': 'positions'})
 
-    
+
     def test_get_account_fields_unchecked(self):
         self.client.set_enforce_enums(False)
         self.client.get_account(ACCOUNT_HASH, fields=['positions'])
@@ -601,6 +324,256 @@ class _TestClient:
         self.mock_session.get.assert_called_once_with(
             self.make_url('/trader/v1/accounts'),
             params={'fields': 'positions'})
+
+    # get_order
+
+    
+    def test_get_order(self):
+        self.client.get_order(ORDER_ID, ACCOUNT_HASH)
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/trader/v1/accounts/{accountHash}/orders/{orderId}'),
+            params={})
+
+    def test_get_order_str(self):
+        self.client.get_order(str(ORDER_ID), str(ACCOUNT_HASH))
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/trader/v1/accounts/{accountHash}/orders/{orderId}'),
+            params={})
+
+    # cancel_order
+
+    def test_cancel_order(self):
+        self.client.cancel_order(ORDER_ID, ACCOUNT_HASH)
+        self.mock_session.delete.assert_called_once_with(
+            self.make_url('/trader/v1/accounts/{accountHash}/orders/{orderId}'))
+
+    def test_cancel_order_str(self):
+        self.client.cancel_order(str(ORDER_ID), str(ACCOUNT_HASH))
+        self.mock_session.delete.assert_called_once_with(
+            self.make_url('/trader/v1/accounts/{accountHash}/orders/{orderId}'))
+
+    # get_orders_for_account
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_orders_for_account_vanilla(self):
+        self.client.get_orders_for_account(ACCOUNT_HASH)
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/trader/v1/accounts/{accountHash}/orders'), params={
+                'fromEnteredTime': NOW_DATETIME_MINUS_60_DAYS_ISO,
+                'toEnteredTime': NOW_DATETIME_ISO
+            })
+
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_orders_for_account_from_not_datetime(self):
+        with self.assertRaises(ValueError) as cm:
+            self.client.get_orders_for_account(
+                    ACCOUNT_HASH, from_entered_datetime='2020-01-02')
+        self.assertEqual(
+                str(cm.exception),
+                "expected type in (datetime.date, datetime.datetime) for " +
+                "from_entered_datetime, got 'builtins.str'")
+
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_orders_for_account_to_not_datetime(self):
+        with self.assertRaises(ValueError) as cm:
+            self.client.get_orders_for_account(
+                    ACCOUNT_HASH, to_entered_datetime='2020-01-02')
+        self.assertEqual(
+                str(cm.exception),
+                "expected type in (datetime.date, datetime.datetime) for " +
+                "to_entered_datetime, got 'builtins.str'")
+
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_orders_for_account_max_results(self):
+        self.client.get_orders_for_account(ACCOUNT_HASH, max_results=100)
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/trader/v1/accounts/{accountHash}/orders'), params={
+                'fromEnteredTime': NOW_DATETIME_MINUS_60_DAYS_ISO,
+                'toEnteredTime': NOW_DATETIME_ISO,
+                'maxResults': 100,
+            })
+
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_orders_for_account_from_entered_datetime(self):
+        self.client.get_orders_for_account(
+                ACCOUNT_HASH, from_entered_datetime=datetime.datetime(
+                    year=2024, month=6, day=5, hour=4, minute=3, second=2))
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/trader/v1/accounts/{accountHash}/orders'), params={
+                'fromEnteredTime': '2024-06-05T04:03:02Z',
+                'toEnteredTime': NOW_DATETIME_ISO,
+            })
+
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_orders_for_account_to_entered_datetime(self):
+        self.client.get_orders_for_account(
+                ACCOUNT_HASH, to_entered_datetime=datetime.datetime(
+                    year=2024, month=6, day=5, hour=4, minute=3, second=2))
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/trader/v1/accounts/{accountHash}/orders'), params={
+                'fromEnteredTime': NOW_DATETIME_MINUS_60_DAYS_ISO,
+                'toEnteredTime': '2024-06-05T04:03:02Z',
+            })
+
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_orders_for_account_status(self):
+        self.client.get_orders_for_account(
+                ACCOUNT_HASH, status=self.client_class.Order.Status.FILLED)
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/trader/v1/accounts/{accountHash}/orders'), params={
+                'fromEnteredTime': NOW_DATETIME_MINUS_60_DAYS_ISO,
+                'toEnteredTime': NOW_DATETIME_ISO,
+                'status': 'FILLED'
+            })
+
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_orders_for_account_multiple_statuses(self):
+        with self.assertRaises(ValueError) as cm:
+            self.client.get_orders_for_account(
+                    ACCOUNT_HASH,
+                    status=[self.client_class.Order.Status.FILLED,
+                            self.client_class.Order.Status.REJECTED])
+        self.assertIn(
+                'expected type "Status", got type "list"',
+                str(cm.exception))
+
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_orders_for_account_status_unchecked(self):
+        self.client.set_enforce_enums(False)
+        self.client.get_orders_for_account(ACCOUNT_HASH, status='NOT_A_STATUS')
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/trader/v1/accounts/{accountHash}/orders'), params={
+                'fromEnteredTime': NOW_DATETIME_MINUS_60_DAYS_ISO,
+                'toEnteredTime': NOW_DATETIME_ISO,
+                'status': 'NOT_A_STATUS'
+            })
+
+
+    '''
+    
+    
+    # get_orders_by_query
+
+    
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_orders_by_query_vanilla(self):
+        self.client.get_orders_by_query()
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/v1/orders'), params={
+                'fromEnteredTime': MIN_ISO,
+                'toEnteredTime': NOW_DATETIME_ISO
+            })
+
+    
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_orders_by_query_max_results(self):
+        self.client.get_orders_by_query(max_results=100)
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/v1/orders'), params={
+                'fromEnteredTime': MIN_ISO,
+                'toEnteredTime': NOW_DATETIME_ISO,
+                'maxResults': 100,
+            })
+
+    
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_orders_by_query_from_entered_datetime(self):
+        self.client.get_orders_by_query(from_entered_datetime=EARLIER_DATETIME)
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/v1/orders'), params={
+                'fromEnteredTime': EARLIER_ISO,
+                'toEnteredTime': NOW_DATETIME_ISO,
+            })
+
+    
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_orders_by_query_to_entered_datetime(self):
+        self.client.get_orders_by_query(to_entered_datetime=EARLIER_DATETIME)
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/v1/orders'), params={
+                'fromEnteredTime': MIN_ISO,
+                'toEnteredTime': EARLIER_ISO,
+            })
+
+    
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_orders_by_query_status_and_statuses(self):
+        with self.assertRaises(
+                ValueError, msg='at most one of status or statuses may be set'):
+            self.client.get_orders_by_query(
+                to_entered_datetime=EARLIER_DATETIME,
+                status='EXPIRED', statuses=[
+                    self.client_class.Order.Status.FILLED,
+                    self.client_class.Order.Status.EXPIRED])
+
+    
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_orders_by_query_status(self):
+        self.client.get_orders_by_query(status=self.client_class.Order.Status.FILLED)
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/v1/orders'), params={
+                'fromEnteredTime': MIN_ISO,
+                'toEnteredTime': NOW_DATETIME_ISO,
+                'status': 'FILLED'
+            })
+
+    
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_orders_by_query_status_unchecked(self):
+        self.client.set_enforce_enums(False)
+        self.client.get_orders_by_query(status='FILLED')
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/v1/orders'), params={
+                'fromEnteredTime': MIN_ISO,
+                'toEnteredTime': NOW_DATETIME_ISO,
+                'status': 'FILLED'
+            })
+
+    
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_orders_by_query_statuses(self):
+        self.client.get_orders_by_query(statuses=[
+            self.client_class.Order.Status.FILLED,
+            self.client_class.Order.Status.EXPIRED])
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/v1/orders'), params={
+                'fromEnteredTime': MIN_ISO,
+                'toEnteredTime': NOW_DATETIME_ISO,
+                'status': 'FILLED,EXPIRED'
+            })
+
+    
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_orders_by_query_statuses_scalar(self):
+        self.client.get_orders_by_query(statuses=self.client_class.Order.Status.FILLED)
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/v1/orders'), params={
+                'fromEnteredTime': MIN_ISO,
+                'toEnteredTime': NOW_DATETIME_ISO,
+                'status': 'FILLED'
+            })
+
+    
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_orders_by_query_statuses_unchecked(self):
+        self.client.set_enforce_enums(False)
+        self.client.get_orders_by_query(statuses=['FILLED', 'EXPIRED'])
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/v1/orders'), params={
+                'fromEnteredTime': MIN_ISO,
+                'toEnteredTime': NOW_DATETIME_ISO,
+                'status': 'FILLED,EXPIRED'
+            })
+
+    '''
 
     '''
     # search_instruments
@@ -2168,107 +2141,107 @@ class _TestClient:
 
     
     def test_get_transaction(self):
-        self.client.get_transaction(ACCOUNT_ID, TRANSACTION_ID)
+        self.client.get_transaction(ACCOUNT_HASH, TRANSACTION_ID)
         self.mock_session.get.assert_called_once_with(
             self.make_url(
-                '/v1/accounts/{accountId}/transactions/{transactionId}'),
+                '/v1/accounts/{accountHash}/transactions/{transactionId}'),
             params={'apikey': API_KEY})
 
     
     def test_get_transaction_str(self):
-        self.client.get_transaction(str(ACCOUNT_ID), str(TRANSACTION_ID))
+        self.client.get_transaction(str(ACCOUNT_HASH), str(TRANSACTION_ID))
         self.mock_session.get.assert_called_once_with(
             self.make_url(
-                '/v1/accounts/{accountId}/transactions/{transactionId}'),
+                '/v1/accounts/{accountHash}/transactions/{transactionId}'),
             params={'apikey': API_KEY})
 
     # get_transactions
 
     
     def test_get_transactions(self):
-        self.client.get_transactions(ACCOUNT_ID)
+        self.client.get_transactions(ACCOUNT_HASH)
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/transactions'), params={
+            self.make_url('/v1/accounts/{accountHash}/transactions'), params={
                 'apikey': API_KEY})
 
     
     def test_get_transactions_str(self):
-        self.client.get_transactions(str(ACCOUNT_ID))
+        self.client.get_transactions(str(ACCOUNT_HASH))
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/transactions'), params={
+            self.make_url('/v1/accounts/{accountHash}/transactions'), params={
                 'apikey': API_KEY})
 
     
     def test_get_transactions_type(self):
         self.client.get_transactions(
-            ACCOUNT_ID,
+            ACCOUNT_HASH,
             transaction_type=self.client_class.Transactions.TransactionType.DIVIDEND)
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/transactions'), params={
+            self.make_url('/v1/accounts/{accountHash}/transactions'), params={
                 'apikey': API_KEY,
                 'type': 'DIVIDEND'})
 
     
     def test_get_transactions_type_unchecked(self):
         self.client.set_enforce_enums(False)
-        self.client.get_transactions(ACCOUNT_ID, transaction_type='DIVIDEND')
+        self.client.get_transactions(ACCOUNT_HASH, transaction_type='DIVIDEND')
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/transactions'), params={
+            self.make_url('/v1/accounts/{accountHash}/transactions'), params={
                 'apikey': API_KEY,
                 'type': 'DIVIDEND'})
 
     
     def test_get_transactions_symbol(self):
-        self.client.get_transactions(ACCOUNT_ID, symbol='AAPL')
+        self.client.get_transactions(ACCOUNT_HASH, symbol='AAPL')
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/transactions'), params={
+            self.make_url('/v1/accounts/{accountHash}/transactions'), params={
                 'apikey': API_KEY,
                 'symbol': 'AAPL'})
 
     
     def test_get_transactions_start_date_datetime(self):
-        self.client.get_transactions(ACCOUNT_ID, start_date=NOW_DATETIME)
+        self.client.get_transactions(ACCOUNT_HASH, start_date=NOW_DATETIME)
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/transactions'), params={
+            self.make_url('/v1/accounts/{accountHash}/transactions'), params={
                 'apikey': API_KEY,
                 'startDate': NOW_DATE_ISO})
 
     
     def test_get_transactions_start_date_date(self):
-        self.client.get_transactions(ACCOUNT_ID, start_date=NOW_DATE)
+        self.client.get_transactions(ACCOUNT_HASH, start_date=NOW_DATE)
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/transactions'), params={
+            self.make_url('/v1/accounts/{accountHash}/transactions'), params={
                 'apikey': API_KEY,
                 'startDate': NOW_DATE_ISO})
 
     
     def test_get_transactions_start_date_str(self):
         with self.assertRaises(ValueError) as cm:
-            self.client.get_transactions(ACCOUNT_ID, start_date='2020-01-01')
+            self.client.get_transactions(ACCOUNT_HASH, start_date='2020-01-01')
         self.assertEqual(str(cm.exception),
                          "expected type in (datetime.date, datetime.datetime) for " +
                          "start_date, got 'builtins.str'")
 
     
     def test_get_transactions_end_date(self):
-        self.client.get_transactions(ACCOUNT_ID, end_date=NOW_DATETIME)
+        self.client.get_transactions(ACCOUNT_HASH, end_date=NOW_DATETIME)
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/transactions'), params={
+            self.make_url('/v1/accounts/{accountHash}/transactions'), params={
                 'apikey': API_KEY,
                 'endDate': NOW_DATE_ISO})
 
     
     def test_get_transactions_end_date_datetime(self):
-        self.client.get_transactions(ACCOUNT_ID, end_date=NOW_DATETIME)
+        self.client.get_transactions(ACCOUNT_HASH, end_date=NOW_DATETIME)
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/transactions'), params={
+            self.make_url('/v1/accounts/{accountHash}/transactions'), params={
                 'apikey': API_KEY,
                 'endDate': NOW_DATE_ISO})
 
     
     def test_get_transactions_end_date_str(self):
         with self.assertRaises(ValueError) as cm:
-            self.client.get_transactions(ACCOUNT_ID, end_date='2020-01-01')
+            self.client.get_transactions(ACCOUNT_HASH, end_date='2020-01-01')
         self.assertEqual(str(cm.exception),
                          "expected type in (datetime.date, datetime.datetime) for " +
                          "end_date, got 'builtins.str'")
@@ -2277,16 +2250,16 @@ class _TestClient:
 
     
     def test_get_preferences(self):
-        self.client.get_preferences(ACCOUNT_ID)
+        self.client.get_preferences(ACCOUNT_HASH)
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/preferences'), params={
+            self.make_url('/v1/accounts/{accountHash}/preferences'), params={
                 'apikey': API_KEY})
 
     
     def test_get_preferences_str(self):
-        self.client.get_preferences(str(ACCOUNT_ID))
+        self.client.get_preferences(str(ACCOUNT_HASH))
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/preferences'), params={
+            self.make_url('/v1/accounts/{accountHash}/preferences'), params={
                 'apikey': API_KEY})
 
     # get_streamer_subscription_keys
@@ -2298,7 +2271,7 @@ class _TestClient:
             self.make_url('/v1/userprincipals/streamersubscriptionkeys'),
             params={
                 'apikey': API_KEY,
-                'accountIds': '1000,2000,3000'})
+                'accountHashs': '1000,2000,3000'})
 
     
     def test_get_streamer_subscription_keys_one_account_id(self):
@@ -2307,7 +2280,7 @@ class _TestClient:
             self.make_url('/v1/userprincipals/streamersubscriptionkeys'),
             params={
                 'apikey': API_KEY,
-                'accountIds': '1000'})
+                'accountHashs': '1000'})
 
     
     def test_get_streamer_subscription_keys_str(self):
@@ -2316,7 +2289,7 @@ class _TestClient:
             self.make_url('/v1/userprincipals/streamersubscriptionkeys'),
             params={
                 'apikey': API_KEY,
-                'accountIds': '1000,2000,3000'})
+                'accountHashs': '1000,2000,3000'})
 
     # get_user_principals
 
@@ -2362,17 +2335,17 @@ class _TestClient:
     
     def test_update_preferences(self):
         preferences = {'wantMoney': True}
-        self.client.update_preferences(ACCOUNT_ID, preferences)
+        self.client.update_preferences(ACCOUNT_HASH, preferences)
         self.mock_session.put.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/preferences'),
+            self.make_url('/v1/accounts/{accountHash}/preferences'),
             json=preferences)
 
     
     def test_update_preferences_str(self):
         preferences = {'wantMoney': True}
-        self.client.update_preferences(str(ACCOUNT_ID), preferences)
+        self.client.update_preferences(str(ACCOUNT_HASH), preferences)
         self.mock_session.put.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/preferences'),
+            self.make_url('/v1/accounts/{accountHash}/preferences'),
             json=preferences)
 
     # create_watchlist
@@ -2380,17 +2353,17 @@ class _TestClient:
     
     def test_create_watchlist(self):
         watchlist = {'AAPL': True}
-        self.client.create_watchlist(ACCOUNT_ID, watchlist)
+        self.client.create_watchlist(ACCOUNT_HASH, watchlist)
         self.mock_session.post.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/watchlists'),
+            self.make_url('/v1/accounts/{accountHash}/watchlists'),
             json=watchlist)
 
     
     def test_create_watchlist_str(self):
         watchlist = {'AAPL': True}
-        self.client.create_watchlist(str(ACCOUNT_ID), watchlist)
+        self.client.create_watchlist(str(ACCOUNT_HASH), watchlist)
         self.mock_session.post.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/watchlists'),
+            self.make_url('/v1/accounts/{accountHash}/watchlists'),
             json=watchlist)
 
     # delete_watchlist
@@ -2398,31 +2371,31 @@ class _TestClient:
     
     def test_delete_watchlist(self):
         watchlist = {'AAPL': True}
-        self.client.delete_watchlist(ACCOUNT_ID, WATCHLIST_ID)
+        self.client.delete_watchlist(ACCOUNT_HASH, WATCHLIST_ID)
         self.mock_session.delete.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/watchlists/{watchlistId}'))
+            self.make_url('/v1/accounts/{accountHash}/watchlists/{watchlistId}'))
 
     
     def test_delete_watchlist_str(self):
         watchlist = {'AAPL': True}
-        self.client.delete_watchlist(str(ACCOUNT_ID), str(WATCHLIST_ID))
+        self.client.delete_watchlist(str(ACCOUNT_HASH), str(WATCHLIST_ID))
         self.mock_session.delete.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/watchlists/{watchlistId}'))
+            self.make_url('/v1/accounts/{accountHash}/watchlists/{watchlistId}'))
 
     # get_watchlist
 
     
     def test_get_watchlist(self):
-        self.client.get_watchlist(ACCOUNT_ID, WATCHLIST_ID)
+        self.client.get_watchlist(ACCOUNT_HASH, WATCHLIST_ID)
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/watchlists/{watchlistId}'),
+            self.make_url('/v1/accounts/{accountHash}/watchlists/{watchlistId}'),
             params={})
 
     
     def test_get_watchlist_str(self):
-        self.client.get_watchlist(str(ACCOUNT_ID), str(WATCHLIST_ID))
+        self.client.get_watchlist(str(ACCOUNT_HASH), str(WATCHLIST_ID))
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/watchlists/{watchlistId}'),
+            self.make_url('/v1/accounts/{accountHash}/watchlists/{watchlistId}'),
             params={})
 
     # get_watchlists_for_multiple_accounts
@@ -2437,33 +2410,33 @@ class _TestClient:
 
     
     def test_get_watchlists_for_single_account(self):
-        self.client.get_watchlists_for_single_account(ACCOUNT_ID)
+        self.client.get_watchlists_for_single_account(ACCOUNT_HASH)
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/watchlists'), params={})
+            self.make_url('/v1/accounts/{accountHash}/watchlists'), params={})
 
     
     def test_get_watchlists_for_single_account_str(self):
-        self.client.get_watchlists_for_single_account(str(ACCOUNT_ID))
+        self.client.get_watchlists_for_single_account(str(ACCOUNT_HASH))
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/watchlists'), params={})
+            self.make_url('/v1/accounts/{accountHash}/watchlists'), params={})
 
     # replace_watchlist
 
     
     def test_replace_watchlist(self):
         watchlist = {'AAPL': True}
-        self.client.replace_watchlist(ACCOUNT_ID, WATCHLIST_ID, watchlist)
+        self.client.replace_watchlist(ACCOUNT_HASH, WATCHLIST_ID, watchlist)
         self.mock_session.put.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/watchlists/{watchlistId}'),
+            self.make_url('/v1/accounts/{accountHash}/watchlists/{watchlistId}'),
             json=watchlist)
 
     
     def test_replace_watchlist_str(self):
         watchlist = {'AAPL': True}
         self.client.replace_watchlist(
-            str(ACCOUNT_ID), str(WATCHLIST_ID), watchlist)
+            str(ACCOUNT_HASH), str(WATCHLIST_ID), watchlist)
         self.mock_session.put.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/watchlists/{watchlistId}'),
+            self.make_url('/v1/accounts/{accountHash}/watchlists/{watchlistId}'),
             json=watchlist)
 
     # update_watchlist
@@ -2471,18 +2444,18 @@ class _TestClient:
     
     def test_update_watchlist(self):
         watchlist = {'AAPL': True}
-        self.client.update_watchlist(ACCOUNT_ID, WATCHLIST_ID, watchlist)
+        self.client.update_watchlist(ACCOUNT_HASH, WATCHLIST_ID, watchlist)
         self.mock_session.patch.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/watchlists/{watchlistId}'),
+            self.make_url('/v1/accounts/{accountHash}/watchlists/{watchlistId}'),
             json=watchlist)
 
     
     def test_update_watchlist_str(self):
         watchlist = {'AAPL': True}
         self.client.update_watchlist(
-            str(ACCOUNT_ID), str(WATCHLIST_ID), watchlist)
+            str(ACCOUNT_HASH), str(WATCHLIST_ID), watchlist)
         self.mock_session.patch.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountId}/watchlists/{watchlistId}'),
+            self.make_url('/v1/accounts/{accountHash}/watchlists/{watchlistId}'),
             json=watchlist)
     '''
 
