@@ -266,8 +266,7 @@ class BaseClient(EnumEnforcer):
                                            max_results=None,
                                            from_entered_datetime=None,
                                            to_entered_datetime=None,
-                                           status=None,
-                                           statuses=None):
+                                           status=None):
         '''Orders for all linked accounts. Optionally specify a single status on 
         which to filter.
 
