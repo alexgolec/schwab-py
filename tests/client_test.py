@@ -33,6 +33,7 @@ MIN_TIMESTAMP_MILLIS = int(MIN_DATETIME.timestamp()) * 1000
 NOW_DATETIME = datetime.datetime(2020, 1, 2, 3, 4, 5)
 NOW_DATE = datetime.date(2020, 1, 2)
 NOW_DATETIME_ISO = '2020-01-02T03:04:05Z'
+NOW_DATETIME_TRUNCATED_ISO = '2020-01-02T00:00:00Z'
 NOW_DATE_ISO = '2020-01-02'
 
 NOW_DATETIME_MINUS_60_DAYS = NOW_DATE - datetime.timedelta(days=60)
@@ -455,8 +456,124 @@ class _TestClient:
             self.make_url('/trader/v1/accounts/{accountHash}/orders/{orderId}'),
             json=order_spec)
 
-    # get_price_history
 
+    # get_transactions
+
+    
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_transactions(self):
+        self.client.get_transactions(ACCOUNT_HASH)
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/trader/v1/accounts/{accountHash}/transactions'),
+            params={
+                'types': ','.join(t.value for t in self.client.Transactions.TransactionType),
+                'startDate': NOW_DATETIME_MINUS_60_DAYS_ISO,
+                'endDate': NOW_DATETIME_ISO})
+
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_transactions_one_type(self):
+        self.client.get_transactions(
+                ACCOUNT_HASH, 
+                transaction_types=self.client.Transactions.TransactionType.TRADE)
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/trader/v1/accounts/{accountHash}/transactions'),
+            params={
+                'types': 'TRADE',
+                'startDate': NOW_DATETIME_MINUS_60_DAYS_ISO,
+                'endDate': NOW_DATETIME_ISO})
+
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_transactions_type_list(self):
+        self.client.get_transactions(
+                ACCOUNT_HASH, 
+                transaction_types=[
+                    self.client.Transactions.TransactionType.TRADE,
+                    self.client.Transactions.TransactionType.JOURNAL])
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/trader/v1/accounts/{accountHash}/transactions'),
+            params={
+                'types': 'TRADE,JOURNAL',
+                'startDate': NOW_DATETIME_MINUS_60_DAYS_ISO,
+                'endDate': NOW_DATETIME_ISO})
+
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_transactions_type_list_unchecked(self):
+        self.client.set_enforce_enums(False)
+        self.client.get_transactions(
+                ACCOUNT_HASH, transaction_types=['TRADE', 'JOURNAL'])
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/trader/v1/accounts/{accountHash}/transactions'),
+            params={
+                'types': 'TRADE,JOURNAL',
+                'startDate': NOW_DATETIME_MINUS_60_DAYS_ISO,
+                'endDate': NOW_DATETIME_ISO})
+
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_transactions_symbol(self):
+        self.client.get_transactions(ACCOUNT_HASH, symbol='AAPL')
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/trader/v1/accounts/{accountHash}/transactions'),
+            params={
+                'types': ','.join(t.value for t in self.client.Transactions.TransactionType),
+                'startDate': NOW_DATETIME_MINUS_60_DAYS_ISO,
+                'endDate': NOW_DATETIME_ISO,
+                'symbol': 'AAPL'})
+
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_transactions_symbol_start_date_as_datetime(self):
+        self.client.get_transactions(
+                ACCOUNT_HASH, start_date=NOW_DATETIME)
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/trader/v1/accounts/{accountHash}/transactions'),
+            params={
+                'types': ','.join(t.value for t in self.client.Transactions.TransactionType),
+                'startDate': NOW_DATETIME_ISO,
+                'endDate': NOW_DATETIME_ISO})
+
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_transactions_symbol_start_date_as_date(self):
+        self.client.get_transactions(
+                ACCOUNT_HASH, start_date=NOW_DATE)
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/trader/v1/accounts/{accountHash}/transactions'),
+            params={
+                'types': ','.join(t.value for t in self.client.Transactions.TransactionType),
+                'startDate': NOW_DATETIME_TRUNCATED_ISO,
+                'endDate': NOW_DATETIME_ISO})
+
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_transactions_symbol_end_date_as_datetime(self):
+        self.client.get_transactions(
+                ACCOUNT_HASH,
+                # NOW_DATETIME is the default, use something different
+                end_date=datetime.datetime(2020, 6, 7, 8, 9, 0))
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/trader/v1/accounts/{accountHash}/transactions'),
+            params={
+                'types': ','.join(t.value for t in self.client.Transactions.TransactionType),
+                'startDate': NOW_DATETIME_MINUS_60_DAYS_ISO,
+                'endDate': '2020-06-07T08:09:00Z'})
+
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_transactions_symbol_end_date_as_date(self):
+        self.client.get_transactions(ACCOUNT_HASH, end_date=NOW_DATE)
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/trader/v1/accounts/{accountHash}/transactions'),
+            params={
+                'types': ','.join(t.value for t in self.client.Transactions.TransactionType),
+                'startDate': NOW_DATETIME_MINUS_60_DAYS_ISO,
+                'endDate': NOW_DATETIME_TRUNCATED_ISO})
+
+
+    # get_price_history
     
     def test_get_price_history_vanilla(self):
         self.client.get_price_history(SYMBOL)
@@ -2240,115 +2357,6 @@ class _TestClient:
             self.make_url('/v1/marketdata/quotes'), params={
                 'apikey': API_KEY,
                 'symbol': 'AAPL'})
-
-    # get_transaction
-
-    
-    def test_get_transaction(self):
-        self.client.get_transaction(ACCOUNT_HASH, TRANSACTION_ID)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url(
-                '/v1/accounts/{accountHash}/transactions/{transactionId}'),
-            params={'apikey': API_KEY})
-
-    
-    def test_get_transaction_str(self):
-        self.client.get_transaction(str(ACCOUNT_HASH), str(TRANSACTION_ID))
-        self.mock_session.get.assert_called_once_with(
-            self.make_url(
-                '/v1/accounts/{accountHash}/transactions/{transactionId}'),
-            params={'apikey': API_KEY})
-
-    # get_transactions
-
-    
-    def test_get_transactions(self):
-        self.client.get_transactions(ACCOUNT_HASH)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/transactions'), params={
-                'apikey': API_KEY})
-
-    
-    def test_get_transactions_str(self):
-        self.client.get_transactions(str(ACCOUNT_HASH))
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/transactions'), params={
-                'apikey': API_KEY})
-
-    
-    def test_get_transactions_type(self):
-        self.client.get_transactions(
-            ACCOUNT_HASH,
-            transaction_type=self.client_class.Transactions.TransactionType.DIVIDEND)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/transactions'), params={
-                'apikey': API_KEY,
-                'type': 'DIVIDEND'})
-
-    
-    def test_get_transactions_type_unchecked(self):
-        self.client.set_enforce_enums(False)
-        self.client.get_transactions(ACCOUNT_HASH, transaction_type='DIVIDEND')
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/transactions'), params={
-                'apikey': API_KEY,
-                'type': 'DIVIDEND'})
-
-    
-    def test_get_transactions_symbol(self):
-        self.client.get_transactions(ACCOUNT_HASH, symbol='AAPL')
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/transactions'), params={
-                'apikey': API_KEY,
-                'symbol': 'AAPL'})
-
-    
-    def test_get_transactions_start_date_datetime(self):
-        self.client.get_transactions(ACCOUNT_HASH, start_date=NOW_DATETIME)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/transactions'), params={
-                'apikey': API_KEY,
-                'startDate': NOW_DATE_ISO})
-
-    
-    def test_get_transactions_start_date_date(self):
-        self.client.get_transactions(ACCOUNT_HASH, start_date=NOW_DATE)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/transactions'), params={
-                'apikey': API_KEY,
-                'startDate': NOW_DATE_ISO})
-
-    
-    def test_get_transactions_start_date_str(self):
-        with self.assertRaises(ValueError) as cm:
-            self.client.get_transactions(ACCOUNT_HASH, start_date='2020-01-01')
-        self.assertEqual(str(cm.exception),
-                         "expected type in (datetime.date, datetime.datetime) for " +
-                         "start_date, got 'builtins.str'")
-
-    
-    def test_get_transactions_end_date(self):
-        self.client.get_transactions(ACCOUNT_HASH, end_date=NOW_DATETIME)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/transactions'), params={
-                'apikey': API_KEY,
-                'endDate': NOW_DATE_ISO})
-
-    
-    def test_get_transactions_end_date_datetime(self):
-        self.client.get_transactions(ACCOUNT_HASH, end_date=NOW_DATETIME)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/transactions'), params={
-                'apikey': API_KEY,
-                'endDate': NOW_DATE_ISO})
-
-    
-    def test_get_transactions_end_date_str(self):
-        with self.assertRaises(ValueError) as cm:
-            self.client.get_transactions(ACCOUNT_HASH, end_date='2020-01-01')
-        self.assertEqual(str(cm.exception),
-                         "expected type in (datetime.date, datetime.datetime) for " +
-                         "end_date, got 'builtins.str'")
 
     # get_preferences
 
