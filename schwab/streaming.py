@@ -108,9 +108,6 @@ class StreamClient(EnumEnforcer):
         self._ssl_context = ssl_context
         self._client = client
 
-        # If None, will be set by the login() function
-        self._account_id = account_id
-
         # Set by the login() function
         self._account = None
         self._stream_correl_id = None
@@ -196,37 +193,9 @@ class StreamClient(EnumEnforcer):
         return ret
 
     async def _init_from_preferences(self, prefs, websocket_connect_args):
-        # Initialize accounts and streamer keys.
-        # Assume a 1-to-1 mapping of streamer keys to accounts.
-        accounts = prefs['accounts']
-        num_accounts = len(accounts)
-        assert num_accounts > 0, 'zero accounts found'
-
-        # If there's only one account, use it. Otherwise require an account ID.
-        streamer_info_idx = 0
-        if num_accounts == 1:
-            self._account = accounts[0]
-        else:
-            if self._account_id is None:
-                raise ValueError(
-                    'multiple accounts found and StreamClient was ' +
-                    'initialized with unspecified account_id')
-            for idx, account in enumerate(accounts):
-                if int(account['accountId']) == self._account_id:
-                    self._account = account
-                    streamer_info_idx = idx
-                    break
-
-        if self._account is None:
-            raise ValueError(
-                'no account found with account_id {}'.format(
-                    self._account_id))
-
-        if self._account_id is None:
-            self._account_id = self._account['accountNumber']
-
         # Record streamer subscription keys
-        stream_info = prefs['streamerInfo'][streamer_info_idx]
+        stream_info = prefs['streamerInfo'][0]
+
         self._stream_correl_id = stream_info['schwabClientCorrelId']
         self._stream_customer_id = stream_info['schwabClientCustomerId']
         self._stream_channel = stream_info['schwabClientChannel']
@@ -234,15 +203,6 @@ class StreamClient(EnumEnforcer):
 
         # Initialize socket
         wss_url = stream_info['streamerSocketUrl']
-
-        # TODO: Is this still necessary?
-        if 'extensions' not in websocket_connect_args:
-            websocket_connect_args['extensions'] = [
-                    ClientPerMessageDeflateFactory()
-            ]
-        else:
-            websocket_connect_args['extensions'].append(
-                    ClientPerMessageDeflateFactory())
 
         self._socket = await ws_client.connect(
                 wss_url, **websocket_connect_args)
