@@ -1,5 +1,5 @@
 test:
-	pytest
+	python -m pytest tests/
 
 fix:
 	autopep8 --in-place -r -a schwab
