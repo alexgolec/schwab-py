@@ -171,15 +171,15 @@ class BaseClient(EnumEnforcer):
     ##########################################################################
     # Orders
 
-    def cancel_order(self, order_id, account_hash):
-        '''Cancel a specific order for a specific account'''
-        path = '/trader/v1/accounts/{}/orders/{}'.format(account_hash, order_id)
-        return self._delete_request(path)
-
     def get_order(self, order_id, account_hash):
         '''Get a specific order for a specific account by its order ID'''
         path = '/trader/v1/accounts/{}/orders/{}'.format(account_hash, order_id)
         return self._get_request(path, {})
+
+    def cancel_order(self, order_id, account_hash):
+        '''Cancel a specific order for a specific account'''
+        path = '/trader/v1/accounts/{}/orders/{}'.format(account_hash, order_id)
+        return self._delete_request(path)
 
     class Order:
         class Status(Enum):
