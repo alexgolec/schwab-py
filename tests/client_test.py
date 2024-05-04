@@ -403,6 +403,31 @@ class _TestClient:
             })
 
 
+    # place_order
+
+    
+    def test_place_order(self):
+        order_spec = {'order': 'spec'}
+        self.client.place_order(ACCOUNT_HASH, order_spec)
+        self.mock_session.post.assert_called_once_with(
+            self.make_url('/trader/v1/accounts/{accountHash}/orders'), json=order_spec)
+
+    
+    def test_place_order_order_builder(self):
+        order_spec = OrderBuilder(enforce_enums=False).set_order_type('LIMIT')
+        expected_spec = {'orderType': 'LIMIT'}
+        self.client.place_order(ACCOUNT_HASH, order_spec)
+        self.mock_session.post.assert_called_once_with(
+            self.make_url('/trader/v1/accounts/{accountHash}/orders'),
+            json=expected_spec)
+
+    
+    def test_place_order_str(self):
+        order_spec = {'order': 'spec'}
+        self.client.place_order(str(ACCOUNT_HASH), order_spec)
+        self.mock_session.post.assert_called_once_with(
+            self.make_url('/trader/v1/accounts/{accountHash}/orders'), json=order_spec)
+
     # get_price_history
 
     
