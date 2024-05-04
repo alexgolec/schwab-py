@@ -47,11 +47,13 @@ seen this flow. You click on the "install" link, a login window pops up, you
 enter your password, and you're presented with a page that asks whether you want 
 to grant the app access to your account.
 
-Here's what's happening under the hood. The window that pops up is the 
-authentication URL, which opens a login page for the target API. The aim is to 
-allow the user to input their username and password without the webapp frontend 
-or the remotely hosted backend seeing it.  On web browsers, this is accomplished 
-using the browser's refusal to send credentials from one domain to another.
+Here's what's happening behind the scenes: A pop-up window appears, which 
+is the authentication URL, leading you to a login page specifically for the 
+target API. The purpose here is to enable you to enter your username and 
+password directly into the API's system, bypassing the web application's 
+frontend and the remotely hosted backend. This process is secure on web 
+browsers because they enforce a policy that prevents your login credentials 
+from being sent to any domain other than the one you are currently interacting with.
 
 Once login here is successful, the API replies with a redirect to a URL that the 
 remotely hosted backend controls. This is the callback URL. This redirect will 
