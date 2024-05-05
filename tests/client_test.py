@@ -1017,6 +1017,15 @@ class _TestClient:
                 'entitlement': 'PP'})
 
 
+    # get_option_expiration_chain
+
+    def test_get_option_expiration_chain(self):
+        self.client.get_option_expiration_chain('AAPL')
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/marketdata/v1/expirationchain'),
+            params={'symbol': 'AAPL'})
+
+
     # get_price_history_every_minute
 
     @patch('schwab.client.base.datetime.datetime', mockdatetime)
@@ -2018,608 +2027,143 @@ class _TestClient:
             params=params)
 
 
-    '''
-    # create_saved_order
-
-    
-    def test_create_saved_order(self):
-        order_spec = {'order': 'spec'}
-        self.client.create_saved_order(ACCOUNT_HASH, order_spec)
-        self.mock_session.post.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/savedorders'),
-            json=order_spec)
-
-    
-    def test_create_saved_order_order_builder(self):
-        order_spec = OrderBuilder(enforce_enums=False).set_order_type('LIMIT')
-        expected_spec = {'orderType': 'LIMIT'}
-        self.client.create_saved_order(ACCOUNT_HASH, order_spec)
-        self.mock_session.post.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/savedorders'),
-            json=expected_spec)
-
-    
-    def test_create_saved_order_str(self):
-        order_spec = {'order': 'spec'}
-        self.client.create_saved_order(str(ACCOUNT_HASH), order_spec)
-        self.mock_session.post.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/savedorders'),
-            json=order_spec)
-
-    # delete_saved_order
-
-    
-    def test_delete_saved_order(self):
-        self.client.delete_saved_order(ACCOUNT_HASH, SAVED_ORDER_ID)
-        self.mock_session.delete.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/savedorders/{savedOrderId}'))
-
-    
-    def test_delete_saved_order_str(self):
-        self.client.delete_saved_order(str(ACCOUNT_HASH), str(SAVED_ORDER_ID))
-        self.mock_session.delete.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/savedorders/{savedOrderId}'))
-
-    # delete_saved_order
-
-    
-    def test_get_saved_order(self):
-        self.client.get_saved_order(ACCOUNT_HASH, SAVED_ORDER_ID)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url(
-                '/v1/accounts/{accountHash}/savedorders/{savedOrderId}'),
-            params={})
-
-    
-    def test_get_saved_order_str(self):
-        self.client.get_saved_order(str(ACCOUNT_HASH), str(SAVED_ORDER_ID))
-        self.mock_session.get.assert_called_once_with(
-            self.make_url(
-                '/v1/accounts/{accountHash}/savedorders/{savedOrderId}'),
-            params={})
-
-    # get_saved_orders_by_path
-
-    
-    def test_get_saved_orders_by_path(self):
-        self.client.get_saved_orders_by_path(ACCOUNT_HASH)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/savedorders'), params={})
-
-    
-    def test_get_saved_orders_by_path_str(self):
-        self.client.get_saved_orders_by_path(str(ACCOUNT_HASH))
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/savedorders'), params={})
-
-    # replace_saved_order
-
-    
-    def test_replace_saved_order(self):
-        order_spec = {'order': 'spec'}
-        self.client.replace_saved_order(ACCOUNT_HASH, SAVED_ORDER_ID, order_spec)
-        self.mock_session.put.assert_called_once_with(
-            self.make_url(
-                '/v1/accounts/{accountHash}/savedorders/{savedOrderId}'),
-            json=order_spec)
-
-    
-    def test_replace_saved_order_order_builder(self):
-        order_spec = OrderBuilder(enforce_enums=False).set_order_type('LIMIT')
-        expected_spec = {'orderType': 'LIMIT'}
-        self.client.replace_saved_order(ACCOUNT_HASH, SAVED_ORDER_ID, order_spec)
-        self.mock_session.put.assert_called_once_with(
-            self.make_url(
-                '/v1/accounts/{accountHash}/savedorders/{savedOrderId}'),
-            json=expected_spec)
-
-    
-    def test_replace_saved_order_str(self):
-        order_spec = {'order': 'spec'}
-        self.client.replace_saved_order(
-            str(ACCOUNT_HASH), str(SAVED_ORDER_ID), order_spec)
-        self.mock_session.put.assert_called_once_with(
-            self.make_url(
-                '/v1/accounts/{accountHash}/savedorders/{savedOrderId}'),
-            json=order_spec)
-    '''
-
-    '''
-    
-    
-    # get_orders_by_query
-
-    
-    @patch('schwab.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_query_vanilla(self):
-        self.client.get_orders_by_query()
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/orders'), params={
-                'fromEnteredTime': MIN_ISO,
-                'toEnteredTime': NOW_DATETIME_ISO
-            })
-
-    
-    @patch('schwab.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_query_max_results(self):
-        self.client.get_orders_by_query(max_results=100)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/orders'), params={
-                'fromEnteredTime': MIN_ISO,
-                'toEnteredTime': NOW_DATETIME_ISO,
-                'maxResults': 100,
-            })
-
-    
-    @patch('schwab.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_query_from_entered_datetime(self):
-        self.client.get_orders_by_query(from_entered_datetime=EARLIER_DATETIME)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/orders'), params={
-                'fromEnteredTime': EARLIER_ISO,
-                'toEnteredTime': NOW_DATETIME_ISO,
-            })
-
-    
-    @patch('schwab.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_query_to_entered_datetime(self):
-        self.client.get_orders_by_query(to_entered_datetime=EARLIER_DATETIME)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/orders'), params={
-                'fromEnteredTime': MIN_ISO,
-                'toEnteredTime': EARLIER_ISO,
-            })
-
-    
-    @patch('schwab.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_query_status_and_statuses(self):
-        with self.assertRaises(
-                ValueError, msg='at most one of status or statuses may be set'):
-            self.client.get_orders_by_query(
-                to_entered_datetime=EARLIER_DATETIME,
-                status='EXPIRED', statuses=[
-                    self.client_class.Order.Status.FILLED,
-                    self.client_class.Order.Status.EXPIRED])
-
-    
-    @patch('schwab.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_query_status(self):
-        self.client.get_orders_by_query(status=self.client_class.Order.Status.FILLED)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/orders'), params={
-                'fromEnteredTime': MIN_ISO,
-                'toEnteredTime': NOW_DATETIME_ISO,
-                'status': 'FILLED'
-            })
-
-    
-    @patch('schwab.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_query_status_unchecked(self):
-        self.client.set_enforce_enums(False)
-        self.client.get_orders_by_query(status='FILLED')
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/orders'), params={
-                'fromEnteredTime': MIN_ISO,
-                'toEnteredTime': NOW_DATETIME_ISO,
-                'status': 'FILLED'
-            })
-
-    
-    @patch('schwab.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_query_statuses(self):
-        self.client.get_orders_by_query(statuses=[
-            self.client_class.Order.Status.FILLED,
-            self.client_class.Order.Status.EXPIRED])
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/orders'), params={
-                'fromEnteredTime': MIN_ISO,
-                'toEnteredTime': NOW_DATETIME_ISO,
-                'status': 'FILLED,EXPIRED'
-            })
-
-    
-    @patch('schwab.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_query_statuses_scalar(self):
-        self.client.get_orders_by_query(statuses=self.client_class.Order.Status.FILLED)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/orders'), params={
-                'fromEnteredTime': MIN_ISO,
-                'toEnteredTime': NOW_DATETIME_ISO,
-                'status': 'FILLED'
-            })
-
-    
-    @patch('schwab.client.base.datetime.datetime', mockdatetime)
-    def test_get_orders_by_query_statuses_unchecked(self):
-        self.client.set_enforce_enums(False)
-        self.client.get_orders_by_query(statuses=['FILLED', 'EXPIRED'])
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/orders'), params={
-                'fromEnteredTime': MIN_ISO,
-                'toEnteredTime': NOW_DATETIME_ISO,
-                'status': 'FILLED,EXPIRED'
-            })
-
-    '''
-
-    '''
-    # search_instruments
-
-    
-    def test_search_instruments(self):
-        self.client.search_instruments(
-            ['AAPL', 'MSFT'], self.client_class.Instrument.Projection.FUNDAMENTAL)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/instruments'), params={
-                'apikey': API_KEY,
-                'symbol': 'AAPL,MSFT',
-                'projection': 'fundamental'})
-
-    
-    def test_search_instruments_one_instrument(self):
-        self.client.search_instruments(
-            'AAPL', self.client_class.Instrument.Projection.FUNDAMENTAL)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/instruments'), params={
-                'apikey': API_KEY,
-                'symbol': 'AAPL',
-                'projection': 'fundamental'})
-
-    
-    def test_search_instruments_unchecked(self):
-        self.client.set_enforce_enums(False)
-        self.client.search_instruments(['AAPL', 'MSFT'], 'fundamental')
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/instruments'), params={
-                'apikey': API_KEY,
-                'symbol': 'AAPL,MSFT',
-                'projection': 'fundamental'})
-
-    # get_instrument
-
-    
-    def test_get_instrument(self):
-        self.client.get_instrument(CUSIP)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/instruments/{cusip}'),
-            params={'apikey': API_KEY})
-
-    
-    def test_get_instrument_cusip_must_be_string(self):
-        msg = 'CUSIPs must be passed as strings to preserve leading zeroes'
-        with self.assertRaises(ValueError, msg=msg):
-            self.client.get_instrument(123456)
-
-    # get_hours_for_multiple_markets
-
-    
-    def test_get_hours_for_multiple_markets_datetime(self):
-        self.client.get_hours_for_multiple_markets([
-            self.client_class.Markets.EQUITY,
-            self.client_class.Markets.BOND], NOW_DATETIME)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/hours'), params={
-                'apikey': API_KEY,
-                'markets': 'EQUITY,BOND',
-                'date': NOW_DATE_ISO})
-
-    
-    def test_get_hours_for_multiple_markets_single_market(self):
-        self.client.get_hours_for_multiple_markets(
-                self.client_class.Markets.EQUITY, NOW_DATETIME)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/hours'), params={
-                'apikey': API_KEY,
-                'markets': 'EQUITY',
-                'date': NOW_DATE_ISO})
-
-    
-    def test_get_hours_for_multiple_markets_date(self):
-        self.client.get_hours_for_multiple_markets([
-            self.client_class.Markets.EQUITY,
-            self.client_class.Markets.BOND], NOW_DATE)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/hours'), params={
-                'apikey': API_KEY,
-                'markets': 'EQUITY,BOND',
-                'date': NOW_DATE_ISO})
-
-    
-    def test_get_hours_for_multiple_markets_str(self):
-        with self.assertRaises(ValueError) as cm:
-            self.client.get_hours_for_multiple_markets([
-                self.client_class.Markets.EQUITY,
-                self.client_class.Markets.BOND], '2020-01-01')
-        self.assertEqual(str(cm.exception),
-                         "expected type in (datetime.date, datetime.datetime) "
-                         "for date, got 'builtins.str'")
-
-    
-    def test_get_hours_for_multiple_markets_unchecked(self):
-        self.client.set_enforce_enums(False)
-        self.client.get_hours_for_multiple_markets(
-            ['EQUITY', 'BOND'], NOW_DATETIME)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/hours'), params={
-                'apikey': API_KEY,
-                'markets': 'EQUITY,BOND',
-                'date': NOW_DATE_ISO})
-
-    # get_hours_for_single_market
-
-    
-    def test_get_hours_for_single_market_datetime(self):
-        self.client.get_hours_for_single_market(
-            self.client_class.Markets.EQUITY, NOW_DATETIME)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/{market}/hours'), params={
-                'apikey': API_KEY,
-                'date': NOW_DATE_ISO})
-
-    
-    def test_get_hours_for_single_market_date(self):
-        self.client.get_hours_for_single_market(
-            self.client_class.Markets.EQUITY, NOW_DATE)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/{market}/hours'), params={
-                'apikey': API_KEY,
-                'date': NOW_DATE_ISO})
-
-    
-    def test_get_hours_for_single_market_str(self):
-        with self.assertRaises(ValueError) as cm:
-            self.client.get_hours_for_single_market(
-                self.client_class.Markets.EQUITY, '2020-01-01')
-        self.assertEqual(str(cm.exception),
-                         "expected type in (datetime.date, datetime.datetime) for " +
-                         "date, got 'builtins.str'")
-
-    
-    def test_get_hours_for_single_market_unchecked(self):
-        self.client.set_enforce_enums(False)
-        self.client.get_hours_for_single_market('EQUITY', NOW_DATETIME)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/{market}/hours'), params={
-                'apikey': API_KEY,
-                'date': NOW_DATE_ISO})
-
     # get_movers
 
     
     def test_get_movers(self):
         self.client.get_movers(
-            INDEX, self.client_class.Movers.Direction.UP, self.client_class.Movers.Change.PERCENT)
+                self.client.Movers.Index.DJI)
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/{index}/movers'), params={
-                'apikey': API_KEY,
-                'direction': 'up',
-                'change': 'percent'})
+            self.make_url('/marketdata/v1/movers/$DJI'), params={})
 
-    
-    def test_get_movers_unchecked(self):
+
+    def test_get_movers_index_unchecked(self):
         self.client.set_enforce_enums(False)
-        self.client.get_movers(INDEX, 'up', 'percent')
+        self.client.get_movers('not-an-index')
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/marketdata/{index}/movers'), params={
-                'apikey': API_KEY,
-                'direction': 'up',
-                'change': 'percent'})
+            self.make_url('/marketdata/v1/movers/not-an-index'), params={})
 
-    '''
 
-    '''
-    # get_preferences
-
-    
-    def test_get_preferences(self):
-        self.client.get_preferences(ACCOUNT_HASH)
+    def test_get_movers_sort_order(self):
+        self.client.get_movers(
+                self.client.Movers.Index.DJI,
+                sort_order=self.client.Movers.SortOrder.VOLUME)
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/preferences'), params={
-                'apikey': API_KEY})
+            self.make_url('/marketdata/v1/movers/$DJI'),
+            params={'sort': 'VOLUME'})
 
-    
-    def test_get_preferences_str(self):
-        self.client.get_preferences(str(ACCOUNT_HASH))
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/preferences'), params={
-                'apikey': API_KEY})
 
-    # get_streamer_subscription_keys
-
-    
-    def test_get_streamer_subscription_keys(self):
-        self.client.get_streamer_subscription_keys([1000, 2000, 3000])
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/userprincipals/streamersubscriptionkeys'),
-            params={
-                'apikey': API_KEY,
-                'accountHashs': '1000,2000,3000'})
-
-    
-    def test_get_streamer_subscription_keys_one_account_id(self):
-        self.client.get_streamer_subscription_keys(1000)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/userprincipals/streamersubscriptionkeys'),
-            params={
-                'apikey': API_KEY,
-                'accountHashs': '1000'})
-
-    
-    def test_get_streamer_subscription_keys_str(self):
-        self.client.get_streamer_subscription_keys(['1000', '2000', '3000'])
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/userprincipals/streamersubscriptionkeys'),
-            params={
-                'apikey': API_KEY,
-                'accountHashs': '1000,2000,3000'})
-
-    # get_user_principals
-
-    
-    def test_get_user_principals_vanilla(self):
-        self.client.get_user_principals()
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/userprincipals'), params={
-                'apikey': API_KEY})
-
-    
-    def test_get_user_principals_fields(self):
-        self.client.get_user_principals(
-            fields=[
-                self.client_class.UserPrincipals.Fields.STREAMER_SUBSCRIPTION_KEYS,
-                self.client_class.UserPrincipals.Fields.PREFERENCES])
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/userprincipals'), params={
-                'apikey': API_KEY,
-                'fields': 'streamerSubscriptionKeys,preferences'})
-
-    
-    def test_get_user_principals_one_field(self):
-        self.client.get_user_principals(
-            fields=self.client_class.UserPrincipals.Fields.PREFERENCES)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/userprincipals'), params={
-                'apikey': API_KEY,
-                'fields': 'preferences'})
-
-    
-    def test_get_user_principals_fields_unchecked(self):
+    def test_get_movers_sort_order_unchecked(self):
         self.client.set_enforce_enums(False)
-        self.client.get_user_principals(
-            fields=['streamerSubscriptionKeys', 'preferences'])
+        self.client.get_movers(
+                self.client.Movers.Index.DJI,
+                sort_order='not-a-sort-order')
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/userprincipals'), params={
-                'apikey': API_KEY,
-                'fields': 'streamerSubscriptionKeys,preferences'})
+            self.make_url('/marketdata/v1/movers/$DJI'),
+            params={'sort': 'not-a-sort-order'})
 
-    # update_preferences
 
-    
-    def test_update_preferences(self):
-        preferences = {'wantMoney': True}
-        self.client.update_preferences(ACCOUNT_HASH, preferences)
-        self.mock_session.put.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/preferences'),
-            json=preferences)
-
-    
-    def test_update_preferences_str(self):
-        preferences = {'wantMoney': True}
-        self.client.update_preferences(str(ACCOUNT_HASH), preferences)
-        self.mock_session.put.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/preferences'),
-            json=preferences)
-
-    # create_watchlist
-
-    
-    def test_create_watchlist(self):
-        watchlist = {'AAPL': True}
-        self.client.create_watchlist(ACCOUNT_HASH, watchlist)
-        self.mock_session.post.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/watchlists'),
-            json=watchlist)
-
-    
-    def test_create_watchlist_str(self):
-        watchlist = {'AAPL': True}
-        self.client.create_watchlist(str(ACCOUNT_HASH), watchlist)
-        self.mock_session.post.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/watchlists'),
-            json=watchlist)
-
-    # delete_watchlist
-
-    
-    def test_delete_watchlist(self):
-        watchlist = {'AAPL': True}
-        self.client.delete_watchlist(ACCOUNT_HASH, WATCHLIST_ID)
-        self.mock_session.delete.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/watchlists/{watchlistId}'))
-
-    
-    def test_delete_watchlist_str(self):
-        watchlist = {'AAPL': True}
-        self.client.delete_watchlist(str(ACCOUNT_HASH), str(WATCHLIST_ID))
-        self.mock_session.delete.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/watchlists/{watchlistId}'))
-
-    # get_watchlist
-
-    
-    def test_get_watchlist(self):
-        self.client.get_watchlist(ACCOUNT_HASH, WATCHLIST_ID)
+    def test_get_movers_frequency(self):
+        self.client.get_movers(
+                self.client.Movers.Index.DJI,
+                frequency=self.client.Movers.Frequency.ZERO)
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/watchlists/{watchlistId}'),
-            params={})
+            self.make_url('/marketdata/v1/movers/$DJI'),
+            params={'frequency': '0'})
 
-    
-    def test_get_watchlist_str(self):
-        self.client.get_watchlist(str(ACCOUNT_HASH), str(WATCHLIST_ID))
+
+    def test_get_movers_frequency_unchecked(self):
+        self.client.set_enforce_enums(False)
+        self.client.get_movers(
+                self.client.Movers.Index.DJI,
+                frequency='999999')
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/watchlists/{watchlistId}'),
-            params={})
+            self.make_url('/marketdata/v1/movers/$DJI'),
+            params={'frequency': '999999'})
 
-    # get_watchlists_for_multiple_accounts
+
+    # get_market_hours
 
     
-    def test_get_watchlists_for_multiple_accounts(self):
-        self.client.get_watchlists_for_multiple_accounts()
+    def test_get_market_hours_single_market(self):
+        self.client.get_market_hours(
+                self.client_class.MarketHours.Market.EQUITY)
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/watchlists'), params={})
+            self.make_url('/marketdata/v1/markets'), params={
+                'markets': 'equity'})
 
-    # get_watchlists_for_single_account
 
-    
-    def test_get_watchlists_for_single_account(self):
-        self.client.get_watchlists_for_single_account(ACCOUNT_HASH)
+    def test_get_market_hours_market_list(self):
+        self.client.get_market_hours(
+                [self.client_class.MarketHours.Market.EQUITY,
+                 self.client_class.MarketHours.Market.OPTION])
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/watchlists'), params={})
+            self.make_url('/marketdata/v1/markets'), params={
+                'markets': 'equity,option'})
 
-    
-    def test_get_watchlists_for_single_account_str(self):
-        self.client.get_watchlists_for_single_account(str(ACCOUNT_HASH))
+
+    def test_get_market_hours_market_unchecked(self):
+        self.client.set_enforce_enums(False)
+        self.client.get_market_hours(['not-a-market'])
         self.mock_session.get.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/watchlists'), params={})
+            self.make_url('/marketdata/v1/markets'), params={
+                'markets': 'not-a-market'})
 
-    # replace_watchlist
 
+    def test_get_market_hours_date(self):
+        self.client.get_market_hours(
+                self.client_class.MarketHours.Market.EQUITY,
+                date=NOW_DATE)
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/marketdata/v1/markets'), params={
+                'markets': 'equity',
+                'date': NOW_DATE_ISO})
+
+
+    def test_get_market_hours_date_str(self):
+        with self.assertRaises(ValueError) as cm:
+            self.client.get_market_hours(
+                    self.client_class.MarketHours.Market.EQUITY,
+                    date='2020-01-02')
+        self.assertEqual(str(cm.exception),
+                         "expected type 'datetime.date' for " +
+                         "date, got 'builtins.str'")
+
+
+    # get_instruments
     
-    def test_replace_watchlist(self):
-        watchlist = {'AAPL': True}
-        self.client.replace_watchlist(ACCOUNT_HASH, WATCHLIST_ID, watchlist)
-        self.mock_session.put.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/watchlists/{watchlistId}'),
-            json=watchlist)
+    def test_get_instruments(self):
+        self.client.get_instruments(
+            ['AAPL', 'MSFT'], self.client_class.Instrument.Projection.FUNDAMENTAL)
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/marketdata/v1/instruments'), params={
+                'symbol': 'AAPL,MSFT',
+                'projection': 'fundamental'})
 
+
+    def test_get_instruments_projection_unchecked(self):
+        self.client.set_enforce_enums(False)
+        self.client.get_instruments(
+            ['AAPL', 'MSFT'], 'not-a-projection')
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/marketdata/v1/instruments'), params={
+                'symbol': 'AAPL,MSFT',
+                'projection': 'not-a-projection'})
+
+
+    # get_instrument_by_cusip
     
-    def test_replace_watchlist_str(self):
-        watchlist = {'AAPL': True}
-        self.client.replace_watchlist(
-            str(ACCOUNT_HASH), str(WATCHLIST_ID), watchlist)
-        self.mock_session.put.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/watchlists/{watchlistId}'),
-            json=watchlist)
+    def test_get_instrument_by_cusip(self):
+        self.client.get_instrument_by_cusip('037833100')
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/marketdata/v1/instruments/037833100'), params={})
 
-    # update_watchlist
 
-    
-    def test_update_watchlist(self):
-        watchlist = {'AAPL': True}
-        self.client.update_watchlist(ACCOUNT_HASH, WATCHLIST_ID, watchlist)
-        self.mock_session.patch.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/watchlists/{watchlistId}'),
-            json=watchlist)
+    def test_get_instrument_by_cusip_cusip_must_be_string(self):
+        with self.assertRaises(ValueError) as cm:
+            self.client.get_instrument_by_cusip(37833100)
+        self.assertEqual(str(cm.exception), 'cusip must be passed as str')
 
-    
-    def test_update_watchlist_str(self):
-        watchlist = {'AAPL': True}
-        self.client.update_watchlist(
-            str(ACCOUNT_HASH), str(WATCHLIST_ID), watchlist)
-        self.mock_session.patch.assert_called_once_with(
-            self.make_url('/v1/accounts/{accountHash}/watchlists/{watchlistId}'),
-            json=watchlist)
-    '''
 
 class ClientTest(_TestClient, unittest.TestCase):
     """

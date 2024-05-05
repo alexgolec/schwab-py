@@ -1011,7 +1011,7 @@ class BaseClient(EnumEnforcer):
         if sort_order is not None:
             params['sort'] = sort_order
         if frequency is not None:
-            params['frequency'] = frequency
+            params['frequency'] = str(frequency)
 
         return self._get_request(path, params)
 
@@ -1115,5 +1115,8 @@ class BaseClient(EnumEnforcer):
         :param cusip: String representing CUSIP of instrument for which to fetch 
                       data. Note leading zeroes must be preserved.
         '''
+        if not isinstance(cusip, str):
+            raise ValueError('cusip must be passed as str')
+
         return self._get_request(
                 '/marketdata/v1/instruments/{}'.format(cusip), {})
