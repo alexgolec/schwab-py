@@ -171,15 +171,15 @@ class BaseClient(EnumEnforcer):
     ##########################################################################
     # Orders
 
-    def cancel_order(self, order_id, account_hash):
-        '''Cancel a specific order for a specific account'''
-        path = '/trader/v1/accounts/{}/orders/{}'.format(account_hash, order_id)
-        return self._delete_request(path)
-
     def get_order(self, order_id, account_hash):
         '''Get a specific order for a specific account by its order ID'''
         path = '/trader/v1/accounts/{}/orders/{}'.format(account_hash, order_id)
         return self._get_request(path, {})
+
+    def cancel_order(self, order_id, account_hash):
+        '''Cancel a specific order for a specific account'''
+        path = '/trader/v1/accounts/{}/orders/{}'.format(account_hash, order_id)
+        return self._delete_request(path)
 
     class Order:
         class Status(Enum):
@@ -266,8 +266,7 @@ class BaseClient(EnumEnforcer):
                                            max_results=None,
                                            from_entered_datetime=None,
                                            to_entered_datetime=None,
-                                           status=None,
-                                           statuses=None):
+                                           status=None):
         '''Orders for all linked accounts. Optionally specify a single status on 
         which to filter.
 
@@ -425,13 +424,13 @@ class BaseClient(EnumEnforcer):
         '''Preferences for the logged in account, including all linked
         accounts.'''
         path = '/trader/v1/userPreference'
-        return self._get_request(path, ())
+        return self._get_request(path, {})
 
 
     ##########################################################################
     # Quotes
 
-    class GetQuote:
+    class Quote:
         class Fields(Enum):
             QUOTE = 'quote'
             FUNDAMENTAL = 'fundamental'
@@ -447,9 +446,9 @@ class BaseClient(EnumEnforcer):
         :param fields: Fields to request. If unset, return all available data. 
                        i.e. all fields. See :class:`GetQuote.Field` for options.
         '''
-        fields = self.convert_enum_iterable(fields, self.GetQuote.Fields)
+        fields = self.convert_enum_iterable(fields, self.Quote.Fields)
         if fields:
-            params = {'fields': fields}
+            params = {'fields': ','.join(fields)}
         else:
             params = {}
 
@@ -471,9 +470,9 @@ class BaseClient(EnumEnforcer):
             'symbols': ','.join(symbols)
         }
 
-        fields = self.convert_enum_iterable(fields, self.GetQuote.Fields)
+        fields = self.convert_enum_iterable(fields, self.Quote.Fields)
         if fields:
-            params['fields'] = fields
+            params['fields'] = ','.join(fields)
 
         if indicative is not None:
             if type(indicative) is not bool:
@@ -604,9 +603,9 @@ class BaseClient(EnumEnforcer):
             strike_range, self.Options.StrikeRange)
         option_type = self.convert_enum(option_type, self.Options.Type)
         exp_month = self.convert_enum(exp_month, self.Options.ExpirationMonth)
+        entitlement = self.convert_enum(entitlement, self.Options.Entitlement)
 
         params = {
-            'apikey': self.api_key,
             'symbol': symbol,
         }
 
@@ -640,6 +639,8 @@ class BaseClient(EnumEnforcer):
             params['expMonth'] = exp_month
         if option_type is not None:
             params['optionType'] = option_type
+        if entitlement is not None:
+            params['entitlement'] = entitlement
 
         path = '/marketdata/v1/chains'
         return self._get_request(path, params)
@@ -1010,7 +1011,7 @@ class BaseClient(EnumEnforcer):
         if sort_order is not None:
             params['sort'] = sort_order
         if frequency is not None:
-            params['frequency'] = frequency
+            params['frequency'] = str(frequency)
 
         return self._get_request(path, params)
 
@@ -1114,5 +1115,8 @@ class BaseClient(EnumEnforcer):
         :param cusip: String representing CUSIP of instrument for which to fetch 
                       data. Note leading zeroes must be preserved.
         '''
+        if not isinstance(cusip, str):
+            raise ValueError('cusip must be passed as str')
+
         return self._get_request(
                 '/marketdata/v1/instruments/{}'.format(cusip), {})
