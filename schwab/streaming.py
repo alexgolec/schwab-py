@@ -13,7 +13,6 @@ import schwab
 import urllib.parse
 
 import websockets.legacy.client as ws_client
-from websockets.extensions.permessage_deflate import ClientPerMessageDeflateFactory
 
 from .utils import EnumEnforcer, LazyLog
 
@@ -115,7 +114,6 @@ class StreamClient(EnumEnforcer):
         self._stream_channel = None
         self._stream_function_id = None
         self._socket = None
-        self._source = None
 
         # Internal fields
         self._request_id = 0
@@ -203,6 +201,9 @@ class StreamClient(EnumEnforcer):
 
         # Initialize socket
         wss_url = stream_info['streamerSocketUrl']
+
+        if self._ssl_context:
+            websocket_connect_args['ssl'] = self._ssl_context
 
         self._socket = await ws_client.connect(
                 wss_url, **websocket_connect_args)
@@ -666,7 +667,7 @@ class StreamClient(EnumEnforcer):
                                                         self.ChartFuturesFields))
 
     ##########################################################################
-    # QUOTE
+    # LEVELONE_EQUITIES
 
     class LevelOneEquityFields(_BaseFieldEnum):
         '''
@@ -902,7 +903,7 @@ class StreamClient(EnumEnforcer):
                 _Handler(handler, self.LevelOneEquityFields))
 
     ##########################################################################
-    # OPTION
+    # LEVELONE_OPTIONS
 
     class LevelOneOptionFields(_BaseFieldEnum):
         '''

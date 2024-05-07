@@ -2,11 +2,11 @@ from colorama import Fore, Back, Style, init
 from unittest.mock import MagicMock
 
 import asyncio
+import asynctest
 import difflib
 import inspect
 import httpx
 import json
-import unittest
 
 class AnyStringWith(str):
     '''
@@ -16,8 +16,8 @@ class AnyStringWith(str):
     def __eq__(self, other):
         return self in other
 
-def account_principals():
-    with open('tests/testdata/principals.json', 'r') as f:
+def account_preferences():
+    with open('tests/testdata/preferences.json', 'r') as f:
         return json.load(f)
 
 
@@ -152,7 +152,7 @@ class AsyncMagicMock:
             return super().__getattribute__(key)
         except AttributeError:
             if key not in attr_cache:
-                attr_cache[key] = unittest.mock.AsyncMock()
+                attr_cache[key] = asynctest.CoroutineMock()
             return attr_cache[key]
 
     def __setattr__(self, key, val):
