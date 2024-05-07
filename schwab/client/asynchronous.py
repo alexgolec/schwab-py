@@ -49,18 +49,6 @@ class AsyncClient(BaseClient):
         register_redactions_from_response(resp)
         return resp
 
-    async def _patch_request(self, path, data):
-        dest = 'https://api.schwabapi.com' + path
-
-        req_num = self._req_num()
-        self.logger.debug('Req %s: PATCH to %s, json=%s',
-                req_num, dest, LazyLog(lambda: json.dumps(data, indent=4)))
-
-        resp = await self.session.patch(dest, json=data)
-        self._log_response(resp, req_num)
-        register_redactions_from_response(resp)
-        return resp
-
     async def _delete_request(self, path):
         dest = 'https://api.schwabapi.com' + path
 

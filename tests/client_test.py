@@ -457,6 +457,26 @@ class _TestClient:
             json=order_spec)
 
 
+    # preview_order
+
+    
+    def test_preview_order(self):
+        order_spec = {'order': 'spec'}
+        self.client.preview_order(ACCOUNT_HASH, order_spec)
+        self.mock_session.post.assert_called_once_with(
+            self.make_url('/trader/v1/accounts/{accountHash}/previewOrder'),
+            json=order_spec)
+
+    
+    def test_preview_order_order_builder(self):
+        order_spec = OrderBuilder(enforce_enums=False).set_order_type('LIMIT')
+        expected_spec = {'orderType': 'LIMIT'}
+        self.client.preview_order(ACCOUNT_HASH, order_spec)
+        self.mock_session.post.assert_called_once_with(
+            self.make_url('/trader/v1/accounts/{accountHash}/previewOrder'),
+            json=expected_spec)
+
+    
     # get_transactions
 
     
