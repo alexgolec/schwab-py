@@ -6,21 +6,21 @@ from schwab.orders.generic import OrderBuilder
 def _parse_expiration_date(expiration_date):
     date = None
     try:
-        date = datetime.datetime.strptime(expiration_date, '%m%d%y')
+        date = datetime.datetime.strptime(expiration_date, '%y%m%d')
         return datetime.date(year=date.year, month=date.month, day=date.day)
     except ValueError:
         pass
 
     raise ValueError(
         'expiration date must follow format ' +
-        '[Month with leading zero][Day with leading zero]' +
-        '[two digit year]')
+        '[two digit year][Month with leading zero]' +
+        '[Day with leading zero]')
 
 
 class OptionSymbol:
     '''Construct an option symbol from its constituent parts. Options symbols
-    have the following format: ``[Underlying][2 spaces][Two digit year]
-    [Two digit month][Two digit day]['P' or 'C'][Strike price]``
+    have the following format: ``[Underlying left justified with spaces to 6 positions]
+    [Two digit year][Two digit month][Two digit day]['P' or 'C'][Strike price]``
 
     The format of the strike price is modified based on its amount:
      * If less than 1000, Strike Price is multiple by 1000 and pre-pended with
@@ -28,7 +28,7 @@ class OptionSymbol:
      * If greater than 1000, it's prepended with one zero.
 
      Examples include:
-     * ``QQQ  240420P00500000``: QQQ Apr 20, 2024 500 Put (note the two zeroes
+     * ``QQQ   240420P00500000``: QQQ Apr 20, 2024 500 Put (note the two zeroes
        in front because strike is less than 1000)
      * ``SPXW  240420C05040000``: SPX Weekly Apr 20, 2024 5040 Call (note the
        one zero in front because strike is greater than 1000)
@@ -79,8 +79,8 @@ class OptionSymbol:
             self.expiration_date = expiration_date
         else:
             raise ValueError(
-                'expiration_date must be a string with format %m%d%y ' +
-                '(e.g. 01092020) or one of datetime.date or ' +
+                'expiration_date must be a string with format %y%m%d ' +
+                '(e.g. 240614) or one of datetime.date or ' +
                 'datetime.datetime')
 
         assert(isinstance(self.expiration_date, datetime.date))
@@ -108,21 +108,16 @@ class OptionSymbol:
     @classmethod
     def parse_symbol(cls, symbol):
         '''
-        Parse a string option symbol of the for ``[Underlying]_[Two digit month]
-        [Two digit day][Two digit year]['P' or 'C'][Strike price]``.
+        Parse a string option symbol of the for ``[Underlying left justified to 6 positions][Two digit year]
+        [Two digit month][Two digit day]['P' or 'C'][Strike price]``.
         '''
         format_error_str = (
             'option symbol must have format ' +
-            '[Underlying]_[Expiration][P/C][Strike]')
+            '[Underlying left justified with spaces to 6 positions][Expiration][P/C][Strike]')
 
         # Underlying
-        try:
-            underlying, rest = symbol.split('_')
-        except ValueError:
-            underlying, rest = None, None
-        if underlying is None:
-            raise ValueError('option symbol missing underscore \'_\', ' +
-                             format_error_str)
+        underlying = symbol[:6].rstrip()
+        rest = symbol[6:]
 
         # Expiration
         type_split = rest.split('P')
@@ -139,6 +134,8 @@ class OptionSymbol:
                     r'option must have contract type \'C\' r \'\P\', ' +
                     format_error_str)
 
+        strike = str(int(strike) / 1000.0)
+
         expiration_date = _parse_expiration_date(expiration_date)
 
         return OptionSymbol(underlying, expiration_date, contract_type, strike)
@@ -147,11 +144,11 @@ class OptionSymbol:
         '''
         Returns the option symbol represented by this builder.
         '''
-        return '{}_{}{}{}'.format(
+        return '{:<6}{}{}{:08d}'.format(
             self.underlying_symbol,
-            self.expiration_date.strftime('%m%d%y'),
+            self.expiration_date.strftime('%y%m%d'),
             self.contract_type,
-            self.strike_price
+            int(float(self.strike_price) * 1000)
         )
 
 
