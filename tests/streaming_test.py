@@ -2,8 +2,7 @@ import schwab
 import urllib.parse
 import json
 import copy
-from .utils import (account_preferences, has_diff, MockResponse,
-                    no_duplicates, AsyncMagicMock)
+from .utils import account_preferences, has_diff, MockResponse, no_duplicates
 from unittest.mock import ANY, AsyncMock, call, MagicMock, Mock, patch
 from unittest import IsolatedAsyncioTestCase
 from schwab import streaming
@@ -109,7 +108,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
         self.http_client.get_user_preferences.return_value = MockResponse(
             preferences, 200)
-        socket = AsyncMagicMock()
+        socket = AsyncMock()
         ws_connect.return_value = socket
 
         socket.recv.side_effect = [json.dumps(self.success_response(
@@ -180,7 +179,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
         self.http_client.get_user_preferences.return_value = MockResponse(
             preferences, 200)
-        socket = AsyncMagicMock()
+        socket = AsyncMock()
         ws_connect.return_value = socket
 
         socket.recv.side_effect = [json.dumps(self.success_response(
@@ -221,7 +220,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             return MockResponse(preferences, 200)
 
         self.http_client.get_user_preferences = get_user_preferences
-        socket = AsyncMagicMock()
+        socket = AsyncMock()
         ws_connect.return_value = socket
 
         socket.recv.side_effect = [json.dumps(self.success_response(
@@ -255,7 +254,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
         self.http_client.get_user_preferences.return_value = MockResponse(
             preferences, 200)
-        socket = AsyncMagicMock()
+        socket = AsyncMock()
         ws_connect.return_value = socket
 
         response = self.success_response(0, 'ADMIN', 'LOGIN')
@@ -274,7 +273,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
         self.http_client.get_user_preferences.return_value = MockResponse(
             account_preferences(), 200)
-        socket = AsyncMagicMock()
+        socket = AsyncMock()
         ws_connect.return_value = socket
 
         socket.recv.side_effect = [json.dumps(self.success_response(
@@ -292,7 +291,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
         self.http_client.get_user_preferences.return_value = MockResponse(
             account_preferences(), 200)
-        socket = AsyncMagicMock()
+        socket = AsyncMock()
         ws_connect.return_value = socket
 
         socket.recv.side_effect = [json.dumps(self.success_response(
@@ -312,7 +311,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
         self.http_client.get_user_preferences.return_value = MockResponse(
             preferences, 200)
-        socket = AsyncMagicMock()
+        socket = AsyncMock()
         ws_connect.return_value = socket
 
         response = self.success_response(0, 'ADMIN', 'LOGIN')
@@ -333,7 +332,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
         self.http_client.get_user_preferences.return_value = MockResponse(
             preferences, 200)
-        socket = AsyncMagicMock()
+        socket = AsyncMock()
         ws_connect.return_value = socket
 
         response = self.success_response(0, 'NOT_ADMIN', 'LOGIN')
@@ -353,7 +352,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
         self.http_client.get_user_preferences.return_value = MockResponse(
             preferences, 200)
-        socket = AsyncMagicMock()
+        socket = AsyncMock()
         ws_connect.return_value = socket
 
         response = self.success_response(0, 'ADMIN', 'NOT_LOGIN')
