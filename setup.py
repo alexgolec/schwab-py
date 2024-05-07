@@ -39,7 +39,6 @@ setuptools.setup(
     ],
     extras_require={
         'dev': [
-            'asynctest',
             'colorama',
             'coverage',
             'nose',

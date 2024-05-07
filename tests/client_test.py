@@ -10,7 +10,7 @@ from unittest.mock import ANY, MagicMock, Mock, patch
 from schwab.client import AsyncClient, Client
 from schwab.orders.generic import OrderBuilder
 
-from utils import AsyncMagicMock, ResyncProxy, no_duplicates
+from .utils import AsyncMagicMock, ResyncProxy, no_duplicates
 
 # Constants
 

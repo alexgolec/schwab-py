@@ -1,12 +1,11 @@
 from colorama import Fore, Back, Style, init
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import asyncio
 import difflib
 import inspect
 import httpx
 import json
-import unittest
 
 class AnyStringWith(str):
     '''
@@ -16,8 +15,8 @@ class AnyStringWith(str):
     def __eq__(self, other):
         return self in other
 
-def account_principals():
-    with open('tests/testdata/principals.json', 'r') as f:
+def account_preferences():
+    with open('tests/testdata/preferences.json', 'r') as f:
         return json.load(f)
 
 
@@ -123,7 +122,7 @@ class ResyncProxy:
 
 
 # TODO: Figure out if httpx supports cleaner response mocking, because this is 
-# pretty janky.
+#       pretty janky.
 class MockResponse(httpx.Response):
     def __init__(self, json, status_code, headers=None):
         resp_args = {
@@ -136,10 +135,12 @@ class MockResponse(httpx.Response):
                 self, **resp_args)
 
 
+# TODO: This was necessary back before AsyncMock was a thing, but is it still 
+#       necessary now?
 class AsyncMagicMock:
     """
-    Simple mock that returns a asynctest.CoroutineMock instance for every
-    attribute. Useful for mocking async libraries
+    Simple mock that returns an AsyncMock instance for every attribute. Useful
+    for mocking async libraries.
     """
     def __init__(self):
         self.__attr_cache = {}
@@ -152,7 +153,7 @@ class AsyncMagicMock:
             return super().__getattribute__(key)
         except AttributeError:
             if key not in attr_cache:
-                attr_cache[key] = unittest.mock.AsyncMock()
+                attr_cache[key] = AsyncMock()
             return attr_cache[key]
 
     def __setattr__(self, key, val):
