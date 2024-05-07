@@ -685,6 +685,13 @@ class _TestClient:
                 'indicative': 'true'})
 
 
+    def test_get_quotes_indicative_not_bool(self):
+        with self.assertRaises(ValueError) as cm:
+            self.client.get_quotes(['AAPL', 'MSFT'], indicative='false')
+        self.assertEqual(str(cm.exception),
+                         "value of 'indicative' must be either True or False")
+
+
     # get_price_history
     
     def test_get_price_history_vanilla(self):
