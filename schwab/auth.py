@@ -82,34 +82,6 @@ class TokenMetadata:
         return wrapped_token_write_func
 
 
-def client_from_token_file(token_path, api_key, app_secret, asyncio=False,
-                           enforce_enums=True):
-    '''
-    Returns a session from an existing token file. The session will perform
-    an auth refresh as needed. It will also update the token on disk whenever
-    appropriate.
-
-    :param token_path: Path to an existing token. Updated tokens will be written
-                       to this path. If you do not yet have a token, use
-                       :func:`~schwab.auth.client_from_login_flow` or
-                       :func:`~schwab.auth.easy_client` to create one.
-    :param api_key: Your Schwab application's app key.
-    :param asyncio: If set to ``True``, this will enable async support allowing
-                    the client to be used in an async environment. Defaults to
-                    ``False``
-    :param enforce_enums: Set it to ``False`` to disable the enum checks on ALL
-                          the client methods. Only do it if you know you really
-                          need it. For most users, it is advised to use enums
-                          to avoid errors.
-    '''
-
-    load = __token_loader(token_path)
-
-    return client_from_access_functions(
-        api_key, app_secret, load, __update_token(token_path), asyncio=asyncio,
-        enforce_enums=enforce_enums)
-
-
 def __fetch_and_register_token_from_redirect(
         oauth, redirected_url, api_key, app_secret, token_path,
         token_write_func, asyncio, enforce_enums=True):
@@ -152,6 +124,34 @@ def __fetch_and_register_token_from_redirect(
                       token=token,
                       update_token=oauth_client_update_token),
         token_metadata=metadata_manager, enforce_enums=enforce_enums)
+
+
+def client_from_token_file(token_path, api_key, app_secret, asyncio=False,
+                           enforce_enums=True):
+    '''
+    Returns a session from an existing token file. The session will perform
+    an auth refresh as needed. It will also update the token on disk whenever
+    appropriate.
+
+    :param token_path: Path to an existing token. Updated tokens will be written
+                       to this path. If you do not yet have a token, use
+                       :func:`~schwab.auth.client_from_login_flow` or
+                       :func:`~schwab.auth.easy_client` to create one.
+    :param api_key: Your Schwab application's app key.
+    :param asyncio: If set to ``True``, this will enable async support allowing
+                    the client to be used in an async environment. Defaults to
+                    ``False``
+    :param enforce_enums: Set it to ``False`` to disable the enum checks on ALL
+                          the client methods. Only do it if you know you really
+                          need it. For most users, it is advised to use enums
+                          to avoid errors.
+    '''
+
+    load = __token_loader(token_path)
+
+    return client_from_access_functions(
+        api_key, app_secret, load, __update_token(token_path), asyncio=asyncio,
+        enforce_enums=enforce_enums)
 
 
 def client_from_manual_flow(api_key, app_secret, callback_url, token_path,
