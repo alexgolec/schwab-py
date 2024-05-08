@@ -7,7 +7,6 @@ from prompt_toolkit import prompt
 import json
 import logging
 import os
-import pickle
 import sys
 import time
 import warnings
@@ -37,15 +36,50 @@ def __token_loader(token_path):
         get_logger().info('Loading token from file %s', token_path)
 
         with open(token_path, 'rb') as f:
-            token_data = f.read()
-            try:
-                return json.loads(token_data.decode())
-            except ValueError:
-                get_logger().warning(
-                    'Unable to load JSON token from file %s, ' +
-                    'falling back to pickle', token_path)
-                return pickle.loads(token_data)
+            return json.load(f)
     return load_token
+
+
+class TokenMetadata:
+    '''
+    Provides the functionality required to maintain and update our view of the
+    token's metadata.
+    '''
+    def __init__(self, token, unwrapped_token_write_func):
+        # The token write function is ultimately stored in the session. When we
+        # get a new token we immediately wrap it in a new sesssion. We hold on
+        # to the unwrapped token writer function to allow us to inject the
+        # appropriate write function.
+        self.unwrapped_token_write_func = unwrapped_token_write_func
+
+        # The current token. Updated whenever the wrapped token update function 
+        # is called.
+        self.token = token
+
+    @classmethod
+    def from_loaded_token(cls, token, unwrapped_token_write_func):
+        '''
+        Returns a new ``TokenMetadata`` object extracted from the metadata of
+        the loaded token object. If the token has a legacy format which contains
+        no metadata, assign default values.
+        '''
+        return TokenMetadata(token, unwrapped_token_write_func)
+
+    def wrapped_token_write_func(self):
+        '''
+        Returns a version of the unwrapped write function which wraps the token 
+        in metadata and updates our view on the most recent token.
+        '''
+        def wrapped_token_write_func(token, *args, **kwargs):
+            # If the write function is going to raise an exception, let it do so 
+            # here before we update our reference to the current token.
+            ret = self.unwrapped_token_write_func(token, *args, **kwargs)
+
+            self.token = token
+
+            return ret
+
+        return wrapped_token_write_func
 
 
 def client_from_token_file(token_path, api_key, app_secret, asyncio=False,
@@ -91,7 +125,7 @@ def __fetch_and_register_token_from_redirect(
     update_token = (
         __update_token(token_path) if token_write_func is None
         else token_write_func)
-    metadata_manager = TokenMetadata(token, int(time.time()), update_token)
+    metadata_manager = TokenMetadata(token, update_token)
     update_token = metadata_manager.wrapped_token_write_func()
     update_token(token)
 
@@ -118,149 +152,6 @@ def __fetch_and_register_token_from_redirect(
                       token=token,
                       update_token=oauth_client_update_token),
         token_metadata=metadata_manager, enforce_enums=enforce_enums)
-
-
-class RedirectTimeoutError(Exception):
-    pass
-
-
-class TokenMetadata:
-    '''
-    Provides the functionality required to maintain and update our view of the
-    token's metadata.
-    '''
-    def __init__(
-            self, token, creation_timestamp, unwrapped_token_write_func=None):
-        self.creation_timestamp = creation_timestamp
-
-        # The token write function is ultimately stored in the session. When we
-        # get a new token we immediately wrap it in a new sesssion. We hold on
-        # to the unwrapped token writer function to allow us to inject the
-        # appropriate write function.
-        self.unwrapped_token_write_func = unwrapped_token_write_func
-
-        # The current token. Updated whenever the wrapped token update function 
-        # is called.
-        self.token = token
-
-    @classmethod
-    def from_loaded_token(cls, token, app_secret, unwrapped_token_write_func=None):
-        '''
-        Returns a new ``TokenMetadata`` object extracted from the metadata of
-        the loaded token object. If the token has a legacy format which contains
-        no metadata, assign default values.
-        '''
-        logger = get_logger()
-        logger.info(
-                'Loaded metadata aware token with creation timestamp %s',
-                token['creation_timestamp'])
-        return TokenMetadata(
-            token['token'],
-            token['creation_timestamp'],
-            unwrapped_token_write_func)
-
-    def wrapped_token_write_func(self):
-        '''
-        Returns a version of the unwrapped write function which wraps the token 
-        in metadata and updates our view on the most recent token.
-        '''
-        def wrapped_token_write_func(token, *args, **kwargs):
-            # If the write function is going to raise an exception, let it do so 
-            # here before we update our reference to the current token.
-            ret = self.unwrapped_token_write_func(
-                self.wrap_token_in_metadata(token), *args, **kwargs)
-
-            self.token = token
-
-            return ret
-
-        return wrapped_token_write_func
-
-    def wrap_token_in_metadata(self, token):
-        return {
-            'creation_timestamp': self.creation_timestamp,
-            'token': token,
-        }
-
-
-# TODO: Raise an exception when passing both token_path and token_write_func
-def client_from_login_flow(webdriver, api_key, app_secret, callback_url, token_path,
-                           redirect_wait_time_seconds=0.1, max_waits=3000,
-                           asyncio=False, token_write_func=None,
-                           enforce_enums=True):
-    '''
-    Uses the webdriver to perform an OAuth webapp login flow and creates a
-    client wrapped around the resulting token. The client will be configured to
-    refresh the token as necessary, writing each updated version to
-    ``token_path``.
-
-    **Warning:** Schwab appears to block logins performed within a webdriver. 
-    This library has been included as a direct copy from ``tda-api``, but it may 
-    be removed in the future.
-
-    :param webdriver: `selenium <https://selenium-python.readthedocs.io>`__
-                      webdriver which will be used to perform the login flow.
-    :param api_key: Your Schwab application's app key.
-    :param callback_url: Your Schwab application's callback URL. Note this must
-                         *exactly* match the value you've entered in your
-                         application configuration, otherwise login will fail
-                         with a security error.
-    :param token_path: Path to which the new token will be written. If the token
-                       file already exists, it will be overwritten with a new
-                       one. Updated tokens will be written to this path as well.
-    :param asyncio: If set to ``True``, this will enable async support allowing
-                    the client to be used in an async environment. Defaults to
-                    ``False``
-    :param enforce_enums: Set it to ``False`` to disable the enum checks on ALL
-                          the client methods. Only do it if you know you really
-                          need it. For most users, it is advised to use enums
-                          to avoid errors.
-    '''
-    get_logger().info('Creating new token with redirect URL \'%s\' ' +
-                       'and token path \'%s\'', callback_url, token_path)
-
-    oauth = OAuth2Client(api_key, callback_url=callback_url)
-    authorization_url, state = oauth.create_authorization_url(
-        'https://api.schwabapi.com/v1/oauth/authorize')
-
-    # Open the login page and wait for the redirect
-    print('\n**************************************************************\n')
-    print('Opening the login page in a webdriver. Please use this window to',
-          'log in. Successful login will be detected automatically.')
-    print()
-    print('If you encounter any issues, see here for troubleshooting: ' +
-          'https://schwab-py.readthedocs.io/en/stable/auth.html' +
-          '#troubleshooting')
-    print('\n**************************************************************\n')
-
-    webdriver.get(authorization_url)
-
-    # Tolerate redirects to HTTPS on the callback URL
-    if callback_url.startswith('http://'):
-        print(('WARNING: Your callback URL ({}) will transmit data over HTTP, ' +
-               'which is a potentially severe security vulnerability. ' +
-               'Please go to your app\'s configuration with Schwab ' +
-               'and update your callback URL to begin with \'https\' ' +
-               'to stop seeing this message.').format(callback_url))
-
-        callback_urls = (callback_url, 'https' + callback_url[4:])
-    else:
-        callback_urls = (callback_url,)
-
-    # Wait until the current URL starts with the callback URL
-    current_url = ''
-    num_waits = 0
-    while not any(current_url.startswith(r_url) for r_url in callback_urls):
-        current_url = webdriver.current_url
-
-        if num_waits > max_waits:
-            raise RedirectTimeoutError('timed out waiting for redirect')
-        time.sleep(redirect_wait_time_seconds)
-        num_waits += 1
-
-    return __fetch_and_register_token_from_redirect(
-        oauth, current_url, api_key, app_secret, token_path, token_write_func,
-        asyncio, enforce_enums=enforce_enums)
 
 
 def client_from_manual_flow(api_key, app_secret, callback_url, token_path,
@@ -336,68 +227,6 @@ def client_from_manual_flow(api_key, app_secret, callback_url, token_path,
         asyncio, enforce_enums=enforce_enums)
 
 
-def easy_client(api_key, app_secret, callback_url, token_path,
-                webdriver_func=None, asyncio=False, enforce_enums=True):
-    '''Convenient wrapper around :func:`client_from_login_flow` and
-    :func:`client_from_token_file`. If ``token_path`` exists, loads the token
-    from it. Otherwise open a login flow to fetch a new token. Returns a client
-    configured to refresh the token to ``token_path``.
-
-    **Warning:** Schwab appears to block logins performed within a webdriver. 
-    This library has been included as a direct copy from ``tda-api``, but it may 
-    be removed in the future.
-
-    *Reminder:* You should never create the token file yourself or modify it in
-    any way. If ``token_path`` refers to an existing file, this method will
-    assume that file is valid token and will attempt to parse it.
-
-    :param api_key: Your Schwab application's app key.
-    :param callback_url: Your Schwab application's redirect URL. Note this must
-                         *exactly* match the value you've entered in your
-                         application configuration, otherwise login will fail
-                         with a security error.
-    :param token_path: Path that new token will be read from and written to. If
-                       If this file exists, this method will assume it's valid
-                       and will attempt to parse it as a token. If it does not,
-                       this method will create a new one using
-                       :func:`~schwab.auth.client_from_login_flow`. Updated tokens
-                       will be written to this path as well.
-    :param webdriver_func: Function that returns a webdriver for use in fetching
-                           a new token. Will only be called if the token file
-                           cannot be found.
-    :param asyncio: If set to ``True``, this will enable async support allowing
-                    the client to be used in an async environment. Defaults to
-                    ``False``
-    :param enforce_enums: Set it to ``False`` to disable the enum checks on ALL
-                          the client methods. Only do it if you know you really
-                          need it. For most users, it is advised to use enums
-                          to avoid errors.
-    '''
-    logger = get_logger()
-
-    if os.path.isfile(token_path):
-        c = client_from_token_file(token_path, api_key, app_secret,
-                                   asyncio=asyncio, enforce_enums=enforce_enums)
-        logger.info(
-                'Returning client loaded from token file \'%s\'', token_path)
-        return c
-    else:
-        logger.warning('Failed to find token file \'%s\'', token_path)
-
-        if webdriver_func is not None:
-            with webdriver_func() as driver:
-                c = client_from_login_flow(
-                    driver, api_key, app_secret, callback_url, token_path,
-                    asyncio=asyncio, enforce_enums=enforce_enums)
-                logger.info(
-                    'Returning client fetched using webdriver, writing' +
-                    'token to \'%s\'', token_path)
-                return c
-        else:
-            logger.error('No webdriver_func set, cannot fetch token')
-            sys.exit(1)
-
-
 def client_from_access_functions(api_key, app_secret, token_read_func,
                                  token_write_func, asyncio=False,
                                  enforce_enums=True):
@@ -412,7 +241,7 @@ def client_from_access_functions(api_key, app_secret, token_read_func,
     Users are free to customize how they represent the token file. In theory,
     since they have direct access to the token, they can get creative about how
     they store it and fetch it. In practice, it is *highly* recommended to
-    simply accept the token object and use ``pickle`` to serialize and
+    simply accept the token object and use ``json`` to serialize and
     deserialize it, without inspecting it in any way.
 
     Note the read and write methods must take particular arguments. Please see 
@@ -437,15 +266,10 @@ def client_from_access_functions(api_key, app_secret, token_read_func,
     token = token_read_func()
 
     # Extract metadata and unpack the token, if necessary
-    metadata = TokenMetadata.from_loaded_token(
-            token, app_secret, token_write_func)
-    token = token['token']
+    metadata = TokenMetadata.from_loaded_token(token, token_write_func)
 
     # Don't emit token details in debug logs
     register_redactions(token)
-
-    # Return a new session configured to refresh credentials
-    #api_key = _normalize_api_key(api_key)
 
     wrapped_token_write_func = metadata.wrapped_token_write_func()
 
