@@ -78,27 +78,10 @@ using them easy.
 Fetching a Token and Creating a Client
 --------------------------------------
 
-``schwab-py`` provides an easy implementation of the client-side login flow in 
-the ``auth`` package. It uses a `selenium 
-<https://selenium-python.readthedocs.io/>`__ webdriver to open the Schwab
-authentication URL, take your login credentials, catch the post-login redirect, 
-and fetch a reusable token. It returns a fully-configured :ref:`client`, ready 
-to send API calls. It also handles token refreshing, and writes updated tokens 
-to the token file.
-
-These functions are webdriver-agnostic, meaning you can use whatever 
-webdriver-supported browser you have available on your system. You can find 
-information about available webdriver on the `Selenium documentation
-<https://www.selenium.dev/documentation/en/getting_started_with_webdriver/
-browsers/>`__.
-
-.. autofunction:: schwab.auth.client_from_login_flow
-
 .. _manual_login:
 
-If for some reason you cannot open a web browser, such as when running in a 
-cloud environment, the following function will guide you through the process of 
-manually creating a token by copy-pasting relevant URLs.
+This function will guide you through the process of logging in and creating a 
+token.
 
 .. autofunction:: schwab.auth.client_from_manual_flow
 
@@ -107,16 +90,10 @@ the login flow again.
 
 .. autofunction:: schwab.auth.client_from_token_file
 
-The following is a convenient wrapper around these two methods, calling each 
-when appropriate: 
-
-.. autofunction:: schwab.auth.easy_client
-
 If you don't want to create a client and just want to fetch a token, you can use
 the ``schwab-generate-token.py`` script that's installed with the library. This 
 method is particularly useful if you want to create your token on one machine 
-and use it on another. The script will attempt to open a web browser and perform 
-the login flow. If it fails, it will fall back to the manual login flow: 
+and use it on another.
 
 .. code-block:: bash
 
@@ -173,34 +150,6 @@ can also `join our Discord server <https://discord.gg/M3vjtHj>`__ to ask questio
 
 
 
-.. _missing_chromedriver:
-
-++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-``WebDriverException: Message: 'chromedriver' executable needs to be in PATH``
-++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-When creating a ``schwab-py`` token using a webrowser-based method like 
-:func:`~schwab.auth.client_from_login_flow` or :func:`~schwab.auth.easy_client`, 
-the library must control the browser using `selenium 
-<https://selenium-python.readthedocs.io/>`__. This is a Python library that 
-sends commands to the browser to perform operations like load pages, inject 
-synthetic clicks, enter text, and so on. The component which is used to send 
-these commands is called a *driver*. 
-
-Drivers are generally not part of the standard web browser installation, meaning 
-you must install them manually. If you're seeing this or a similar message, you 
-probably haven't installed the appropriate webdriver. Drivers are 
-available for most of the common web browsers, including `Chrome 
-<https://chromedriver.chromium.org/getting-started/>`__, `Firefox 
-<https://github.com/mozilla/geckodriver/releases>`__, and `Safari 
-<https://developer.apple.com/documentation/webkit/testing_with_webdriver_in_safari>`__.  
-Make sure you've installed the driver *before* attempting to create a token 
-using ``schwab-py``.
-
-
-.. _invalid_grant:
-
-
 ++++++++++++++++++++++
 Token Parsing Failures
 ++++++++++++++++++++++
@@ -228,26 +177,3 @@ you're confident is valid, please `file a ticket
 <https://github.com/alexgolec/schwab-py/issues>`__. Just remember, **never share 
 your token file, not even with** ``schwab-py`` **developers**. Sharing the token
 file is as dangerous as sharing your Schwab username and password. 
-
-
-++++++++++++++++++++++++++++++
-What If I Can't Use a Browser?
-++++++++++++++++++++++++++++++
-
-Launching a browser can be inconvenient in some situations, most notably in 
-containerized applications running on a cloud provider. ``schwab-py`` supports 
-two alternatives to creating tokens by opening a web browser. 
-
-Firstly, the :ref:`manual login flow<manual_login>` flow allows you to go 
-through the login flow on a different machine than the one on which 
-``schwab-py`` is running. Instead of starting the web browser and automatically 
-opening the relevant URLs, this flow allows you to manually copy-paste around 
-the URLs. It's a little more cumbersome, but it has no dependency on selenium.
-
-Alterately, you can take advantage of the fact that token files are portable. 
-Once you create a token on one machine, such as one where you can open a web 
-browser, you can easily copy that token file to another machine, such as your 
-application in the cloud. However, make sure you don't use the same token on 
-two machines. It is recommended to delete the token created on the 
-browser-capable machine as soon as it is copied to its destination. 
-
