@@ -1102,7 +1102,7 @@ class BaseClient(EnumEnforcer):
         projection = self.convert_enum(projection, self.Instrument.Projection)
 
         params = {
-                'symbol': ','.join(symbols),
+                'symbol': ','.join(symbols) if isinstance(symbols, list) else symbols,
                 'projection': projection,
         }
 
