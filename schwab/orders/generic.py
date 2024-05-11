@@ -57,7 +57,7 @@ class OrderBuilder(EnumEnforcer):
         self._orderType = None
         self._complexOrderStrategyType = None
         self._quantity = None
-        self._requestedDestination = None
+        self._destinationLinkName = None
         self._stopPrice = None
         self._stopPriceLinkBasis = None
         self._stopPriceLinkType = None
@@ -167,14 +167,14 @@ class OrderBuilder(EnumEnforcer):
         '''
         requested_destination = self.convert_enum(
             requested_destination, common.Destination)
-        self._requestedDestination = requested_destination
+        self._destinationLinkName = requested_destination
         return self
 
     def clear_requested_destination(self):
         '''
         Clear the requested destination.
         '''
-        self._requestedDestination = None
+        self._destinationLinkName = None
         return self
 
     # StopPrice
