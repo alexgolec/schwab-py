@@ -32,7 +32,7 @@ class OptionSymbol:
        in front because strike is less than 1000)
      * ``SPXW  240420C05040000``: SPX Weekly Apr 20, 2024 5040 Call (note the
        one zero in front because strike is greater than 1000)
-     
+
     Note while each of the individual parts is validated by itself, the
     option symbol itself may not represent a traded option:
 
@@ -93,7 +93,7 @@ class OptionSymbol:
         if (strike is None or not isinstance(strike_price_as_string, str)
                 or strike <= 0):
             raise ValueError(
-                'Strike price must be a string representing a positive ' +
+                'strike price must be a string representing a positive ' +
                 'float')
 
         # Remove extraneous zeroes at the end
