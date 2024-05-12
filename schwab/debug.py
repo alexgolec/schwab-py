@@ -1,5 +1,6 @@
 import atexit
 import httpx
+import json
 import logging
 import sys
 import schwab
@@ -52,7 +53,7 @@ def register_redactions_from_response(resp):
     if resp.status_code == httpx.codes.OK:
         try:
             register_redactions(resp.json())
-        except __json_errors:
+        except json.decoder.JSONDecodeError:
             pass
 
 
