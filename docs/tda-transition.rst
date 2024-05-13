@@ -30,8 +30,8 @@ multiple days. Until your app status changes to "Ready For Use," you cannot do
 anything. If you encounter any issues, please check this first **before** you 
 ask for help on our Discord server.
 
-*127.0.0.1 cannot be used as a callback URL.* You can still use your local 
-machine, but you must enter ``localhost`` instead.
+*localhost cannot be used as a callback URL.* You can still use your local 
+machine, but you must enter ``127.0.0.1`` instead.
 
 *Old tokens are invalid*. Once you create your first app, you cannot re-use your 
 old that worked under ``tda-api``. You must delete that one and create a new 
