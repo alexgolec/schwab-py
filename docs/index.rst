@@ -26,6 +26,7 @@ know exactly what you're doing.
   :maxdepth: 2
   :caption: Contents:
 
+  tda-transition
   getting-started
   auth
   client
