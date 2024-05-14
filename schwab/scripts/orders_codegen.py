@@ -1,4 +1,5 @@
 import argparse
+import httpx
 import json
 
 from schwab.auth import client_from_token_file
@@ -13,25 +14,65 @@ def latest_order_main(sys_args):
     required.add_argument(
             '--token_file', required=True, help='Path to token file')
     required.add_argument('--api_key', required=True)
+    required.add_argument('--app_secret', required=True)
 
-    parser.add_argument('--account_id', type=int,
+    account_spec_group = parser.add_mutually_exclusive_group()
+    account_spec_group.add_argument('--account_id', type=int,
             help='Restrict lookups to a specific account ID')
 
-    args = parser.parse_args(args=sys_args)
-    client = client_from_token_file(args.token_file, args.api_key)
+    account_spec_group.add_argument('--account_hash', type=str,
+            help='Restrict lookups to the account with the specified hash')
 
-    if args.account_id:
-        orders = client.get_orders_by_path(args.account_id).json()
-        if 'error' in orders:
-            print(('TDA returned error: "{}", This is most often caused by ' +
-                   'an invalid account ID').format(orders['error']))
+    args = parser.parse_args(args=sys_args)
+    client = client_from_token_file(
+            args.token_file, args.app_secret, args.api_key)
+
+    # If the account ID is specified, find the corresponding account hash
+    if args.account_id is not None:
+        r = client.get_account_numbers()
+        assert r.status_code == httpx.codes.OK
+
+        for val in r.json():
+            if val['accountNumber'] == str(args.account_id):
+                account_hash = val['hashValue']
+                break
+        else:
+            print(('Failed to find account has for account ID {}. Searched ' +
+                   'the following accounts:\n{}').format(
+                       args.account_id, json.dumps(r.json(), indent=4)))
             return -1
     else:
-        orders = client.get_orders_by_query().json()
-        if 'error' in orders:
-            print('TDA returned error: "{}"'.format(orders['error']))
+        account_hash = args.account_hash
+
+
+    # Fetch orders
+    def get_orders(method):
+        r = method()
+        if r.status_code != httpx.codes.OK:
+            print(('Returned HTTP status code {}. This is most often caused ' +
+                   'by an invalid account ID or hash.').format(r.status_code))
+            return None
+        return r.json()
+
+    if account_hash is not None:
+        orders = get_orders(lambda: client.get_orders_for_account(account_hash))
+        if orders is None:
             return -1
 
+        if 'error' in orders:
+            print(('Schwab returned error: "{}", This is most often caused ' +
+                   'by an invalid account ID or hash').format(orders['error']))
+            return -1
+    else:
+        orders = get_orders(lambda: client.get_orders_for_all_linked_accounts())
+        if orders is None:
+            return -1
+
+        if 'error' in orders:
+            print('Schwab returned error: "{}"'.format(orders['error']))
+            return -1
+
+    # Construct and emit order code
     if orders:
         order = sorted(orders, key=lambda o: -o['orderId'])[0]
         print('# Order ID', order['orderId'])

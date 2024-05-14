@@ -1,3 +1,4 @@
+import httpx
 import subprocess
 import unittest
 from unittest.mock import call, MagicMock, patch
@@ -31,6 +32,8 @@ class LatestOrderTest(unittest.TestCase):
         self.add_arg('filename.json')
         self.add_arg('--api_key')
         self.add_arg('api-key')
+        self.add_arg('--app_secret')
+        self.add_arg('app-secret')
 
         orders = [
                 {'orderId': 201},
@@ -41,7 +44,8 @@ class LatestOrderTest(unittest.TestCase):
 
         mock_client = MagicMock()
         mock_client_from_token_file.return_value = mock_client
-        mock_client.get_orders_by_query.return_value.json.return_value = orders
+        mock_client.get_orders_for_all_linked_accounts.return_value \
+                = httpx.Response(200, json=orders)
 
         self.assertEqual(self.main(), 0)
 
@@ -56,7 +60,7 @@ class LatestOrderTest(unittest.TestCase):
     @patch('schwab.scripts.orders_codegen.client_from_token_file')
     @patch('schwab.scripts.orders_codegen.construct_repeat_order')
     @patch('schwab.scripts.orders_codegen.code_for_builder')
-    def test_no_account_id_no_such_order(
+    def test_no_account_id_no_recent_orders(
             self,
             mock_code_for_builder,
             mock_construct_repeat_order,
@@ -66,12 +70,15 @@ class LatestOrderTest(unittest.TestCase):
         self.add_arg('filename.json')
         self.add_arg('--api_key')
         self.add_arg('api-key')
+        self.add_arg('--app_secret')
+        self.add_arg('app-secret')
 
         orders = []
 
         mock_client = MagicMock()
         mock_client_from_token_file.return_value = mock_client
-        mock_client.get_orders_by_query.return_value.json.return_value = orders
+        mock_client.get_orders_for_all_linked_accounts.return_value \
+                = httpx.Response(200, json=orders)
 
         self.assertEqual(self.main(), 0)
 
@@ -94,18 +101,21 @@ class LatestOrderTest(unittest.TestCase):
         self.add_arg('filename.json')
         self.add_arg('--api_key')
         self.add_arg('api-key')
+        self.add_arg('--app_secret')
+        self.add_arg('app-secret')
 
         orders = {'error': 'invalid'}
 
         mock_client = MagicMock()
         mock_client_from_token_file.return_value = mock_client
-        mock_client.get_orders_by_query.return_value.json.return_value = orders
+        mock_client.get_orders_for_all_linked_accounts.return_value \
+                = httpx.Response(200, json=orders)
 
         self.assertEqual(self.main(), -1)
 
         mock_construct_repeat_order.assert_not_called()
         mock_print.assert_called_once_with(
-                AnyStringWith('TDA returned error: "invalid"'))
+                AnyStringWith('Schwab returned error: "invalid"'))
 
 
     @no_duplicates
@@ -123,6 +133,8 @@ class LatestOrderTest(unittest.TestCase):
         self.add_arg('filename.json')
         self.add_arg('--api_key')
         self.add_arg('api-key')
+        self.add_arg('--app_secret')
+        self.add_arg('app-secret')
         self.add_arg('--account_id')
         self.add_arg('123456')
 
@@ -135,10 +147,18 @@ class LatestOrderTest(unittest.TestCase):
 
         mock_client = MagicMock()
         mock_client_from_token_file.return_value = mock_client
-        mock_client.get_orders_by_path.return_value.json.return_value = orders
+        mock_client.get_account_numbers.return_value = httpx.Response(
+                200,
+                json=[{
+                    'accountNumber': '123456',
+                    'hashValue': 'hash-value',
+                }])
+        mock_client.get_orders_for_account.return_value \
+                = httpx.Response(200, json=orders)
 
         self.assertEqual(self.main(), 0)
 
+        mock_client.get_account_numbers.assert_called_once()
         mock_construct_repeat_order.assert_called_once_with(orders[3])
         mock_print.assert_has_calls([
                 call('# Order ID', 401),
@@ -160,6 +180,8 @@ class LatestOrderTest(unittest.TestCase):
         self.add_arg('filename.json')
         self.add_arg('--api_key')
         self.add_arg('api-key')
+        self.add_arg('--app_secret')
+        self.add_arg('app-secret')
         self.add_arg('--account_id')
         self.add_arg('123456')
 
@@ -167,7 +189,14 @@ class LatestOrderTest(unittest.TestCase):
 
         mock_client = MagicMock()
         mock_client_from_token_file.return_value = mock_client
-        mock_client.get_orders_by_path.return_value.json.return_value = orders
+        mock_client.get_account_numbers.return_value = httpx.Response(
+                200,
+                json=[{
+                    'accountNumber': '123456',
+                    'hashValue': 'hash-value',
+                }])
+        mock_client.get_orders_for_account.return_value \
+                = httpx.Response(200, json=orders)
 
         self.assertEqual(self.main(), 0)
 
@@ -190,21 +219,67 @@ class LatestOrderTest(unittest.TestCase):
         self.add_arg('filename.json')
         self.add_arg('--api_key')
         self.add_arg('api-key')
+        self.add_arg('--app_secret')
+        self.add_arg('app-secret')
         self.add_arg('--account_id')
         self.add_arg('123456')
 
-        orders = {'error': 'invalid'}
-
         mock_client = MagicMock()
         mock_client_from_token_file.return_value = mock_client
-        mock_client.get_orders_by_path.return_value.json.return_value = orders
+        mock_client.get_account_numbers.return_value = httpx.Response(
+                200,
+                json=[{
+                    'accountNumber': '123456',
+                    'hashValue': 'hash-value',
+                }])
+        mock_client.get_orders_for_account.return_value \
+                = httpx.Response(200, json={'error': 'invalid'})
 
         self.assertEqual(self.main(), -1)
 
         mock_construct_repeat_order.assert_not_called
         mock_print.assert_called_once_with(
-                AnyStringWith('TDA returned error: "invalid"'))
+                AnyStringWith('Schwab returned error: "invalid"'))
 
+
+    @no_duplicates
+    @patch('builtins.print')
+    @patch('schwab.scripts.orders_codegen.client_from_token_file')
+    @patch('schwab.scripts.orders_codegen.construct_repeat_order')
+    @patch('schwab.scripts.orders_codegen.code_for_builder')
+    def test_success_account_hash(
+            self,
+            mock_code_for_builder,
+            mock_construct_repeat_order,
+            mock_client_from_token_file,
+            mock_print):
+        self.add_arg('--token_file')
+        self.add_arg('filename.json')
+        self.add_arg('--api_key')
+        self.add_arg('api-key')
+        self.add_arg('--app_secret')
+        self.add_arg('app-secret')
+        self.add_arg('--account_hash')
+        self.add_arg('account-hash')
+
+        orders = [
+                {'orderId': 201},
+                {'orderId': 101},
+                {'orderId': 301},
+                {'orderId': 401},
+        ]
+
+        mock_client = MagicMock()
+        mock_client_from_token_file.return_value = mock_client
+        mock_client.get_orders_for_account.return_value \
+                = httpx.Response(200, json=orders)
+
+        self.assertEqual(self.main(), 0)
+
+        mock_construct_repeat_order.assert_called_once_with(orders[3])
+        mock_print.assert_has_calls([
+                call('# Order ID', 401),
+                call(mock_code_for_builder.return_value)])
 
 class ScriptInvocationTest(unittest.TestCase):
 
