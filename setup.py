@@ -30,6 +30,7 @@ setuptools.setup(
     ],
     python_requires='>=3.10',
     install_requires=[
+        'autopep8',
         'authlib',
         'httpx',
         'prompt_toolkit',
@@ -56,6 +57,7 @@ setuptools.setup(
     },
     license='MIT',
     scripts=[
+        'bin/schwab-order-codegen.py',
     ],
 )
 
