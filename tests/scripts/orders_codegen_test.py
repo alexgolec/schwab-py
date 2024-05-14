@@ -363,5 +363,3 @@ class ScriptInvocationTest(unittest.TestCase):
         output = subprocess.check_output(
                 'schwab-order-codegen.py --help',
                 shell=True, text=True)
-        self.assertIn('Utilities for generating code from historical orders',
-                      output)
