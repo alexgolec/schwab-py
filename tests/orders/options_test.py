@@ -64,6 +64,33 @@ class OptionSymbolTest(unittest.TestCase):
 
         self.assertEqual('BKNG  240510C02400000', op.build())
 
+    def test_strike_ends_in_decimal_point(self):
+        op = OptionSymbol('AAPL', datetime.date(2024, 5, 10), 'C', '100.')
+        self.assertEqual('AAPL  240510C00100000', op.build())
+
+    def test_strike_ends_in_trailing_zeroes(self):
+        op = OptionSymbol('AAPL', datetime.date(2024, 5, 10), 'C', 
+                          '100.00000000')
+        self.assertEqual('AAPL  240510C00100000', op.build())
+
+    def test_CALL_as_delimiter(self):
+        op = OptionSymbol('AAPL', datetime.date(2024, 5, 10), 'CALL', '100.10')
+        self.assertEqual('AAPL  240510C00100100', op.build())
+
+    def test_PUT_as_delimiter(self):
+        op = OptionSymbol('AAPL', datetime.date(2024, 5, 10), 'CALL', '100.10')
+        self.assertEqual('AAPL  240510C00100100', op.build())
+
+    def test_invalid_strike(self):
+        with self.assertRaisesRegex(
+                ValueError, '.*option must have contract type.*'):
+            op = OptionSymbol.parse_symbol('BKNG  240510Q02400000')
+
+
+    def test_date_as_string(self):
+        op = OptionSymbol('AAPL', '261218', 'P', '350')
+        self.assertEqual('AAPL  261218P00350000', op.build())
+
 
     def test_strike_as_float(self):
         with self.assertRaisesRegex(
