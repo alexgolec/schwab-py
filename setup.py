@@ -57,7 +57,7 @@ setuptools.setup(
     },
     license='MIT',
     scripts=[
-        'bin/tda-order-codegen.py',
+        'bin/schwab-order-codegen.py',
     ],
 )
 
