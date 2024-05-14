@@ -332,7 +332,7 @@ class LatestOrderTest(unittest.TestCase):
     @patch('schwab.scripts.orders_codegen.client_from_token_file')
     @patch('schwab.scripts.orders_codegen.construct_repeat_order')
     @patch('schwab.scripts.orders_codegen.code_for_builder')
-    def test_order_fetching_fails(
+    def test_order_fetching_fails_no_account_id(
             self,
             mock_code_for_builder,
             mock_construct_repeat_order,
@@ -355,6 +355,41 @@ class LatestOrderTest(unittest.TestCase):
         mock_print.assert_called_once_with(
                 AnyStringWith('Returned HTTP status code 400'))
 
+
+    @no_duplicates
+    @patch('builtins.print')
+    @patch('schwab.scripts.orders_codegen.client_from_token_file')
+    @patch('schwab.scripts.orders_codegen.construct_repeat_order')
+    @patch('schwab.scripts.orders_codegen.code_for_builder')
+    def test_order_fetching_fails_account_id(
+            self,
+            mock_code_for_builder,
+            mock_construct_repeat_order,
+            mock_client_from_token_file,
+            mock_print):
+        self.add_arg('--token_file')
+        self.add_arg('filename.json')
+        self.add_arg('--api_key')
+        self.add_arg('api-key')
+        self.add_arg('--app_secret')
+        self.add_arg('app-secret')
+        self.add_arg('--account_id')
+        self.add_arg('123456')
+
+        mock_client = MagicMock()
+        mock_client_from_token_file.return_value = mock_client
+        mock_client.get_account_numbers.return_value = httpx.Response(
+                200,
+                json=[{
+                    'accountNumber': '123456',
+                    'hashValue': 'hash-value',
+                }])
+        mock_client.get_orders_for_account.return_value = httpx.Response(400)
+
+        self.assertEqual(self.main(), -1)
+
+        mock_print.assert_called_once_with(
+                AnyStringWith('Returned HTTP status code 400'))
 
 
 class ScriptInvocationTest(unittest.TestCase):
