@@ -1,3 +1,4 @@
+import subprocess
 import unittest
 from unittest.mock import call, MagicMock, patch
 
@@ -203,3 +204,14 @@ class LatestOrderTest(unittest.TestCase):
         mock_construct_repeat_order.assert_not_called
         mock_print.assert_called_once_with(
                 AnyStringWith('TDA returned error: "invalid"'))
+
+
+class ScriptInvocationTest(unittest.TestCase):
+
+    def test_get_help(self):
+        res = subprocess.run(
+                'schwab-order-codegen.py --help',
+                shell=True, check=True, text=True, capture_output=True)
+        print(res.stdout)
+        self.assertIn('Utilities for generating code from historical orders',
+                      res.stdout)
