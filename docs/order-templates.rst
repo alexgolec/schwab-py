@@ -112,6 +112,9 @@ Note orders placed using these templates may be rejected, depending on the
 user's options trading authorization.
 
 
+
+.. _options_symbols:
+
 ++++++++++++++++++++++++
 Building Options Symbols
 ++++++++++++++++++++++++
@@ -135,7 +138,9 @@ and does not validate whether the symbol actually represents a traded option:
       'TSLA', datetime.date(year=2020, month=11, day=20), 'P', '1360').build()
 
 .. autoclass:: schwab.orders.options.OptionSymbol
-  :special-members:
+   :special-members:
+
+.. automethod:: schwab.orders.options.OptionSymbol.build
 
 
 ++++++++++++++

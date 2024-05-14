@@ -94,6 +94,16 @@ Again, **this is not a choice by the library authors.** Please do not go to our
 Discord server asking to recover your data or add this functionality.
 
 
++++++++++++++++++++++++++++++++++++++++++
+Options symbols are formatted differently
++++++++++++++++++++++++++++++++++++++++++
+
+Options symbols on Schwab use a different format than they did on TDAmeritrade.  
+Code that manipulates them may need to be updated. ``schwab-py`` provides a 
+:ref:`helper class<options_symbols>` to make parsing and generating options 
+symbols easier.
+
+
 ++++++++++++++++++++++++++++++++++++++++++++++
 ``schwab-py`` only supports python 3.10 and up
 ++++++++++++++++++++++++++++++++++++++++++++++
