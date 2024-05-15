@@ -163,14 +163,12 @@ def client_from_manual_flow(api_key, app_secret, callback_url, token_path,
     The client will be configured to refresh the token as necessary, writing
     each updated version to ``token_path``.
 
-    Note this method is more complicated and error prone, and should be avoided
-    in favor of :func:`client_from_login_flow` wherever possible.
-
     :param api_key: Your Schwab application's app key.
     :param callback_url: Your Schwab application's callback URL. Note this must
                          *exactly* match the value you've entered in your
                          application configuration, otherwise login will fail
-                         with a security error.
+                         with a security error. Be sure to check case and 
+                         trailing slashes.
     :param token_path: Path to which the new token will be written. If the token
                        file already exists, it will be overwritten with a new
                        one. Updated tokens will be written to this path as well.
