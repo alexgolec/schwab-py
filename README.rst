@@ -1,46 +1,131 @@
-``schwab-py``: A Schwab API Wrapper
-========================================
+``schwab-py``: A Charles Schwab API Wrapper
+===========================================
 
 .. image:: https://img.shields.io/discord/720378361880248621.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2
   :target: https://discord.gg/BEr6y6Xqyv
 
 .. image:: https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fshieldsio-patreon.vercel.app%2Fapi%3Fusername%3Dalexgolec%26type%3Dpatrons&style=flat
-  :target: https://patreon.com/alexgolec
+  :target: https://patreon.com/TDAAPI
 
-``schwab-api``
---------------
+.. image:: https://readthedocs.org/projects/schwab-py/badge/?version=latest
+  :target: https://schwab-py.readthedocs.io/en/latest/?badge=latest
 
-Background
-==========
+.. image:: https://github.com/alexgolec/schwab-py/workflows/tests/badge.svg
+  :target: https://github.com/alexgolec/schwab-py/actions?query=workflow%3Atests
 
-In 2020, Charles Schwab completed its purchase of TDAmeritrade. Prior to this 
-purchase, TDAmeritrade operated (in the author's personal opinion) the most 
-high-quality, accessible, and cost effective trading API. It offers developers 
-access to their TDAmeritrade accounts, trading in equities, ETFs, and options, 
-plus a wide range of historical data. 
+.. image:: https://badge.fury.io/py/schwab-py.svg
+  :target: https://badge.fury.io/py/schwab-py
 
-Since this purchase, Schwab has begun to transition TDAmeritrade customers onto 
-their own service. In late 2022, the announced the TDAmeritrade REST API will be 
-included in this transition, which will happen over the course of 2023. 
+.. image:: 
+   http://codecov.io/github/alexgolec/schwab-py/coverage.svg?branch=master
+  :target: http://codecov.io/github/alexgolec/schwab-py?branch=master
 
+What is ``schwab-py``?
+--------------------
 
-What is ``schwab-api``?
-=======================
+``schwab-py`` is an unofficial wrapper around the Charles Schwab Consumer APIs.  
+It strives to be as thin and unopinionated as possible, offering an elegant 
+programmatic interface over each endpoint. Notable functionality includes:
 
-The author of this repo (Alex Golec) had previous authored ``tda-api``, an 
-unofficial python wrapper around the previous TDAmeritrade API. This library is 
-currently the most popular method of accessing this API, with a community of 
-hundreds of active users on our Discord server. 
+* Login and authentication
+* Quotes, fundamentals, and historical pricing data
+* Options chains
+* Streaming quotes and order book depth data
+* Trades and trade management
+* Account info
 
-While the details of the forthcoming Schwab API have not yet been announced, 
-this repository serves as a placeholder for a python wrapper around it. It 
-currently has no functionality. Stay tuned for updates as they become available.
+How do I use ``schwab-pt``?
+-------------------------
 
+For a full description of ``schwab-pt``'s functionality, check out the 
+`documentation <https://schwab-py.readthedocs.io/en/latest/>`__. Meawhile, 
+here's a quick getting started guide:
 
+Before you do anything, create an account and an application on the
+`Charles Schwab developer site <https://developer.schwab.com/login>`__.
+You'll receive an API key and app secret, which you can pass to this wrapper.  
+You'll also want to take note of your callback URI, as the login flow requires 
+it. Once your app is approved (which can take a few days), you'll be ready to 
+go! You can find more detailed instructions `here 
+<https://schwab-py.readthedocs.io/en/latest/getting-started.html>`__.
 
-**Disclaimer:** *schwab-api is an unofficial API wrapper. It is in no way 
-endorsed by or affiliated with TD Ameritrade, Charles Schwab or any associated 
-organization. Make sure to read and understand the terms of service of the 
-underlying API before using this package. The authors accept no responsibility 
-for any damage that might stem from use of this package. See the LICENSE file 
-for more details.*
+Next, install ``schwab-py``:
+
+.. code-block:: python
+
+  pip install schwab-py
+
+You're good to go! To demonstrate, here's how you can authenticate and fetch
+daily historical price data for the past twenty years:
+
+.. code-block:: python
+
+  from tda import auth, client
+  import json
+
+  api_key = 'YOUR_API_KEY'
+  app_secret = 'YOUR_APP_SECRET'
+  redirect_uri = 'https://127.0.0.1/'
+  token_path = '/path/to/token.json'
+  try:
+      c = auth.client_from_token_file(token_path, api_key)
+  except FileNotFoundError:
+      c = auth.client_from_manual_flow(
+          api_key, app_secret, redirect_uri, token_path)
+
+  r = c.get_price_history('AAPL',
+          period_type=client.Client.PriceHistory.PeriodType.YEAR,
+          period=client.Client.PriceHistory.Period.TWENTY_YEARS,
+          frequency_type=client.Client.PriceHistory.FrequencyType.DAILY,
+          frequency=client.Client.PriceHistory.Frequency.DAILY)
+  assert r.status_code == 200, r.raise_for_status()
+  print(json.dumps(r.json(), indent=4))
+
+Why should I use ``schwab-py``?
+-----------------------------
+
+``schwab-py`` was designed to provide a few important pieces of functionality:
+
+1. **Safe Authentication**: Schwab's API supports OAuth authentication, but too 
+   many people online end up rolling their own implementation of the OAuth 
+   callback flow. This is both unnecessarily complex and dangerous.  
+   ``schwab-py`` handles token fetch and refreshing for you.
+
+2. **Minimal API Wrapping**: Unlike some other API wrappers, which build in lots 
+   of logic and validation, ``schwab-py`` takes raw values and returns raw 
+   responses, allowing you to interpret the complex API responses as you see 
+   fit. Anything you can do with raw HTTP requests you can do with 
+   ``schwab-py``, only more easily.
+
+Why should I *not* use ``tda-api``?
+-----------------------------------
+
+As excellent as Schwab's API is, there are a few popular features it does not 
+offer: 
+
+ * While Charles Schwab owns `thinkorswim (AKA TOS)
+   <https://www.schwab.com/trading/thinkorswim/desktop>`__, this API is 
+   unaffiliated with it. You can access and trade against the same accounts as 
+   TOS, but some of TOS's functionality is not supported by ``schwab-py``
+ * Historical options pricing data is not available. 
+
+What else?
+----------
+
+We have a `Discord server <https://discord.gg/BEr6y6Xqyv>`__! You can join to 
+get help using ``schwab-py`` or just to chat with interesting people.
+
+Bug reports, suggestions, and patches are always welcome! Submit issues
+`here <https://github.com/alexgolec/schwab-py/issues>`__ and pull requests
+`here <https://github.com/alexgolec/schwab-py/pulls>`__.
+
+``schwab-py`` is released under the
+`MIT license <https://github.com/alexgolec/tda-api/blob/master/LICENSE>`__.
+
+**Disclaimer:** *schwab-py is an unofficial API wrapper. It is in no way 
+endorsed by or affiliated with Charles Schwab or any associated organization.
+Make sure to read and understand the terms of service of the underlying API 
+before using this package. This authors accept no responsibility for any
+damage that might stem from use of this package. See the LICENSE file for
+more details.*
+
