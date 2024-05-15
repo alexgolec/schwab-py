@@ -29,8 +29,7 @@ def real_order():
         'quantity': 1.0,
         'filledQuantity': 1.0,
         'remainingQuantity': 0.0,
-        'requestedDestination': 'AUTO',
-        'destinationLinkName': 'ETMM',
+        'destinationLinkName': 'AUTO',
         'price': 58.41,
         'orderLegCollection': [
             {

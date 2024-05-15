@@ -149,27 +149,27 @@ class OrderBuilderTest(unittest.TestCase):
     # RequestedDestination
 
     @no_duplicates
-    def test_requested_destination_success(self):
-        self.order_builder.set_requested_destination(Destination.INET)
+    def test_destination_link_name_success(self):
+        self.order_builder.set_destination_link_name(Destination.INET)
         self.assertFalse(has_diff({
-            'requestedDestination': 'INET'
+            'destinationLinkName': 'INET'
         }, self.order_builder.build()))
 
-        self.order_builder.clear_requested_destination()
+        self.order_builder.clear_destination_link_name()
         self.assertFalse(has_diff({}, self.order_builder.build()))
 
     @no_duplicates
-    def test_requested_destination_wrong_type(self):
+    def test_destination_link_name_wrong_type(self):
         with self.assertRaisesRegex(
                 ValueError, 'schwab.orders.common.Destination.INET'):
-            self.order_builder.set_requested_destination('INET')
+            self.order_builder.set_destination_link_name('INET')
 
     @no_duplicates
-    def test_requested_destination_wrong_type_no_check(self):
+    def test_destination_link_name_wrong_type_no_check(self):
         self.order_builder = OrderBuilder(enforce_enums=False)
-        self.order_builder.set_requested_destination('INET')
+        self.order_builder.set_destination_link_name('INET')
         self.assertFalse(has_diff({
-            'requestedDestination': 'INET'
+            'destinationLinkName': 'INET'
         }, self.order_builder.build()))
 
     ##########################################################################
