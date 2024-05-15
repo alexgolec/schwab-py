@@ -1,9 +1,5 @@
 .. py:module:: schwab.orders.generic
 
-.. image:: _static/warning.png
-   :width: 40
-
-**WARNING!!! schwab-py is pre-alpha! Use at your own risk!**
 
 .. _order_builder:
 
@@ -371,8 +367,8 @@ whether your order is actually executed there is up to Schwab.
 .. autoclass:: schwab.orders.common::Destination
   :members:
   :undoc-members:
-.. automethod:: schwab.orders.generic.OrderBuilder.set_requested_destination
-.. automethod:: schwab.orders.generic.OrderBuilder.clear_requested_destination
+.. automethod:: schwab.orders.generic.OrderBuilder.set_destination_link_name
+.. automethod:: schwab.orders.generic.OrderBuilder.clear_destination_link_name
 
 
 ++++++++++++++++++++

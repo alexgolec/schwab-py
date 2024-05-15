@@ -1,10 +1,5 @@
 .. py:module:: schwab.orders
 
-.. image:: _static/warning.png
-   :width: 40
-
-**WARNING!!! schwab-py is pre-alpha! Use at your own risk!**
-
 .. _order_templates:
 
 ===============
