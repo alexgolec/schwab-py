@@ -21,7 +21,7 @@
   :target: http://codecov.io/github/alexgolec/schwab-py?branch=master
 
 What is ``schwab-py``?
---------------------
+----------------------
 
 ``schwab-py`` is an unofficial wrapper around the Charles Schwab Consumer APIs.  
 It strives to be as thin and unopinionated as possible, offering an elegant 
@@ -34,10 +34,10 @@ programmatic interface over each endpoint. Notable functionality includes:
 * Trades and trade management
 * Account info
 
-How do I use ``schwab-pt``?
--------------------------
+How do I use ``schwab-py``?
+---------------------------
 
-For a full description of ``schwab-pt``'s functionality, check out the 
+For a full description of ``schwab-py``'s functionality, check out the 
 `documentation <https://schwab-py.readthedocs.io/en/latest/>`__. Meawhile, 
 here's a quick getting started guide:
 
@@ -82,7 +82,7 @@ daily historical price data for the past twenty years:
   print(json.dumps(r.json(), indent=4))
 
 Why should I use ``schwab-py``?
------------------------------
+-------------------------------
 
 ``schwab-py`` was designed to provide a few important pieces of functionality:
 
@@ -97,8 +97,8 @@ Why should I use ``schwab-py``?
    fit. Anything you can do with raw HTTP requests you can do with 
    ``schwab-py``, only more easily.
 
-Why should I *not* use ``tda-api``?
------------------------------------
+Why should I *not* use ``schwab-py``?
+-------------------------------------
 
 As excellent as Schwab's API is, there are a few popular features it does not 
 offer: 
