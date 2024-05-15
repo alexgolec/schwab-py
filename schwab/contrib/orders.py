@@ -37,7 +37,7 @@ _FIELDS_AND_SETTERS = (
     ('complexOrderStrategyType', 'set_complex_order_strategy_type',
         schwab.orders.common.ComplexOrderStrategyType),
     ('quantity', 'set_quantity', None),
-    ('requestedDestination', 'set_requested_destination',
+    ('destinationLinkName', 'set_destination_link_name',
         schwab.orders.common.Destination),
     ('stopPrice', 'copy_stop_price', None),
     ('stopPriceLinkBasis', 'set_stop_price_link_basis',

@@ -52,8 +52,7 @@ class ConstructRepeatOrderTest(unittest.TestCase):
             "quantity": 1.0,
             "filledQuantity": 1.0,
             "remainingQuantity": 0.0,
-            "requestedDestination": "AUTO",
-            "destinationLinkName": "NITE",
+            "destinationLinkName": "AUTO",
             "orderLegCollection": [
                 {
                     "orderLegType": "EQUITY",
@@ -104,7 +103,7 @@ class ConstructRepeatOrderTest(unittest.TestCase):
             'orderType': 'MARKET',
             'complexOrderStrategyType': 'NONE',
             'quantity': 1.0,
-            'requestedDestination': 'AUTO',
+            'destinationLinkName': 'AUTO',
             'orderStrategyType': 'SINGLE',
             'orderLegCollection': [{
                 'instruction': 'BUY',
@@ -126,8 +125,7 @@ class ConstructRepeatOrderTest(unittest.TestCase):
             "quantity": 1.0,
             "filledQuantity": 1.0,
             "remainingQuantity": 0.0,
-            "requestedDestination": "AUTO",
-            "destinationLinkName": "NITE",
+            "destinationLinkName": "AUTO",
             "orderLegCollection": [
                 {
                     "orderLegType": "EQUITY",
@@ -183,8 +181,7 @@ class ConstructRepeatOrderTest(unittest.TestCase):
             "quantity": 1.0,
             "filledQuantity": 1.0,
             "remainingQuantity": 0.0,
-            "requestedDestination": "AUTO",
-            "destinationLinkName": "NITE",
+            "destinationLinkName": "AUTO",
             "orderLegCollection": [
                 {
                     "orderLegType": "BOGUS",
@@ -240,8 +237,7 @@ class ConstructRepeatOrderTest(unittest.TestCase):
             "quantity": 1.0,
             "filledQuantity": 1.0,
             "remainingQuantity": 0.0,
-            "requestedDestination": "AUTO",
-            "destinationLinkName": "NITE",
+            "destinationLinkName": "AUTO",
             "orderLegCollection": [
                 {
                     "orderLegType": "EQUITY",
@@ -300,8 +296,7 @@ class ConstructRepeatOrderTest(unittest.TestCase):
             "quantity": 1.0,
             "filledQuantity": 1.0,
             "remainingQuantity": 0.0,
-            "requestedDestination": "AUTO",
-            "destinationLinkName": "CDRG",
+            "destinationLinkName": "AUTO",
             "price": 0.21,
             "orderLegCollection": [{
                 "orderLegType": "OPTION",
@@ -349,7 +344,7 @@ class ConstructRepeatOrderTest(unittest.TestCase):
             'orderType': 'LIMIT',
             'complexOrderStrategyType': 'NONE',
             'quantity': 1.0,
-            'requestedDestination': 'AUTO',
+            'destinationLinkName': 'AUTO',
             'price': 0.21,
             'orderStrategyType': 'SINGLE',
             'orderLegCollection': [{
@@ -372,8 +367,7 @@ class ConstructRepeatOrderTest(unittest.TestCase):
             "quantity": 1.0,
             "filledQuantity": 1.0,
             "remainingQuantity": 0.0,
-            "requestedDestination": "AUTO",
-            "destinationLinkName": "AutoRoute",
+            "destinationLinkName": "AUTO",
             "price": 0.03,
             "orderLegCollection": [
                 {
@@ -466,7 +460,7 @@ class ConstructRepeatOrderTest(unittest.TestCase):
             'orderType': 'NET_DEBIT',
             'complexOrderStrategyType': 'BUTTERFLY',
             'quantity': 1.0,
-            'requestedDestination': 'AUTO',
+            'destinationLinkName': 'AUTO',
             'price': 0.03,
             'orderStrategyType': 'SINGLE',
             'orderLegCollection': [{
@@ -503,8 +497,7 @@ class ConstructRepeatOrderTest(unittest.TestCase):
             "quantity": 2.0,
             "filledQuantity": 2.0,
             "remainingQuantity": 0.0,
-            "requestedDestination": "AUTO",
-            "destinationLinkName": "AutoRoute",
+            "destinationLinkName": "AUTO",
             "price": 3.6,
             "orderLegCollection": [
                 {
@@ -555,8 +548,7 @@ class ConstructRepeatOrderTest(unittest.TestCase):
                     "quantity": 2.0,
                     "filledQuantity": 2.0,
                     "remainingQuantity": 0.0,
-                    "requestedDestination": "NYSE",
-                    "destinationLinkName": "AutoRoute",
+                    "destinationLinkName": "NYSE",
                     "price": 3.7,
                     "orderLegCollection": [
                         {
@@ -610,7 +602,7 @@ class ConstructRepeatOrderTest(unittest.TestCase):
             'orderType': 'LIMIT',
             'complexOrderStrategyType': 'NONE',
             'quantity': 2.0,
-            'requestedDestination': 'AUTO',
+            'destinationLinkName': 'AUTO',
             'orderStrategyType': 'TRIGGER',
             'price': 3.6,
             'orderLegCollection': [{
@@ -628,7 +620,7 @@ class ConstructRepeatOrderTest(unittest.TestCase):
                 'complexOrderStrategyType': 'NONE',
                 'quantity': 2.0,
                 'price': 3.7,
-                'requestedDestination': 'NYSE',
+                'destinationLinkName': 'NYSE',
                 'orderStrategyType': 'SINGLE',
                 'orderLegCollection': [{
                     'instruction': 'SELL_TO_CLOSE',
@@ -650,8 +642,7 @@ class ConstructRepeatOrderTest(unittest.TestCase):
             "quantity": 1.0,
             "filledQuantity": 0.0,
             "remainingQuantity": 1.0,
-            "requestedDestination": "AUTO",
-            "destinationLinkName": "AutoRoute",
+            "destinationLinkName": "AUTO",
             "price": 2.71,
             "orderLegCollection": [
                 {
@@ -691,8 +682,7 @@ class ConstructRepeatOrderTest(unittest.TestCase):
                             "quantity": 1.0,
                             "filledQuantity": 0.0,
                             "remainingQuantity": 1.0,
-                            "requestedDestination": "AUTO",
-                            "destinationLinkName": "AutoRoute",
+                            "destinationLinkName": "AUTO",
                             "orderLegCollection": [
                                 {
                                     "orderLegType": "OPTION",
@@ -724,8 +714,7 @@ class ConstructRepeatOrderTest(unittest.TestCase):
                             "quantity": 1.0,
                             "filledQuantity": 0.0,
                             "remainingQuantity": 1.0,
-                            "requestedDestination": "AUTO",
-                            "destinationLinkName": "AutoRoute",
+                            "destinationLinkName": "AUTO",
                             "orderLegCollection": [
                                 {
                                     "orderLegType": "OPTION",
@@ -762,7 +751,7 @@ class ConstructRepeatOrderTest(unittest.TestCase):
             'orderType': 'LIMIT',
             'complexOrderStrategyType': 'NONE',
             'quantity': 1.0,
-            'requestedDestination': 'AUTO',
+            'destinationLinkName': 'AUTO',
             'orderStrategyType': 'TRIGGER',
             'price': 2.71,
             'orderLegCollection': [{
@@ -781,7 +770,7 @@ class ConstructRepeatOrderTest(unittest.TestCase):
                     'orderType': 'LIMIT',
                     'complexOrderStrategyType': 'NONE',
                     'quantity': 1.0,
-                    'requestedDestination': 'AUTO',
+                    'destinationLinkName': 'AUTO',
                     'orderStrategyType': 'SINGLE',
                     'orderLegCollection': [{
                         'instruction': 'SELL_TO_CLOSE',
@@ -797,7 +786,7 @@ class ConstructRepeatOrderTest(unittest.TestCase):
                     'orderType': 'STOP',
                     'complexOrderStrategyType': 'NONE',
                     'quantity': 1.0,
-                    'requestedDestination': 'AUTO',
+                    'destinationLinkName': 'AUTO',
                     'orderStrategyType': 'SINGLE',
                     'orderLegCollection': [{
                         'instruction': 'SELL_TO_CLOSE',

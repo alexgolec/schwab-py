@@ -57,7 +57,7 @@ class OrderBuilder(EnumEnforcer):
         self._orderType = None
         self._complexOrderStrategyType = None
         self._quantity = None
-        self._requestedDestination = None
+        self._destinationLinkName = None
         self._stopPrice = None
         self._stopPriceLinkBasis = None
         self._stopPriceLinkType = None
@@ -159,22 +159,22 @@ class OrderBuilder(EnumEnforcer):
         self._quantity = None
         return self
 
-    # RequestedDestination
-    def set_requested_destination(self, requested_destination):
+    # DestinationLinkName
+    def set_destination_link_name(self, destination_link_name):
         '''
-        Set the requested destination. See
+        Set the destination link name. See
         :class:`~schwab.orders.common.Destination` for details.
         '''
-        requested_destination = self.convert_enum(
-            requested_destination, common.Destination)
-        self._requestedDestination = requested_destination
+        destination_link_name = self.convert_enum(
+            destination_link_name, common.Destination)
+        self._destinationLinkName = destination_link_name
         return self
 
-    def clear_requested_destination(self):
+    def clear_destination_link_name(self):
         '''
-        Clear the requested destination.
+        Clear the destination link name
         '''
-        self._requestedDestination = None
+        self._destinationLinkName = None
         return self
 
     # StopPrice
