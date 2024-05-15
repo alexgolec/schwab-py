@@ -2,19 +2,26 @@
 ===========================================
 
 .. image:: https://img.shields.io/discord/720378361880248621.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2
-  :target: https://discord.gg/BEr6y6Xqyv
+   :target: https://discord.gg/BEr6y6Xqyv
+   :align: center
 .. image:: 
    https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fshieldsio-patreon.vercel.app%2Fapi%3Fusername%TDAAPI%26type%3Dpatrons&style=flat
-  :target: https://patreon.com/TDAAPI
+   :target: https://patreon.com/TDAAPI
+   :align: center
 .. image:: https://readthedocs.org/projects/schwab-py/badge/?version=latest
-  :target: https://schwab-py.readthedocs.io/en/latest/?badge=latest
+   :target: https://schwab-py.readthedocs.io/en/latest/?badge=latest
+   :align: center
 .. image:: https://github.com/alexgolec/schwab-py/workflows/tests/badge.svg
-  :target: https://github.com/alexgolec/schwab-py/actions?query=workflow%3Atests
+   :target: :align: center
+   https://github.com/alexgolec/schwab-py/actions?query=workflow%3Atests
+   :align: center
 .. image:: https://badge.fury.io/py/schwab-py.svg
-  :target: https://badge.fury.io/py/schwab-py
+   :target: https://badge.fury.io/py/schwab-py
+   :align: center
 .. image:: 
    http://codecov.io/github/alexgolec/schwab-py/coverage.svg?branch=master
-  :target: http://codecov.io/github/alexgolec/schwab-py?branch=master
+   :target: http://codecov.io/github/alexgolec/schwab-py?branch=master
+   :align: center
 
 What is ``schwab-py``?
 ----------------------
