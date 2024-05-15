@@ -46,8 +46,8 @@ Before you do anything, create an account and an application on the
 `Charles Schwab developer site <https://developer.schwab.com/login>`__.
 You'll receive an API key and app secret, which you can pass to this wrapper.  
 You'll also want to take note of your callback URI, as the login flow requires 
-it. Once your app is approved (which can take a few days), you'll be ready to 
-go! You can find more detailed instructions `here 
+it. You app must be approved by Schwab before you can use it (this can take 
+several days).  You can find more detailed instructions `here 
 <https://schwab-py.readthedocs.io/en/latest/getting-started.html>`__.
 
 Next, install ``schwab-py``:
@@ -68,6 +68,7 @@ daily historical price data for the past twenty years:
   app_secret = 'YOUR_APP_SECRET'
   redirect_uri = 'https://127.0.0.1/'
   token_path = '/path/to/token.json'
+
   try:
       c = auth.client_from_token_file(token_path, api_key)
   except FileNotFoundError:
