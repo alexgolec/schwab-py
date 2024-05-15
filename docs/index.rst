@@ -8,7 +8,7 @@
 
 .. image:: _static/github-logo.png
    :width: 40
-   :target: https://github.com/alexgolec/tda-api
+   :target: https://github.com/alexgolec/schwab-py
 
 .. image:: _static/patreon.png
    :width: 110
