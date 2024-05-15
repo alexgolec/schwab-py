@@ -109,6 +109,7 @@ offer:
    <https://www.schwab.com/trading/thinkorswim/desktop>`__, this API is 
    unaffiliated with it. You can access and trade against the same accounts as 
    TOS, but some of TOS's functionality is not supported by ``schwab-py``
+ * Paper trading is not supported
  * Historical options pricing data is not available. 
 
 What else?
