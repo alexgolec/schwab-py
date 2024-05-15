@@ -624,164 +624,161 @@ class StreamClient(EnumEnforcer):
         Fields for equity quotes.
         '''
 
-        #: UNKNOWN
-        FIELD_0 = 0
+        #: Ticker symbol
+        SYMBOL = 0
 
-        #: UNKNOWN
-        FIELD_1 = 1
+        #: Bid price
+        BID_PRICE = 1
 
-        #: UNKNOWN
-        FIELD_2 = 2
+        #: Ask price
+        ASK_PRICE = 2
 
-        #: UNKNOWN
-        FIELD_3 = 3
+        #: Last trade price
+        LAST_PRICE = 3
 
-        #: UNKNOWN
-        FIELD_4 = 4
+        #: Size of the highest bid
+        BID_SIZE = 4
 
-        #: UNKNOWN
-        FIELD_5 = 5
+        #: Size of the lowest ask
+        ASK_SIZE = 5
 
-        #: UNKNOWN
-        FIELD_6 = 6
+        #: Exchange ID of the lowest ask
+        ASK_ID = 6
 
-        #: UNKNOWN
-        FIELD_7 = 7
+        #: Exchange ID of the highest bid
+        BID_ID = 7
 
-        #: UNKNOWN
-        FIELD_8 = 8
+        #: Total volume trade to date
+        TOTAL_VOLUME = 8
 
-        #: UNKNOWN
-        FIELD_9 = 9
+        #: Size of the last trade
+        LAST_SIZE = 9
 
-        #: UNKNOWN
-        FIELD_10 = 10
+        #: Daily high price
+        HIGH_PRICE = 10
 
-        #: UNKNOWN
-        FIELD_11 = 11
+        #: Daily low price
+        LOW_PRICE = 11
 
-        #: UNKNOWN
-        FIELD_12 = 12
+        #: Previous close price
+        CLOSE_PRICE = 12
 
-        #: UNKNOWN
-        FIELD_13 = 13
+        #: Exchange ID
+        EXCHANGE_ID = 13
 
-        #: UNKNOWN
-        FIELD_14 = 14
+        #: Is this equity marginable?
+        MARGINABLE = 14
 
-        #: UNKNOWN
-        FIELD_15 = 15
+        #: Description
+        DESCRIPTION = 15
 
-        #: UNKNOWN
-        FIELD_16 = 16
+        #: Exchange ID of the last trade
+        LAST_ID = 16
 
-        #: UNKNOWN
-        FIELD_17 = 17
+        #: Today's open price
+        OPEN_PRICE = 17
 
-        #: UNKNOWN
-        FIELD_18 = 18
+        #: Net change
+        NET_CHANGE = 18
 
-        #: UNKNOWN
-        FIELD_19 = 19
+        #: 52 week high price
+        HIGH_PRICE_52_WEEK = 19
 
-        #: UNKNOWN
-        FIELD_20 = 20
+        #: 52 week low price
+        LOW_PRICE_52_WEEK = 20
 
-        #: UNKNOWN
-        FIELD_21 = 21
+        #: P/E ratio
+        PE_RATIO = 21
 
-        #: UNKNOWN
-        FIELD_22 = 22
+        #: Dividend amount
+        DIVIDEND_AMOUNT = 22
 
-        #: UNKNOWN
-        FIELD_23 = 23
+        #: Dividend yield
+        DIVIDEND_YIELD = 23
 
-        #: UNKNOWN
-        FIELD_24 = 24
+        #: ETF net asset value
+        NAV = 24
 
-        #: UNKNOWN
-        FIELD_25 = 25
+        #: Exchange name
+        EXCHANGE_NAME = 25
 
-        #: UNKNOWN
-        FIELD_26 = 26
+        #: Dividend date
+        DIVIDEND_DATE = 26
 
-        #: UNKNOWN
-        FIELD_27 = 27
+        #: Is this a regular market quote?
+        REGULAR_MARKET_QUOTE = 27
 
-        #: UNKNOWN
-        FIELD_28 = 28
+        #: Is this a regular market trade?
+        REGULAR_MARKET_TRADE = 28
 
-        #: UNKNOWN
-        FIELD_29 = 29
+        #: Regular market last price
+        REGULAR_MARKET_LAST_PRICE = 29
 
-        #: UNKNOWN
-        FIELD_30 = 30
+        #: Regular market last size
+        REGULAR_MARKET_LAST_SIZE = 30
 
-        #: UNKNOWN
-        FIELD_31 = 31
+        #: Regular market net change
+        REGULAR_MARKET_NET_CHANGE = 31
 
-        #: UNKNOWN
-        FIELD_32 = 32
+        #: Security status
+        SECURITY_STATUS = 32
 
-        #: UNKNOWN
-        FIELD_33 = 33
+        #: Mark
+        MARK = 33
 
-        #: UNKNOWN
-        FIELD_34 = 34
+        #: Quote time in milliseconds
+        QUOTE_TIME_MILLIS = 34
 
-        #: UNKNOWN
-        FIELD_35 = 35
+        #: Last trade time in milliseconds
+        TRADE_TIME_MILLIS = 35
 
-        #: UNKNOWN
-        FIELD_36 = 36
+        #: Regular market trade time in milliseconds
+        REGULAR_MARKET_TRADE_MILLIS = 36
 
-        #: UNKNOWN
-        FIELD_37 = 37
+        #: Bid time in millis
+        BID_TIME_MILLIS = 37
 
-        #: UNKNOWN
-        FIELD_38 = 38
+        #: Ask time in millis
+        ASK_TIME_MILLIS = 38
 
-        #: UNKNOWN
-        FIELD_39 = 39
+        #: Ask MIC ID
+        ASK_MIC_ID = 39
 
-        #: UNKNOWN
-        FIELD_40 = 40
+        #: Bid MIC ID
+        BID_MIC_ID = 40
 
-        #: UNKNOWN
-        FIELD_41 = 41
+        #: Last trade MIC ID
+        LAST_MIC_ID = 41
 
-        #: UNKNOWN
-        FIELD_42 = 42
+        #: Net change in percent
+        NET_CHANGE_PERCENT = 42
 
-        #: UNKNOWN
-        FIELD_43 = 43
+        #: Regular market change in percent
+        REGULAR_MARKET_CHANGE_PERCENT = 43
 
-        #: UNKNOWN
-        FIELD_44 = 44
+        #: Mark change
+        MARK_CHANGE = 44
 
-        #: UNKNOWN
-        FIELD_45 = 45
+        #: Mark change in percent
+        MARK_CHANGE_PERCENT = 45
 
-        #: UNKNOWN
-        FIELD_46 = 46
+        #: HTB quality
+        HTB_QUALITY = 46
 
-        #: UNKNOWN
-        FIELD_47 = 47
+        #: HTB rate
+        HTB_RATE = 47
 
-        #: UNKNOWN
-        FIELD_48 = 48
+        #: Is this equity hard to borrow?
+        HARD_TO_BORROW = 48
 
-        #: UNKNOWN
-        FIELD_49 = 49
+        #: Is this equity shortable
+        IS_SHORTABLE = 49
 
-        #: UNKNOWN
-        FIELD_50 = 50
+        #: Post market net change
+        POST_MARKET_NET_CHANGE = 50
 
-        #: UNKNOWN
-        FIELD_51 = 51
-
-        #: UNKNOWN
-        FIELD_52 = 52
+        #: Post market net change percent
+        POST_MARKET_NET_CHANGE_PERCENT = 51
 
     async def level_one_equity_subs(self, symbols, *, fields=None):
         '''
@@ -795,8 +792,8 @@ class StreamClient(EnumEnforcer):
                        the fields to return in streaming entries. If unset, all
                        fields will be requested.
         '''
-        if fields and self.LevelOneEquityFields.FIELD_0 not in fields:
-            fields.append(self.LevelOneEquityFields.FIELD_0)
+        if fields and self.LevelOneEquityFields.SYMBOL not in fields:
+            fields.append(self.LevelOneEquityFields.SYMBOL)
         await self._service_op(
             symbols, 'LEVELONE_EQUITIES', 'SUBS', self.LevelOneEquityFields,
             fields=fields)
@@ -830,131 +827,173 @@ class StreamClient(EnumEnforcer):
         streaming-data#_Toc504640601>`__
         '''
 
-        #: UNKNOWN
-        FIELD_0 = 0
+        #: Option symbol
+        SYMBOL = 0
 
-        #: UNKNOWN
-        FIELD_1 = 1
+        #: Description
+        DESCRIPTION = 1
 
-        #: UNKNOWN
-        FIELD_2 = 2
+        #: Highest bid price
+        BID_PRICE = 2
 
-        #: UNKNOWN
-        FIELD_3 = 3
+        #: Lowest ask price
+        ASK_PRICE = 3
 
-        #: UNKNOWN
-        FIELD_4 = 4
+        #: Last trade price
+        LAST_PRICE = 4
 
-        #: UNKNOWN
-        FIELD_5 = 5
+        #: Today's high price
+        HIGH_PRICE = 5
 
-        #: UNKNOWN
-        FIELD_6 = 6
+        #: Today's low price
+        LOW_PRICE = 6
 
-        #: UNKNOWN
-        FIELD_7 = 7
+        #: Last close price
+        CLOSE_PRICE = 7
 
-        #: UNKNOWN
-        FIELD_8 = 8
+        #: Today's total volume
+        TOTAL_VOLUME = 8
 
-        #: UNKNOWN
-        FIELD_9 = 9
+        #: Open interest
+        OPEN_INTEREST = 9
 
-        #: UNKNOWN
-        FIELD_10 = 10
+        #: Volatility
+        VOLATILITY = 10
 
-        #: UNKNOWN
-        FIELD_11 = 11
+        #: Money intrinsic value
+        MONEY_INSTRINSIC_VALUE = 11
 
-        #: UNKNOWN
-        FIELD_12 = 12
+        #: Expiration year
+        EXPIRATION_YEAR = 12
 
-        #: UNKNOWN
-        FIELD_13 = 13
+        #: MULTIPLIER
+        MULTIPLIER = 13
 
-        #: UNKNOWN
-        FIELD_14 = 14
+        #: Digits
+        DIGITS = 14
 
-        #: UNKNOWN
-        FIELD_15 = 15
+        #: Open price
+        OPEN_PRICE = 15
 
-        #: UNKNOWN
-        FIELD_16 = 16
+        #: Highest bid size
+        BID_SIZE = 16
 
-        #: UNKNOWN
-        FIELD_17 = 17
+        #: Lowest ask size
+        ASK_SIZE = 17
 
-        #: UNKNOWN
-        FIELD_18 = 18
+        #: Last trade size
+        LAST_SIZE = 18
 
-        #: UNKNOWN
-        FIELD_19 = 19
+        #: Net change
+        NET_CHANGE = 19
 
-        #: UNKNOWN
-        FIELD_20 = 20
+        #: Strike type
+        STRIKE_TYPE = 20
 
-        #: UNKNOWN
-        FIELD_21 = 21
+        #: Contract type
+        CONTRACT_TYPE = 21
 
-        #: UNKNOWN
-        FIELD_22 = 22
+        #: Underlying symbol
+        UNDERLYING = 22
 
-        #: UNKNOWN
-        FIELD_23 = 23
+        #: Expiration month
+        EXPIRATION_MONTH = 23
 
-        #: UNKNOWN
-        FIELD_24 = 24
+        #: Deliverables
+        DELIVERABLES = 24
 
-        #: UNKNOWN
-        FIELD_25 = 25
+        #: Time value
+        TIME_VALUE = 25
 
-        #: UNKNOWN
-        FIELD_26 = 26
+        #: Expiration day
+        EXPIRATIO_DAY = 26
 
-        #: UNKNOWN
-        FIELD_27 = 27
+        #: Days to expiration
+        DAYS_TO_EXPIRATION = 27
 
-        #: UNKNOWN
-        FIELD_28 = 28
+        #: Delta
+        DELTA = 28
 
-        #: UNKNOWN
-        FIELD_29 = 29
+        #: GAMMA
+        GAMMA = 29
 
-        #: UNKNOWN
-        FIELD_30 = 30
+        #: Theta
+        THETA = 30
 
-        #: UNKNOWN
-        FIELD_31 = 31
+        #: Vega
+        VEGA = 31
 
-        #: UNKNOWN
-        FIELD_32 = 32
+        #: Rho
+        RHO = 32
 
-        #: UNKNOWN
-        FIELD_33 = 33
+        #: Security status
+        SECURITY_STATUS = 33
 
-        #: UNKNOWN
-        FIELD_34 = 34
+        #: Theoretical option value
+        THEORETICAL_OPTION_VALUE = 34
 
-        #: UNKNOWN
-        FIELD_35 = 35
+        #: Underlying price
+        UNDERLYING_PRICE = 35
 
-        #: UNKNOWN
-        FIELD_36 = 36
+        #: UV expiration type
+        UV_EXPIRATION_TYPE = 36
 
-        #: UNKNOWN
-        FIELD_37 = 37
+        #: Mark
+        MARK = 37
 
-        #: UNKNOWN
-        FIELD_38 = 38
+        #: Quote time in millis
+        QUOTE_TIME_MILLIS = 38
 
-        #: UNKNOWN
-        FIELD_39 = 39
+        #: Last trade time in millis
+        TRADE_TIME_MILLIS = 39
 
-        #: UNKNOWN
-        FIELD_40 = 40
+        #: Exchange ID
+        EXCHANGE_ID = 40
 
-        #: Mark Price
-        FIELD_41 = 41
+        #: Exchange name
+        EXCHANGE_NAME = 41
+
+        #: Last trading day
+        LAST_TRADING_DAY = 42
+
+        #: Settlement type
+        SETTLEMENT_TYPE = 43
+
+        #: Net percent change
+        NET_PERCENT_CHANGE = 44
+
+        #: Mark change
+        MARK_CHANGE = 45
+
+        #: Mark change in percent
+        MARK_CHANGE_PERCENT = 46
+
+        #: Implied yield
+        IMPLIED_YIELD = 47
+
+        #: Is penny stock?
+        IS_PENNY = 48
+
+        #: Option root
+        OPTION_ROOT = 49
+
+        #: 52 week high price
+        HIGH_PRICE_52_WEEK = 50
+
+        #: 52 week low price
+        LOW_PRICE_52_WEEK = 51
+
+        #: Indicative asking price
+        INDICATIVE_ASKING_PRICE = 52
+
+        #: Indicative bid price
+        INDICATIVE_BID_PRICE = 53
+
+        #: Indicative quote time
+        INDICATIVE_QUOTE_TIME = 54
+
+        #: Exercise type
+        EXERCISE_TYPE = 55
 
     async def level_one_option_subs(self, symbols, *, fields=None):
         '''
@@ -968,8 +1007,8 @@ class StreamClient(EnumEnforcer):
                        the fields to return in streaming entries. If unset, all
                        fields will be requested.
         '''
-        if fields and self.LevelOneOptionFields.FIELD_0 not in fields:
-            fields.append(self.LevelOneOptionFields.FIELD_0)
+        if fields and self.LevelOneOptionFields.SYMBOL not in fields:
+            fields.append(self.LevelOneOptionFields.SYMBOL)
         await self._service_op(
             symbols, 'LEVELONE_OPTIONS', 'SUBS', self.LevelOneOptionFields,
             fields=fields)

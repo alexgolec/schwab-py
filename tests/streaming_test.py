@@ -1010,8 +1010,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
                 'keys': 'GOOG,MSFT',
                 'fields': ('0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,' +
                            '20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,' +
-                           '36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,' +
-                           '52')
+                           '36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51')
             }
         })
 
@@ -1053,7 +1052,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
                         "fields": 
                         "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,"+
                         "20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,"+
-                        "37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52"
+                        "37,38,39,40,41,42,43,44,45,46,47,48,49,50,51"
                     }
                 }]
             })),
@@ -1083,10 +1082,10 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             1, 'LEVELONE_EQUITIES', 'SUBS'))]
 
         await self.client.level_one_equity_subs(['GOOG', 'MSFT'], fields=[
-            StreamClient.LevelOneEquityFields.FIELD_0,
-            StreamClient.LevelOneEquityFields.FIELD_1,
-            StreamClient.LevelOneEquityFields.FIELD_2,
-            StreamClient.LevelOneEquityFields.FIELD_11,
+            StreamClient.LevelOneEquityFields.SYMBOL,
+            StreamClient.LevelOneEquityFields.BID_PRICE,
+            StreamClient.LevelOneEquityFields.ASK_PRICE,
+            StreamClient.LevelOneEquityFields.LOW_PRICE,
         ])
         socket.recv.assert_awaited_once()
         request = self.request_from_socket_mock(socket)
@@ -1113,9 +1112,9 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             1, 'LEVELONE_EQUITIES', 'SUBS'))]
 
         await self.client.level_one_equity_subs(['GOOG', 'MSFT'], fields=[
-            StreamClient.LevelOneEquityFields.FIELD_1,
-            StreamClient.LevelOneEquityFields.FIELD_2,
-            StreamClient.LevelOneEquityFields.FIELD_11,
+            StreamClient.LevelOneEquityFields.BID_PRICE,
+            StreamClient.LevelOneEquityFields.ASK_PRICE,
+            StreamClient.LevelOneEquityFields.LOW_PRICE,
         ])
         socket.recv.assert_awaited_once()
         request = self.request_from_socket_mock(socket)
@@ -1222,7 +1221,6 @@ class StreamClientTest(IsolatedAsyncioTestCase):
                     '49': 1410.42,
                     '50': 1590191970734,
                     '51': 1590191966446,
-                    '52': 1590177600617
                 }, {
                     'key': 'MSFT',
                     'delayed': False,
@@ -1279,7 +1277,6 @@ class StreamClientTest(IsolatedAsyncioTestCase):
                     '49': 183.51,
                     '50': 1590191988960,
                     '51': 1590191988957,
-                    '52': 1590177600516
                 }]
             }]
         }
@@ -1304,115 +1301,113 @@ class StreamClientTest(IsolatedAsyncioTestCase):
                 'delayed': False,
                 'assetMainType': 'EQUITY',
                 'cusip': '02079K107',
-                'FIELD_1': 1404.92,
-                'FIELD_2': 1412.99,
-                'FIELD_3': 1411.89,
-                'FIELD_4': 1,
-                'FIELD_5': 2,
-                'FIELD_6': 'P',
-                'FIELD_7': 'K',
-                'FIELD_8': 1309408,
-                'FIELD_9': 2,
-                'FIELD_10': 71966,
-                'FIELD_11': 71970,
-                'FIELD_12': 1412.76,
-                'FIELD_13': 1391.83,
-                'FIELD_14': ' ',
-                'FIELD_15': 1410.42,
-                'FIELD_16': 'q',
-                'FIELD_17': True,
-                'FIELD_18': True,
-                'FIELD_19': 1412.991,
-                'FIELD_20': 1411.891,
-                'FIELD_21': 1309409,
-                'FIELD_22': 18404,
-                'FIELD_23': 18404,
-                'FIELD_24': 0.0389,
-                'FIELD_25': 'Alphabet Inc. - Class C Capital Stock',
-                'FIELD_26': 'P',
-                'FIELD_27': 4,
-                'FIELD_28': 1396.71,
-                'FIELD_29': 1.47,
-                'FIELD_30': 1532.106,
-                'FIELD_31': 1013.536,
-                'FIELD_32': 28.07,
-                'FIELD_33': 6.52,
-                'FIELD_34': 5.51,
-                'FIELD_35': 122.0,
-                'FIELD_36': 123.0,
-                'FIELD_37': 123123.0,
-                'FIELD_38': 123214.0,
-                'FIELD_39': 'NASD',
-                'FIELD_40': ' ',
-                'FIELD_41': True,
-                'FIELD_42': True,
-                'FIELD_43': 1410.42,
-                'FIELD_44': 699,
-                'FIELD_45': 57600,
-                'FIELD_46': 18404,
-                'FIELD_47': 1.48,
-                'FIELD_48': 'Normal',
-                'FIELD_49': 1410.42,
-                'FIELD_50': 1590191970734,
-                'FIELD_51': 1590191966446,
-                'FIELD_52': 1590177600617
+                'BID_PRICE': 1404.92,
+                'ASK_PRICE': 1412.99,
+                'LAST_PRICE': 1411.89,
+                'BID_SIZE': 1,
+                'ASK_SIZE': 2,
+                'ASK_ID': 'P',
+                'BID_ID': 'K',
+                'TOTAL_VOLUME': 1309408,
+                'LAST_SIZE': 2,
+                'HIGH_PRICE': 71966,
+                'LOW_PRICE': 71970,
+                'CLOSE_PRICE': 1412.76,
+                'EXCHANGE_ID': 1391.83,
+                'MARGINABLE': ' ',
+                'DESCRIPTION': 1410.42,
+                'LAST_ID': 'q',
+                'OPEN_PRICE': True,
+                'NET_CHANGE': True,
+                'HIGH_PRICE_52_WEEK': 1412.991,
+                'LOW_PRICE_52_WEEK': 1411.891,
+                'PE_RATIO': 1309409,
+                'DIVIDEND_AMOUNT': 18404,
+                'DIVIDEND_YIELD': 18404,
+                'NAV': 0.0389,
+                'EXCHANGE_NAME': 'Alphabet Inc. - Class C Capital Stock',
+                'DIVIDEND_DATE': 'P',
+                'REGULAR_MARKET_QUOTE': 4,
+                'REGULAR_MARKET_TRADE': 1396.71,
+                'REGULAR_MARKET_LAST_PRICE': 1.47,
+                'REGULAR_MARKET_LAST_SIZE': 1532.106,
+                'REGULAR_MARKET_NET_CHANGE': 1013.536,
+                'SECURITY_STATUS': 28.07,
+                'MARK': 6.52,
+                'QUOTE_TIME_MILLIS': 5.51,
+                'TRADE_TIME_MILLIS': 122.0,
+                'REGULAR_MARKET_TRADE_MILLIS': 123.0,
+                'BID_TIME_MILLIS': 123123.0,
+                'ASK_TIME_MILLIS': 123214.0,
+                'ASK_MIC_ID': 'NASD',
+                'BID_MIC_ID': ' ',
+                'LAST_MIC_ID': True,
+                'NET_CHANGE_PERCENT': True,
+                'REGULAR_MARKET_CHANGE_PERCENT': 1410.42,
+                'MARK_CHANGE': 699,
+                'MARK_CHANGE_PERCENT': 57600,
+                'HTB_QUALITY': 18404,
+                'HTB_RATE': 1.48,
+                'HARD_TO_BORROW': 'Normal',
+                'IS_SHORTABLE': 1410.42,
+                'POST_MARKET_NET_CHANGE': 1590191970734,
+                'POST_MARKET_NET_CHANGE_PERCENT': 1590191966446,
             }, {
                 'key': 'MSFT',
                 'delayed': False,
                 'assetMainType': 'EQUITY',
                 'cusip': '594918104',
-                'FIELD_1': 183.65,
-                'FIELD_2': 183.7,
-                'FIELD_3': 183.65,
-                'FIELD_4': 3,
-                'FIELD_5': 10,
-                'FIELD_6': 'P',
-                'FIELD_7': 'P',
-                'FIELD_8': 20826898,
-                'FIELD_9': 200,
-                'FIELD_10': 71988,
-                'FIELD_11': 71988,
-                'FIELD_12': 184.46,
-                'FIELD_13': 182.54,
-                'FIELD_14': ' ',
-                'FIELD_15': 183.51,
-                'FIELD_16': 'q',
-                'FIELD_17': True,
-                'FIELD_18': True,
-                'FIELD_19': 182.65,
-                'FIELD_20': 182.7,
-                'FIELD_21': 20826899,
-                'FIELD_22': 18404,
-                'FIELD_23': 18404,
-                'FIELD_24': 0.0126,
-                'FIELD_25': 'Microsoft Corporation - Common Stock',
-                'FIELD_26': 'K',
-                'FIELD_27': 4,
-                'FIELD_28': 183.19,
-                'FIELD_29': 0.14,
-                'FIELD_30': 190.7,
-                'FIELD_31': 119.01,
-                'FIELD_32': 32.3555,
-                'FIELD_33': 2.04,
-                'FIELD_34': 1.11,
-                'FIELD_35': 122.0,
-                'FIELD_36': 123.0,
-                'FIELD_37': 123123.0,
-                'FIELD_38': 123214.0,
-                'FIELD_39': 'NASD',
-                'FIELD_40': '2020-05-20 00:00:00.000',
-                'FIELD_41': True,
-                'FIELD_42': True,
-                'FIELD_43': 183.51,
-                'FIELD_44': 16890,
-                'FIELD_45': 57600,
-                'FIELD_46': 18404,
-                'FIELD_47': 1.49,
-                'FIELD_48': 'Normal',
-                'FIELD_49': 183.51,
-                'FIELD_50': 1590191988960,
-                'FIELD_51': 1590191988957,
-                'FIELD_52': 1590177600516
+                'BID_PRICE': 183.65,
+                'ASK_PRICE': 183.7,
+                'LAST_PRICE': 183.65,
+                'BID_SIZE': 3,
+                'ASK_SIZE': 10,
+                'ASK_ID': 'P',
+                'BID_ID': 'P',
+                'TOTAL_VOLUME': 20826898,
+                'LAST_SIZE': 200,
+                'HIGH_PRICE': 71988,
+                'LOW_PRICE': 71988,
+                'CLOSE_PRICE': 184.46,
+                'EXCHANGE_ID': 182.54,
+                'MARGINABLE': ' ',
+                'DESCRIPTION': 183.51,
+                'LAST_ID': 'q',
+                'OPEN_PRICE': True,
+                'NET_CHANGE': True,
+                'HIGH_PRICE_52_WEEK': 182.65,
+                'LOW_PRICE_52_WEEK': 182.7,
+                'PE_RATIO': 20826899,
+                'DIVIDEND_AMOUNT': 18404,
+                'DIVIDEND_YIELD': 18404,
+                'NAV': 0.0126,
+                'EXCHANGE_NAME': 'Microsoft Corporation - Common Stock',
+                'DIVIDEND_DATE': 'K',
+                'REGULAR_MARKET_QUOTE': 4,
+                'REGULAR_MARKET_TRADE': 183.19,
+                'REGULAR_MARKET_LAST_PRICE': 0.14,
+                'REGULAR_MARKET_LAST_SIZE': 190.7,
+                'REGULAR_MARKET_NET_CHANGE': 119.01,
+                'SECURITY_STATUS': 32.3555,
+                'MARK': 2.04,
+                'QUOTE_TIME_MILLIS': 1.11,
+                'TRADE_TIME_MILLIS': 122.0,
+                'REGULAR_MARKET_TRADE_MILLIS': 123.0,
+                'BID_TIME_MILLIS': 123123.0,
+                'ASK_TIME_MILLIS': 123214.0,
+                'ASK_MIC_ID': 'NASD',
+                'BID_MIC_ID': '2020-05-20 00:00:00.000',
+                'LAST_MIC_ID': True,
+                'NET_CHANGE_PERCENT': True,
+                'REGULAR_MARKET_CHANGE_PERCENT': 183.51,
+                'MARK_CHANGE': 16890,
+                'MARK_CHANGE_PERCENT': 57600,
+                'HTB_QUALITY': 18404,
+                'HTB_RATE': 1.49,
+                'HARD_TO_BORROW': 'Normal',
+                'IS_SHORTABLE': 183.51,
+                'POST_MARKET_NET_CHANGE': 1590191988960,
+                'POST_MARKET_NET_CHANGE_PERCENT': 1590191988957,
             }]
         }
 
@@ -1445,7 +1440,8 @@ class StreamClientTest(IsolatedAsyncioTestCase):
                 'keys': 'GOOG_052920C620,MSFT_052920C145',
                 'fields': ('0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,' +
                            '20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,' +
-                           '36,37,38,39,40,41')
+                           '36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,' +
+                           '52,53,54,55')
             }
         })
 
@@ -1493,7 +1489,8 @@ class StreamClientTest(IsolatedAsyncioTestCase):
                         "keys": "GOOG_052920C620,MSFT_052920C145", 
                         "fields": "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,"+
                         "17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,"+
-                        "34,35,36,37,38,39,40,41"
+                        "34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,"+
+                        "51,52,53,54,55"
                     }
                 }]
             })),
@@ -1523,10 +1520,10 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
         await self.client.level_one_option_subs(
             ['GOOG_052920C620', 'MSFT_052920C145'], fields=[
-                StreamClient.LevelOneOptionFields.FIELD_0,
-                StreamClient.LevelOneOptionFields.FIELD_2,
-                StreamClient.LevelOneOptionFields.FIELD_3,
-                StreamClient.LevelOneOptionFields.FIELD_10,
+                StreamClient.LevelOneOptionFields.SYMBOL,
+                StreamClient.LevelOneOptionFields.BID_PRICE,
+                StreamClient.LevelOneOptionFields.ASK_PRICE,
+                StreamClient.LevelOneOptionFields.VOLATILITY,
             ])
         socket.recv.assert_awaited_once()
         request = self.request_from_socket_mock(socket)
@@ -1554,9 +1551,9 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
         await self.client.level_one_option_subs(
             ['GOOG_052920C620', 'MSFT_052920C145'], fields=[
-                StreamClient.LevelOneOptionFields.FIELD_2,
-                StreamClient.LevelOneOptionFields.FIELD_3,
-                StreamClient.LevelOneOptionFields.FIELD_10,
+                StreamClient.LevelOneOptionFields.BID_PRICE,
+                StreamClient.LevelOneOptionFields.ASK_PRICE,
+                StreamClient.LevelOneOptionFields.VOLATILITY,
             ])
         socket.recv.assert_awaited_once()
         request = self.request_from_socket_mock(socket)
@@ -1715,81 +1712,81 @@ class StreamClientTest(IsolatedAsyncioTestCase):
                 'delayed': False,
                 'assetMainType': 'LEVELONE_OPTIONS',
                 'cusip': '0MSFT.ET00145000',
-                'FIELD_1': 'MSFT May 29 2020 145 Call (Weekly)',
-                'FIELD_2': 38.05,
-                'FIELD_3': 39.05,
-                'FIELD_4': 38.85,
-                'FIELD_5': 38.85,
-                'FIELD_6': 38.85,
-                'FIELD_7': 38.581,
-                'FIELD_8': 2,
-                'FIELD_9': 7,
-                'FIELD_10': 5,
-                'FIELD_11': 57599,
-                'FIELD_12': 53017,
-                'FIELD_13': 38.51,
-                'FIELD_14': 18404,
-                'FIELD_15': 18404,
-                'FIELD_16': 2020,
-                'FIELD_17': 100,
-                'FIELD_18': 2,
-                'FIELD_19': 38.85,
-                'FIELD_20': 6,
-                'FIELD_21': 116,
-                'FIELD_22': 1,
-                'FIELD_23': 0.3185,
-                'FIELD_24': 145,
-                'FIELD_25': 'C',
-                'FIELD_26': 'MSFT',
-                'FIELD_27': 5,
-                'FIELD_29': 0.34,
-                'FIELD_30': 29,
-                'FIELD_31': 6,
-                'FIELD_32': 1,
-                'FIELD_33': 0,
-                'FIELD_34': 0,
-                'FIELD_35': 0.1882,
-                'FIELD_37': 'Normal',
-                'FIELD_38': 38.675,
-                'FIELD_39': 183.51,
-                'FIELD_40': 'S',
-                'FIELD_41': 38.55
+                'DESCRIPTION': 'MSFT May 29 2020 145 Call (Weekly)',
+                'BID_PRICE': 38.05,
+                'ASK_PRICE': 39.05,
+                'LAST_PRICE': 38.85,
+                'HIGH_PRICE': 38.85,
+                'LOW_PRICE': 38.85,
+                'CLOSE_PRICE': 38.581,
+                'TOTAL_VOLUME': 2,
+                'OPEN_INTEREST': 7,
+                'VOLATILITY': 5,
+                'MONEY_INSTRINSIC_VALUE': 57599,
+                'EXPIRATION_YEAR': 53017,
+                'MULTIPLIER': 38.51,
+                'DIGITS': 18404,
+                'OPEN_PRICE': 18404,
+                'BID_SIZE': 2020,
+                'ASK_SIZE': 100,
+                'LAST_SIZE': 2,
+                'NET_CHANGE': 38.85,
+                'STRIKE_TYPE': 6,
+                'CONTRACT_TYPE': 116,
+                'UNDERLYING': 1,
+                'EXPIRATION_MONTH': 0.3185,
+                'DELIVERABLES': 145,
+                'TIME_VALUE': 'C',
+                'EXPIRATIO_DAY': 'MSFT',
+                'DAYS_TO_EXPIRATION': 5,
+                'GAMMA': 0.34,
+                'THETA': 29,
+                'VEGA': 6,
+                'RHO': 1,
+                'SECURITY_STATUS': 0,
+                'THEORETICAL_OPTION_VALUE': 0,
+                'UNDERLYING_PRICE': 0.1882,
+                'MARK': 'Normal',
+                'QUOTE_TIME_MILLIS': 38.675,
+                'TRADE_TIME_MILLIS': 183.51,
+                'EXCHANGE_ID': 'S',
+                'EXCHANGE_NAME': 38.55
             }, {
                 'key': 'GOOG_052920C620',
                 'delayed': False,
                 'assetMainType': 'LEVELONE_OPTIONS',
                 'cusip': '0GOOG.ET00620000',
-                'FIELD_1': 'GOOG May 29 2020 620 Call (Weekly)',
-                'FIELD_2': 785.2,
-                'FIELD_3': 794,
-                'FIELD_7': 790.42,
-                'FIELD_10': 238.2373,
-                'FIELD_11': 57594,
-                'FIELD_12': 68400,
-                'FIELD_13': 790.42,
-                'FIELD_14': 18404,
-                'FIELD_16': 2020,
-                'FIELD_17': 100,
-                'FIELD_18': 2,
-                'FIELD_20': 1,
-                'FIELD_21': 6,
-                'FIELD_24': 620,
-                'FIELD_25': 'C',
-                'FIELD_26': 'GOOG',
-                'FIELD_27': 5,
-                'FIELD_29': -0.82,
-                'FIELD_30': 29,
-                'FIELD_31': 6,
-                'FIELD_32': 0.996,
-                'FIELD_33': 0,
-                'FIELD_34': -0.3931,
-                'FIELD_35': 0.023,
-                'FIELD_36': 0.1176,
-                'FIELD_37': 'Normal',
-                'FIELD_38': 789.6,
-                'FIELD_39': 1410.42,
-                'FIELD_40': 'S',
-                'FIELD_41': 789.6
+                'DESCRIPTION': 'GOOG May 29 2020 620 Call (Weekly)',
+                'BID_PRICE': 785.2,
+                'ASK_PRICE': 794,
+                'CLOSE_PRICE': 790.42,
+                'VOLATILITY': 238.2373,
+                'MONEY_INSTRINSIC_VALUE': 57594,
+                'EXPIRATION_YEAR': 68400,
+                'MULTIPLIER': 790.42,
+                'DIGITS': 18404,
+                'BID_SIZE': 2020,
+                'ASK_SIZE': 100,
+                'LAST_SIZE': 2,
+                'STRIKE_TYPE': 1,
+                'CONTRACT_TYPE': 6,
+                'DELIVERABLES': 620,
+                'TIME_VALUE': 'C',
+                'EXPIRATIO_DAY': 'GOOG',
+                'DAYS_TO_EXPIRATION': 5,
+                'GAMMA': -0.82,
+                'THETA': 29,
+                'VEGA': 6,
+                'RHO': 0.996,
+                'SECURITY_STATUS': 0,
+                'THEORETICAL_OPTION_VALUE': -0.3931,
+                'UNDERLYING_PRICE': 0.023,
+                'UV_EXPIRATION_TYPE': 0.1176,
+                'MARK': 'Normal',
+                'QUOTE_TIME_MILLIS': 789.6,
+                'TRADE_TIME_MILLIS': 1410.42,
+                'EXCHANGE_ID': 'S',
+                'EXCHANGE_NAME': 789.6
             }]
         }
 
@@ -4816,8 +4813,8 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             command='SUBS',
             field_type=StreamClient.LevelOneEquityFields,
             fields=[
-            StreamClient.LevelOneEquityFields.FIELD_15,
-            StreamClient.LevelOneEquityFields.FIELD_2
+            StreamClient.LevelOneEquityFields.DESCRIPTION,
+            StreamClient.LevelOneEquityFields.ASK_PRICE
         ])
         socket.recv.assert_awaited_once()
         request = self.request_from_socket_mock(socket)
@@ -4905,8 +4902,8 @@ class StreamClientTest(IsolatedAsyncioTestCase):
                 service='LEVELONE_EQUITIES',
                 command='SUBS',
                 fields=[
-                    StreamClient.LevelOneEquityFields.FIELD_15,
-                    StreamClient.LevelOneEquityFields.FIELD_2
+                    StreamClient.LevelOneEquityFields.DESCRIPTION,
+                    StreamClient.LevelOneEquityFields.ASK_PRICE
                 ]
             )
         socket.recv.assert_awaited_once()
