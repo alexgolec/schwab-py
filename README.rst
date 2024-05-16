@@ -39,8 +39,8 @@ I used to use ``tda-api``, how do I migrate?
 --------------------------------------------
 
 Now that TDAmeritrade is no more, the old ``tda-api`` library will no longer 
-work. Check out our `transition guide 
-<https://schwab-py.readthedocs.io/en/latest/tda-transition.html>`__ for 
+work. Check out our `transition 
+guide<https://schwab-py.readthedocs.io/en/latest/tda-transition.html>`__ for 
 instructions on getting started.
 
 
