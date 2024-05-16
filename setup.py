@@ -47,6 +47,7 @@ setuptools.setup(
             'pytz',
             'sphinx_rtd_theme',
             'twine',
+            'wheel',
         ]
     },
     keywords='finance trading equities bonds options research',
