@@ -55,6 +55,6 @@ jobs:
         name: GitHub
 
     - name: Check twine
-      if matrix.python.version == '3.10'
-      run:
+      if: matrix.python.version == '3.10'
+      run: |
         twine check dist/*
