@@ -70,7 +70,7 @@ daily historical price data for the past twenty years:
 
 .. code-block:: python
 
-  from tda import auth, client
+  from schwab import auth, client
   import json
 
   api_key = 'YOUR_API_KEY'
