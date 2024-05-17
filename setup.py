@@ -40,6 +40,7 @@ setuptools.setup(
     ],
     extras_require={
         'dev': [
+            'callee',
             'colorama',
             'coverage',
             'nose',
