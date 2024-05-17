@@ -1,3 +1,5 @@
+import warnings
+
 from enum import Enum
 
 from schwab.orders import common
@@ -33,6 +35,9 @@ def _build_object(obj):
 
 
 def truncate_float(flt):
+    warnings.warn('passing floats to set_price and set_stop_price is '+
+                  'deprecated and will be removed soon. Please update your '+
+                  'code to pass prices as strings instead.')
     if abs(flt) < 1 and flt != 0.0:
         return '{:.4f}'.format(float(int(flt * 10000)) / 10000.0)
     else:
