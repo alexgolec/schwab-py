@@ -217,8 +217,6 @@ class OptionOrderLegAST:
 
 class GenericBuilderAST:
     def __init__(self, builder):
-        self.emit_destination_warning = False
-
         self.top_level_fields = []
         for name, setter, enum_type in sorted(_FIELDS_AND_SETTERS):
             value = getattr(builder, '_'+name)
