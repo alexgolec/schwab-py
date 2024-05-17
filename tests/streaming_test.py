@@ -626,8 +626,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
                     "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
                     "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
                     "parameters": {
-                        "keys": 
-                        "GOOG,MSFT"
+                        "keys": "GOOG,MSFT"
                     }
                 }]
             })),
@@ -683,39 +682,37 @@ class StreamClientTest(IsolatedAsyncioTestCase):
         socket = await self.login_and_get_socket(ws_connect)
 
         stream_item = {
-            'data': [
-                {
-                    'service': 'CHART_EQUITY',
-                    'timestamp': 1590597641293,
-                    'command': 'SUBS',
-                    'content': [
-                        {
-                            'seq': 985,
-                            'key': 'MSFT',
-                            '1': 179.445,
-                            '2': 179.57,
-                            '3': 179.4299,
-                            '4': 179.52,
-                            '5': 53742.0,
-                            '6': 339,
-                            '7': 1590597540000,
-                            '8': 18409
-                        },
-                        {
-                            'seq': 654,
-                            'key': 'GOOG',
-                            '1': 1408.8,
-                            '2': 1408.8,
-                            '3': 1408.1479,
-                            '4': 1408.1479,
-                            '5': 500.0,
-                            '6': 339,
-                            '7': 1590597540000,
-                            '8': 18409
-                        }
-                    ]
-                }
-            ]
+            'data': [{
+                "service": "CHART_EQUITY",
+                "timestamp": 1715908546054,
+                "command": "SUBS",
+                "content": [
+                    {
+                        "seq": 0,
+                        "key": "MSFT",
+                        "1": 779,
+                        "2": 421.65,
+                        "3": 421.79,
+                        "4": 421.65,
+                        "5": 421.755,
+                        "6": 26.0,
+                        "7": 1715903940000,
+                        "8": 19859
+                    },
+                    {
+                        "seq": 0,
+                        "key": "GOOG",
+                        "1": 779,
+                        "2": 175.16,
+                        "3": 175.21,
+                        "4": 175.06,
+                        "5": 175.06,
+                        "6": 145.0,
+                        "7": 1715903940000,
+                        "8": 19859
+                    }
+                ]
+            }]
         }
 
         socket.recv.side_effect = [
@@ -730,33 +727,33 @@ class StreamClientTest(IsolatedAsyncioTestCase):
         await self.client.handle_message()
 
         expected_item = {
-            'service': 'CHART_EQUITY',
-            'timestamp': 1590597641293,
-            'command': 'SUBS',
-            'content': [
+            "service": "CHART_EQUITY",
+            "timestamp": 1715908546054,
+            "command": "SUBS",
+            "content": [
                 {
-                    'seq': 985,
-                    'key': 'MSFT',
-                    'FIELD_1': 179.445,
-                    'FIELD_2': 179.57,
-                    'FIELD_3': 179.4299,
-                    'FIELD_4': 179.52,
-                    'FIELD_5': 53742.0,
-                    'FIELD_6': 339,
-                    'FIELD_7': 1590597540000,
-                    'FIELD_8': 18409
+                    "seq": 0,
+                    "key": "MSFT",
+                    "SEQUENCE": 779,
+                    "OPEN_PRICE": 421.65,
+                    "HIGH_PRICE": 421.79,
+                    "LOW_PRICE": 421.65,
+                    "CLOSE_PRICE": 421.755,
+                    "VOLUME": 26.0,
+                    "CHART_TIME_MILLIS": 1715903940000,
+                    "CHART_DAY": 19859
                 },
                 {
-                    'seq': 654,
-                    'key': 'GOOG',
-                    'FIELD_1': 1408.8,
-                    'FIELD_2': 1408.8,
-                    'FIELD_3': 1408.1479,
-                    'FIELD_4': 1408.1479,
-                    'FIELD_5': 500.0,
-                    'FIELD_6': 339,
-                    'FIELD_7': 1590597540000,
-                    'FIELD_8': 18409
+                    "seq": 0,
+                    "key": "GOOG",
+                    "SEQUENCE": 779,
+                    "OPEN_PRICE": 175.16,
+                    "HIGH_PRICE": 175.21,
+                    "LOW_PRICE": 175.06,
+                    "CLOSE_PRICE": 175.06,
+                    "VOLUME": 145.0,
+                    "CHART_TIME_MILLIS": 1715903940000,
+                    "CHART_DAY": 19859
                 }
             ]
         }

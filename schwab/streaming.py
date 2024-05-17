@@ -458,32 +458,32 @@ class StreamClient(EnumEnforcer):
         values stored returned in the stream messages.
         '''
 
-        #: UNKNOWN
-        FIELD_0 = 0
+        #: Ticker symbol
+        SYMBOL = 0
 
-        #: UNKNOWN
-        FIELD_1 = 1
+        #: Sequence number
+        SEQUENCE = 1
 
-        #: UNKNOWN
-        FIELD_2 = 2
+        #: Today's open price
+        OPEN_PRICE = 2
 
-        #: UNKNOWN
-        FIELD_3 = 3
+        #: Today's high price
+        HIGH_PRICE = 3
 
-        #: UNKNOWN
-        FIELD_4 = 4
+        #: Today's low price
+        LOW_PRICE = 4
 
-        #: UNKNOWN
-        FIELD_5 = 5
+        #: Previous day's close price
+        CLOSE_PRICE = 5
 
-        #: UNKNOWN
-        FIELD_6 = 6
+        #: Today's trading volume
+        VOLUME = 6
 
-        #: UNKNOWN
-        FIELD_7 = 7
+        #: Chart timestamp
+        CHART_TIME_MILLIS = 7
 
-        #: UNKNOWN
-        FIELD_8 = 8
+        #: Chart day
+        CHART_DAY = 8
 
     async def chart_equity_subs(self, symbols):
         '''
