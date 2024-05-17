@@ -51,9 +51,10 @@ class ConstructRepeatOrderTest(unittest.TestCase):
             "complexOrderStrategyType": "NONE",
             "quantity": 1.0,
             "filledQuantity": 1.0,
-            "remainingQuantity": 0.0,
-            "destinationLinkName": "AUTO",
-            "orderLegCollection": [
+            "remainingQuantity": 0.0,'''+
+            # XXX: See comment in contrib.orders._FIELDS_AND_SETTERS
+            #"destinationLinkName": "AUTO",
+            '''"orderLegCollection": [
                 {
                     "orderLegType": "EQUITY",
                     "legId": 1,
@@ -103,7 +104,7 @@ class ConstructRepeatOrderTest(unittest.TestCase):
             'orderType': 'MARKET',
             'complexOrderStrategyType': 'NONE',
             'quantity': 1.0,
-            'destinationLinkName': 'AUTO',
+            # 'destinationLinkName': 'AUTO',
             'orderStrategyType': 'SINGLE',
             'orderLegCollection': [{
                 'instruction': 'BUY',
@@ -295,9 +296,10 @@ class ConstructRepeatOrderTest(unittest.TestCase):
             "complexOrderStrategyType": "NONE",
             "quantity": 1.0,
             "filledQuantity": 1.0,
-            "remainingQuantity": 0.0,
-            "destinationLinkName": "AUTO",
-            "price": 0.21,
+            "remainingQuantity": 0.0,'''+
+            # XXX: See comment in contrib.orders._FIELDS_AND_SETTERS
+            #"destinationLinkName": "AUTO",
+            '''"price": 0.21,
             "orderLegCollection": [{
                 "orderLegType": "OPTION",
                 "legId": 1,
@@ -344,7 +346,7 @@ class ConstructRepeatOrderTest(unittest.TestCase):
             'orderType': 'LIMIT',
             'complexOrderStrategyType': 'NONE',
             'quantity': 1.0,
-            'destinationLinkName': 'AUTO',
+            #'destinationLinkName': 'AUTO',
             'price': 0.21,
             'orderStrategyType': 'SINGLE',
             'orderLegCollection': [{
@@ -366,8 +368,9 @@ class ConstructRepeatOrderTest(unittest.TestCase):
             "complexOrderStrategyType": "BUTTERFLY",
             "quantity": 1.0,
             "filledQuantity": 1.0,
-            "remainingQuantity": 0.0,
-            "destinationLinkName": "AUTO",
+            "remainingQuantity": 0.0,'''+
+            # XXX: See comment in contrib.orders._FIELDS_AND_SETTERS
+            '''"destinationLinkName": "AUTO",
             "price": 0.03,
             "orderLegCollection": [
                 {
@@ -460,7 +463,7 @@ class ConstructRepeatOrderTest(unittest.TestCase):
             'orderType': 'NET_DEBIT',
             'complexOrderStrategyType': 'BUTTERFLY',
             'quantity': 1.0,
-            'destinationLinkName': 'AUTO',
+            #'destinationLinkName': 'AUTO',
             'price': 0.03,
             'orderStrategyType': 'SINGLE',
             'orderLegCollection': [{
@@ -496,9 +499,10 @@ class ConstructRepeatOrderTest(unittest.TestCase):
             "complexOrderStrategyType": "NONE",
             "quantity": 2.0,
             "filledQuantity": 2.0,
-            "remainingQuantity": 0.0,
-            "destinationLinkName": "AUTO",
-            "price": 3.6,
+            "remainingQuantity": 0.0,'''+
+            # XXX: See comment in contrib.orders._FIELDS_AND_SETTERS
+            #"destinationLinkName": "AUTO",
+            '''"price": 3.6,
             "orderLegCollection": [
                 {
                     "orderLegType": "OPTION",
@@ -547,9 +551,9 @@ class ConstructRepeatOrderTest(unittest.TestCase):
                     "complexOrderStrategyType": "NONE",
                     "quantity": 2.0,
                     "filledQuantity": 2.0,
-                    "remainingQuantity": 0.0,
-                    "destinationLinkName": "NYSE",
-                    "price": 3.7,
+                    "remainingQuantity": 0.0,'''+
+                    #"destinationLinkName": "NYSE",
+                    '''"price": 3.7,
                     "orderLegCollection": [
                         {
                             "orderLegType": "OPTION",
@@ -602,7 +606,7 @@ class ConstructRepeatOrderTest(unittest.TestCase):
             'orderType': 'LIMIT',
             'complexOrderStrategyType': 'NONE',
             'quantity': 2.0,
-            'destinationLinkName': 'AUTO',
+            #'destinationLinkName': 'AUTO',
             'orderStrategyType': 'TRIGGER',
             'price': 3.6,
             'orderLegCollection': [{
@@ -620,7 +624,7 @@ class ConstructRepeatOrderTest(unittest.TestCase):
                 'complexOrderStrategyType': 'NONE',
                 'quantity': 2.0,
                 'price': 3.7,
-                'destinationLinkName': 'NYSE',
+                #'destinationLinkName': 'NYSE',
                 'orderStrategyType': 'SINGLE',
                 'orderLegCollection': [{
                     'instruction': 'SELL_TO_CLOSE',
@@ -641,9 +645,10 @@ class ConstructRepeatOrderTest(unittest.TestCase):
             "complexOrderStrategyType": "NONE",
             "quantity": 1.0,
             "filledQuantity": 0.0,
-            "remainingQuantity": 1.0,
-            "destinationLinkName": "AUTO",
-            "price": 2.71,
+            "remainingQuantity": 1.0,'''+
+            # XXX: See comment in contrib.orders._FIELDS_AND_SETTERS
+            # "destinationLinkName": "AUTO",
+            '''"price": 2.71,
             "orderLegCollection": [
                 {
                     "orderLegType": "OPTION",
@@ -681,9 +686,9 @@ class ConstructRepeatOrderTest(unittest.TestCase):
                             "complexOrderStrategyType": "NONE",
                             "quantity": 1.0,
                             "filledQuantity": 0.0,
-                            "remainingQuantity": 1.0,
-                            "destinationLinkName": "AUTO",
-                            "orderLegCollection": [
+                            "remainingQuantity": 1.0,'''+
+                            # "destinationLinkName": "AUTO",
+                            '''"orderLegCollection": [
                                 {
                                     "orderLegType": "OPTION",
                                     "legId": 1,
@@ -713,9 +718,9 @@ class ConstructRepeatOrderTest(unittest.TestCase):
                             "complexOrderStrategyType": "NONE",
                             "quantity": 1.0,
                             "filledQuantity": 0.0,
-                            "remainingQuantity": 1.0,
-                            "destinationLinkName": "AUTO",
-                            "orderLegCollection": [
+                            "remainingQuantity": 1.0,'''+
+                            # "destinationLinkName": "AUTO",
+                            '''"orderLegCollection": [
                                 {
                                     "orderLegType": "OPTION",
                                     "legId": 1,
@@ -751,7 +756,7 @@ class ConstructRepeatOrderTest(unittest.TestCase):
             'orderType': 'LIMIT',
             'complexOrderStrategyType': 'NONE',
             'quantity': 1.0,
-            'destinationLinkName': 'AUTO',
+            #'destinationLinkName': 'AUTO',
             'orderStrategyType': 'TRIGGER',
             'price': 2.71,
             'orderLegCollection': [{
@@ -770,7 +775,7 @@ class ConstructRepeatOrderTest(unittest.TestCase):
                     'orderType': 'LIMIT',
                     'complexOrderStrategyType': 'NONE',
                     'quantity': 1.0,
-                    'destinationLinkName': 'AUTO',
+                    #'destinationLinkName': 'AUTO',
                     'orderStrategyType': 'SINGLE',
                     'orderLegCollection': [{
                         'instruction': 'SELL_TO_CLOSE',
@@ -786,7 +791,7 @@ class ConstructRepeatOrderTest(unittest.TestCase):
                     'orderType': 'STOP',
                     'complexOrderStrategyType': 'NONE',
                     'quantity': 1.0,
-                    'destinationLinkName': 'AUTO',
+                    #'destinationLinkName': 'AUTO',
                     'orderStrategyType': 'SINGLE',
                     'orderLegCollection': [{
                         'instruction': 'SELL_TO_CLOSE',

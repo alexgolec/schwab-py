@@ -75,6 +75,28 @@ def latest_order_main(sys_args):
     # Construct and emit order code
     if orders:
         order = sorted(orders, key=lambda o: -o['orderId'])[0]
+
+        # XXX: If necessary, warn about the jank around destinations
+        emit_destination_warning_newline = False
+        if ('requestedDestination' in order
+                and order['requestedDestination'] != 'AUTO'):
+            print(('# Warning: This order contains a non-"AUTO" value of ' +
+                   '"requestedDestination" ("{}").').format(
+                       order['requestedDestination']))
+            print('#          This parameter appears to be broken in ' +
+                  'the API, so it is omitted in this generated code.')
+            emit_destination_warning_newline = True
+        if ('destinationLinkName' in order
+                and order['destinationLinkName'] != 'AutoRoute'):
+            print(('# Warning: This order contains a non-"AutoRoute" value of ' +
+                   '"destinationLinkName" ("{}").').format(
+                           order['destinationLinkName']))
+            print('           This parameter appears to be broken in the ' +
+                  'API, so it is omitted in this generated code.''')
+            emit_destination_warning_newline = True
+        if emit_destination_warning_newline:
+            print()
+
         print('# Order ID', order['orderId'])
         print(code_for_builder(construct_repeat_order(order)))
     else:

@@ -37,8 +37,15 @@ _FIELDS_AND_SETTERS = (
     ('complexOrderStrategyType', 'set_complex_order_strategy_type',
         schwab.orders.common.ComplexOrderStrategyType),
     ('quantity', 'set_quantity', None),
-    ('destinationLinkName', 'set_destination_link_name',
-        schwab.orders.common.Destination),
+    # XXX: Destinations are weird/busted
+    #       * As of 2024-05-16, the example in the place_order documentation 
+    #         references destinationLinkName but not requestedDestination.
+    #       * The same documentation lists requestedDestination as a parameter 
+    #         to the method, but doesn't list destinationLinkName.
+    #       * Fetching historical orders returns orders which contain both.
+    #      These parameters are being ignored until we gain more clarity.
+    #('destinationLinkName', 'set_destination_link_name',
+    #    schwab.orders.common.Destination),
     ('stopPrice', 'copy_stop_price', None),
     ('stopPriceLinkBasis', 'set_stop_price_link_basis',
         schwab.orders.common.StopPriceLinkBasis),
@@ -210,6 +217,8 @@ class OptionOrderLegAST:
 
 class GenericBuilderAST:
     def __init__(self, builder):
+        self.emit_destination_warning = False
+
         self.top_level_fields = []
         for name, setter, enum_type in sorted(_FIELDS_AND_SETTERS):
             value = getattr(builder, '_'+name)
