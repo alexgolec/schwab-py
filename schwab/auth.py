@@ -138,6 +138,7 @@ def client_from_token_file(token_path, api_key, app_secret, asyncio=False,
                        :func:`~schwab.auth.client_from_login_flow` or
                        :func:`~schwab.auth.easy_client` to create one.
     :param api_key: Your Schwab application's app key.
+    :param app_secret: Application secret. Provided upon app approval.
     :param asyncio: If set to ``True``, this will enable async support allowing
                     the client to be used in an async environment. Defaults to
                     ``False``
@@ -164,6 +165,7 @@ def client_from_manual_flow(api_key, app_secret, callback_url, token_path,
     each updated version to ``token_path``.
 
     :param api_key: Your Schwab application's app key.
+    :param app_secret: Application secret provided upon app approval.
     :param callback_url: Your Schwab application's callback URL. Note this must
                          *exactly* match the value you've entered in your
                          application configuration, otherwise login will fail
@@ -247,6 +249,7 @@ def client_from_access_functions(api_key, app_secret, token_read_func,
     client_from_access_functions.py>`__ for details.
 
     :param api_key: Your Schwab application's app key.
+    :param app_secret: Application secret. Provided upon app approval.
     :param token_read_func: Function that takes no arguments and returns a token
                             object.
     :param token_write_func: Function that writes the token on update. Will be
