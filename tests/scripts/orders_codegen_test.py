@@ -1,3 +1,4 @@
+import callee
 import httpx
 import subprocess
 import unittest
@@ -390,6 +391,88 @@ class LatestOrderTest(unittest.TestCase):
 
         mock_print.assert_called_once_with(
                 AnyStringWith('Returned HTTP status code 400'))
+
+
+    @no_duplicates
+    @patch('builtins.print')
+    @patch('schwab.scripts.orders_codegen.client_from_token_file')
+    @patch('schwab.scripts.orders_codegen.construct_repeat_order')
+    @patch('schwab.scripts.orders_codegen.code_for_builder')
+    def test_warn_on_non_auto_requestedDestination(
+            self,
+            mock_code_for_builder,
+            mock_construct_repeat_order,
+            mock_client_from_token_file,
+            mock_print):
+        self.add_arg('--token_file')
+        self.add_arg('filename.json')
+        self.add_arg('--api_key')
+        self.add_arg('api-key')
+        self.add_arg('--app_secret')
+        self.add_arg('app-secret')
+        self.add_arg('--account_hash')
+        self.add_arg('account-hash')
+
+        orders = [
+                {'orderId': 401,
+                 'requestedDestination': 'not AUTO'},
+        ]
+
+        mock_client = MagicMock()
+        mock_client_from_token_file.return_value = mock_client
+        mock_client.get_orders_for_account.return_value \
+                = httpx.Response(200, json=orders)
+
+        self.assertEqual(self.main(), 0)
+
+        mock_construct_repeat_order.assert_called_once_with(orders[0])
+        mock_print.assert_has_calls([
+                call(callee.Contains('requestedDestination')),
+                call(callee.Contains('broken')),
+                call(),
+                call('# Order ID', 401),
+                call(mock_code_for_builder.return_value)])
+
+
+    @no_duplicates
+    @patch('builtins.print')
+    @patch('schwab.scripts.orders_codegen.client_from_token_file')
+    @patch('schwab.scripts.orders_codegen.construct_repeat_order')
+    @patch('schwab.scripts.orders_codegen.code_for_builder')
+    def test_warn_on_non_auto_destinationLinkName(
+            self,
+            mock_code_for_builder,
+            mock_construct_repeat_order,
+            mock_client_from_token_file,
+            mock_print):
+        self.add_arg('--token_file')
+        self.add_arg('filename.json')
+        self.add_arg('--api_key')
+        self.add_arg('api-key')
+        self.add_arg('--app_secret')
+        self.add_arg('app-secret')
+        self.add_arg('--account_hash')
+        self.add_arg('account-hash')
+
+        orders = [
+                {'orderId': 401,
+                 'destinationLinkName': 'not AUTO'},
+        ]
+
+        mock_client = MagicMock()
+        mock_client_from_token_file.return_value = mock_client
+        mock_client.get_orders_for_account.return_value \
+                = httpx.Response(200, json=orders)
+
+        self.assertEqual(self.main(), 0)
+
+        mock_construct_repeat_order.assert_called_once_with(orders[0])
+        mock_print.assert_has_calls([
+                call(callee.Contains('destinationLinkName')),
+                call(callee.Contains('broken')),
+                call(),
+                call('# Order ID', 401),
+                call(mock_code_for_builder.return_value)])
 
 
 class ScriptInvocationTest(unittest.TestCase):
