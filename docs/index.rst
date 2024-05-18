@@ -22,6 +22,7 @@
   getting-started
   auth
   client
+  streaming
   order-templates
   order-builder
   util
