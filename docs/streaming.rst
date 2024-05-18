@@ -283,7 +283,7 @@ particular they list the best available bid and ask prices, together with the
 requested volume of each. They are updated live as market conditions change.
 
 
-.. _level_one_quotes_stream
+.. _level_one_quotes_stream:
 
 ---------------
 Equities Quotes
@@ -299,7 +299,7 @@ Level one quotes for equities traded on NYSE, AMEX, and PACIFIC.
   :undoc-members:
 
 
-.. _level_one_option_stream
+.. _level_one_option_stream:
 
 --------------
 Options Quotes
