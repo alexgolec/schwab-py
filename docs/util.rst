@@ -12,16 +12,19 @@ All utilities are presented under the ``Utils`` class:
   .. automethod:: __init__
   .. automethod:: set_account_hash
 
--------------------------
-Get the Most Recent Order
--------------------------
 
-For successfully placed orders, :meth:`schwab.client.Client.place_order` returns 
-the ID of the newly created order, encoded in the ``r.headers['Location']`` 
-header.  This method inspects the response and extracts the order ID from the 
-contents, if it's there. This order ID can then be used to monitor or modify the
-order as described in the :ref:`Client documentation <orders-section>`. Example
-usage:
+.. _extract_order_id:
+
+---------------------------------------
+Extract an order ID from a placed order
+---------------------------------------
+
+For successfully placed orders, :meth:`place_order 
+<schwab.client.Client.place_order>` returns the ID of the newly created order, 
+encoded in the ``r.headers['Location']`` header.  This method inspects the 
+response and extracts the order ID from the contents, if it's there. This order 
+ID can then be used to monitor or modify the order as described in the 
+:ref:`Client documentation <orders-section>`. Example usage:
 
 .. code-block:: python
 
