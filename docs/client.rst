@@ -325,10 +325,13 @@ Editing Existing Orders
 -----------------------
 
 Endpoints for canceling and replacing existing orders.
-Annoyingly, while these endpoints require an order ID, it seems that when
-placing new orders the API does not return any metadata about the new order. As 
-a result, if you want to cancel or replace an order after you've created it, you 
-must search for it using the methods described in :ref:`accessing_existing_orders`.
+
+These endpoints require the order ID. Because the API does not return a JSON 
+response when creating an order, the workflow for extracting this order ID is a 
+little complicated.  You can fetch the order ID from the response to a 
+:meth:`place_order <schwab.client.Client.place_order>` request using :ref:`this 
+helper function <extract_order_id>`. Otherwise, see 
+:ref:`accessing_existing_orders` to finding historical orders.
 
 .. automethod:: schwab.client.Client.cancel_order
 .. automethod:: schwab.client.Client.replace_order
