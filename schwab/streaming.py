@@ -861,7 +861,7 @@ class StreamClient(EnumEnforcer):
         VOLATILITY = 10
 
         #: Money intrinsic value
-        MONEY_INSTRINSIC_VALUE = 11
+        MONEY_INTRINSIC_VALUE = 11
 
         #: Expiration year
         EXPIRATION_YEAR = 12
@@ -906,7 +906,7 @@ class StreamClient(EnumEnforcer):
         TIME_VALUE = 25
 
         #: Expiration day
-        EXPIRATIO_DAY = 26
+        EXPIRATION_DAY = 26
 
         #: Days to expiration
         DAYS_TO_EXPIRATION = 27
