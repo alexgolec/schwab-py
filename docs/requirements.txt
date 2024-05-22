@@ -5,4 +5,3 @@ httpx==0.27.0
 prompt_toolkit==3.0.43
 python-dateutil==2.9.0.post0
 sphinx-rtd-theme==2.0.0
-websockets==12.0
