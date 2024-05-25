@@ -85,6 +85,11 @@ class TokenMetadata:
                 token['creation_timestamp'],
                 unwrapped_token_write_func)
 
+    def token_age(self):
+        '''Returns the number of second elapsed since this token was initially 
+        created.'''
+        return int(time.time()) - self.creation_timestamp
+
     def wrapped_token_write_func(self):
         '''
         Returns a version of the unwrapped write function which wraps the token 

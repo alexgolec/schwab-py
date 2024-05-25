@@ -447,3 +447,14 @@ class TokenMetadataTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'token format has changed'):
             metadata = auth.TokenMetadata.from_loaded_token(
                     {'token': 'yes'}, lambda t: None)
+
+
+    @no_duplicates
+    @patch('time.time', unittest.mock.MagicMock(return_value=MOCK_NOW))
+    def test_token_age(self):
+        token = {'token': 'yes', 'creation_timestamp': TOKEN_CREATION_TIMESTAMP}
+
+        metadata = auth.TokenMetadata.from_loaded_token(
+                token, unwrapped_token_write_func=None)
+        self.assertEqual(metadata.token_age(),
+                         MOCK_NOW - TOKEN_CREATION_TIMESTAMP)
