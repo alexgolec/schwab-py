@@ -45,7 +45,19 @@ class TokenMetadata:
     Provides the functionality required to maintain and update our view of the
     token's metadata.
     '''
-    def __init__(self, token, unwrapped_token_write_func):
+    def __init__(self, token, creation_timestamp, unwrapped_token_write_func):
+        '''
+        :param token: The token to wrap in metadata
+        :param creation_timestamp: Timestamp at which this token was initially 
+                                   created. Notably, this timestamp does not 
+                                   change when the token is updated.
+        :unwrapped_token_write_func: Function that accepts a non-metadata
+                                     wrapped token and writes it to disk or 
+                                     other persistent storage.
+        '''
+
+        self.creation_timestamp = creation_timestamp
+
         # The token write function is ultimately stored in the session. When we
         # get a new token we immediately wrap it in a new sesssion. We hold on
         # to the unwrapped token writer function to allow us to inject the
@@ -63,7 +75,15 @@ class TokenMetadata:
         the loaded token object. If the token has a legacy format which contains
         no metadata, assign default values.
         '''
-        return TokenMetadata(token, unwrapped_token_write_func)
+        if 'creation_timestamp' not in token:
+            raise ValueError(
+                    'WARNING: The token format has changed since this token '+
+                    'was created. Please delete it and create a new one.')
+
+        return TokenMetadata(
+                token['token'],
+                token['creation_timestamp'],
+                unwrapped_token_write_func)
 
     def wrapped_token_write_func(self):
         '''
@@ -73,13 +93,20 @@ class TokenMetadata:
         def wrapped_token_write_func(token, *args, **kwargs):
             # If the write function is going to raise an exception, let it do so 
             # here before we update our reference to the current token.
-            ret = self.unwrapped_token_write_func(token, *args, **kwargs)
+            ret = self.unwrapped_token_write_func(
+                self.wrap_token_in_metadata(token), *args, **kwargs)
 
             self.token = token
 
             return ret
 
         return wrapped_token_write_func
+
+    def wrap_token_in_metadata(self, token):
+        return {
+            'creation_timestamp': self.creation_timestamp,
+            'token': token,
+        }
 
 
 def __fetch_and_register_token_from_redirect(
@@ -97,7 +124,7 @@ def __fetch_and_register_token_from_redirect(
     update_token = (
         __update_token(token_path) if token_write_func is None
         else token_write_func)
-    metadata_manager = TokenMetadata(token, update_token)
+    metadata_manager = TokenMetadata(token, int(time.time()), update_token)
     update_token = metadata_manager.wrapped_token_write_func()
     update_token(token)
 
@@ -216,7 +243,7 @@ def client_from_manual_flow(api_key, app_secret, callback_url, token_path,
     if callback_url.startswith('http://'):
         print(('WARNING: Your callback URL ({}) will transmit data over HTTP, ' +
                'which is a potentially severe security vulnerability. ' +
-               'Please go to your app\'s configuration with TDAmeritrade ' +
+               'Please go to your app\'s configuration with Schwab ' +
                'and update your callback URL to begin with \'https\' ' +
                'to stop seeing this message.').format(callback_url))
 
@@ -268,6 +295,7 @@ def client_from_access_functions(api_key, app_secret, token_read_func,
 
     # Extract metadata and unpack the token, if necessary
     metadata = TokenMetadata.from_loaded_token(token, token_write_func)
+    token = metadata.token
 
     # Don't emit token details in debug logs
     register_redactions(token)

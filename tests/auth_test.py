@@ -16,6 +16,7 @@ import unittest
 
 API_KEY = 'APIKEY'
 APP_SECRET = '0x5EC07'
+TOKEN_CREATION_TIMESTAMP = 1613745000
 MOCK_NOW = 1613745082
 REDIRECT_URL = 'https://redirect.url.com'
 
@@ -24,17 +25,21 @@ class ClientFromTokenFileTest(unittest.TestCase):
 
     def setUp(self):
         self.tmp_dir = tempfile.TemporaryDirectory()
-        self.json_path = os.path.join(self.tmp_dir.name, 'token.json')
-        self.token = {'token': 'yes'}
+        self.token_path = os.path.join(self.tmp_dir.name, 'token.json')
+        self.raw_token = {'token': 'yes'}
+        self.token = {
+                'token': self.raw_token,
+                'creation_timestamp': TOKEN_CREATION_TIMESTAMP
+        }
 
     def write_token(self):
-        with open(self.json_path, 'w') as f:
+        with open(self.token_path, 'w') as f:
             json.dump(self.token, f)
 
     @no_duplicates
     def test_no_such_file(self):
         with self.assertRaises(FileNotFoundError):
-            auth.client_from_token_file(self.json_path, API_KEY, APP_SECRET)
+            auth.client_from_token_file(self.token_path, API_KEY, APP_SECRET)
 
     @no_duplicates
     @patch('schwab.auth.Client')
@@ -47,13 +52,13 @@ class ClientFromTokenFileTest(unittest.TestCase):
 
         self.assertEqual('returned client',
                          auth.client_from_token_file(
-                             self.json_path, API_KEY, APP_SECRET))
+                             self.token_path, API_KEY, APP_SECRET))
         client.assert_called_once_with(API_KEY, _, token_metadata=_,
                                        enforce_enums=_)
         sync_session.assert_called_once_with(
             API_KEY,
             client_secret=APP_SECRET,
-            token=self.token,
+            token=self.raw_token,
             token_endpoint=_,
             update_token=_)
 
@@ -65,7 +70,7 @@ class ClientFromTokenFileTest(unittest.TestCase):
             self, async_session, sync_session, client):
         self.write_token()
 
-        auth.client_from_token_file(self.json_path, API_KEY, APP_SECRET)
+        auth.client_from_token_file(self.token_path, API_KEY, APP_SECRET)
         sync_session.assert_called_once()
 
         session_call = sync_session.mock_calls[0]
@@ -73,8 +78,11 @@ class ClientFromTokenFileTest(unittest.TestCase):
 
         updated_token = {'updated': 'token'}
         update_token(updated_token)
-        with open(self.json_path, 'r') as f:
-            self.assertEqual(json.load(f), updated_token)
+        with open(self.token_path, 'r') as f:
+            self.assertEqual(json.load(f), {
+                'token': updated_token,
+                'creation_timestamp': TOKEN_CREATION_TIMESTAMP
+            })
 
     @no_duplicates
     @patch('schwab.auth.Client')
@@ -87,7 +95,7 @@ class ClientFromTokenFileTest(unittest.TestCase):
 
         self.assertEqual('returned client',
                          auth.client_from_token_file(
-                             self.json_path, API_KEY, APP_SECRET,
+                             self.token_path, API_KEY, APP_SECRET,
                              enforce_enums=False))
         client.assert_called_once_with(API_KEY, _, token_metadata=_,
                                        enforce_enums=False)
@@ -103,12 +111,21 @@ class ClientFromTokenFileTest(unittest.TestCase):
 
         self.assertEqual('returned client',
                          auth.client_from_token_file(
-                             self.json_path, API_KEY, APP_SECRET))
+                             self.token_path, API_KEY, APP_SECRET))
         client.assert_called_once_with(API_KEY, _, token_metadata=_,
                                        enforce_enums=True)
 
 
 class ClientFromAccessFunctionsTest(unittest.TestCase):
+
+
+    def setUp(self):
+        self.raw_token = {'token': 'yes'}
+        self.token = {
+                'token': self.raw_token,
+                'creation_timestamp': TOKEN_CREATION_TIMESTAMP
+        }
+
 
     @no_duplicates
     @patch('schwab.auth.Client')
@@ -116,10 +133,8 @@ class ClientFromAccessFunctionsTest(unittest.TestCase):
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     def test_success_with_write_func(
             self, async_session, sync_session, client):
-        token = {'token': 'yes'}
-
         token_read_func = MagicMock()
-        token_read_func.return_value = token
+        token_read_func.return_value = self.token
 
         token_writes = []
 
@@ -137,7 +152,7 @@ class ClientFromAccessFunctionsTest(unittest.TestCase):
         sync_session.assert_called_once_with(
             API_KEY,
             client_secret=APP_SECRET,
-            token=token,
+            token=self.raw_token,
             token_endpoint=_,
             update_token=_)
         token_read_func.assert_called_once()
@@ -146,9 +161,11 @@ class ClientFromAccessFunctionsTest(unittest.TestCase):
         session_call = sync_session.mock_calls[0]
         update_token = session_call[2]['update_token']
 
-
-        update_token(token)
-        self.assertEqual([token], token_writes)
+        update_token(self.raw_token)
+        self.assertEqual([{
+            'creation_timestamp': TOKEN_CREATION_TIMESTAMP,
+            'token': self.raw_token
+        }], token_writes)
 
     @no_duplicates
     @patch('schwab.auth.Client')
@@ -156,10 +173,8 @@ class ClientFromAccessFunctionsTest(unittest.TestCase):
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     def test_success_with_write_func_metadata_aware_token(
             self, async_session, sync_session, client):
-        token = {'token': 'yes'}
-
         token_read_func = MagicMock()
-        token_read_func.return_value = token
+        token_read_func.return_value = self.token
 
         token_writes = []
 
@@ -177,7 +192,7 @@ class ClientFromAccessFunctionsTest(unittest.TestCase):
         sync_session.assert_called_once_with(
             API_KEY,
             client_secret=APP_SECRET,
-            token=token,
+            token=self.raw_token,
             token_endpoint=_,
             update_token=_)
         token_read_func.assert_called_once()
@@ -186,8 +201,11 @@ class ClientFromAccessFunctionsTest(unittest.TestCase):
         session_call = sync_session.mock_calls[0]
         update_token = session_call[2]['update_token']
 
-        update_token(token)
-        self.assertEqual([token], token_writes)
+        update_token(self.raw_token)
+        self.assertEqual([{
+            'creation_timestamp': TOKEN_CREATION_TIMESTAMP,
+            'token': self.raw_token
+        }], token_writes)
 
     @no_duplicates
     @patch('schwab.auth.Client')
@@ -195,10 +213,8 @@ class ClientFromAccessFunctionsTest(unittest.TestCase):
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     def test_success_with_enforce_enums_disabled(
             self, async_session, sync_session, client):
-        token = {'token': 'yes'}
-
         token_read_func = MagicMock()
-        token_read_func.return_value = token
+        token_read_func.return_value = self.token
 
         token_writes = []
 
@@ -222,10 +238,8 @@ class ClientFromAccessFunctionsTest(unittest.TestCase):
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     def test_success_with_enforce_enums_enabled(
             self, async_session, sync_session, client):
-        token = {'token': 'yes'}
-
         token_read_func = MagicMock()
-        token_read_func.return_value = token
+        token_read_func.return_value = self.token
 
         token_writes = []
 
@@ -244,13 +258,12 @@ class ClientFromAccessFunctionsTest(unittest.TestCase):
                 API_KEY, _, token_metadata=_, enforce_enums=True)
 
 
-
 class ClientFromManualFlow(unittest.TestCase):
 
     def setUp(self):
         self.tmp_dir = tempfile.TemporaryDirectory()
-        self.json_path = os.path.join(self.tmp_dir.name, 'token.json')
-        self.token = {'token': 'yes'}
+        self.token_path = os.path.join(self.tmp_dir.name, 'token.json')
+        self.raw_token = {'token': 'yes'}
 
     @no_duplicates
     @patch('schwab.auth.Client')
@@ -264,17 +277,20 @@ class ClientFromManualFlow(unittest.TestCase):
 
         sync_session.return_value = sync_session
         sync_session.create_authorization_url.return_value = AUTH_URL, None
-        sync_session.fetch_token.return_value = self.token
+        sync_session.fetch_token.return_value = self.raw_token
 
         client.return_value = 'returned client'
         prompt_func.return_value = 'http://redirect.url.com/?data'
 
         self.assertEqual('returned client',
                          auth.client_from_manual_flow(
-                             API_KEY, APP_SECRET, REDIRECT_URL, self.json_path))
+                             API_KEY, APP_SECRET, REDIRECT_URL, self.token_path))
 
-        with open(self.json_path, 'r') as f:
-            self.assertEqual(self.token, json.load(f))
+        with open(self.token_path, 'r') as f:
+            self.assertEqual({
+                'creation_timestamp': MOCK_NOW,
+                'token': self.raw_token
+            }, json.load(f))
 
     @no_duplicates
     @patch('schwab.auth.Client')
@@ -288,7 +304,7 @@ class ClientFromManualFlow(unittest.TestCase):
 
         sync_session.return_value = sync_session
         sync_session.create_authorization_url.return_value = AUTH_URL, None
-        sync_session.fetch_token.return_value = self.token
+        sync_session.fetch_token.return_value = self.raw_token
 
         webdriver = MagicMock()
         webdriver.current_url = REDIRECT_URL + '/token_params'
@@ -304,13 +320,16 @@ class ClientFromManualFlow(unittest.TestCase):
         self.assertEqual('returned client',
                          auth.client_from_manual_flow(
                              API_KEY, APP_SECRET, REDIRECT_URL,
-                             self.json_path,
+                             self.token_path,
                              token_write_func=dummy_token_write_func))
 
         sync_session.assert_called_with(
                 _, client_secret=APP_SECRET, token=_, update_token=_)
 
-        self.assertEqual([self.token], token_writes)
+        self.assertEqual([{
+            'creation_timestamp': MOCK_NOW,
+            'token': self.raw_token
+        }], token_writes)
 
     @no_duplicates
     @patch('schwab.auth.Client')
@@ -321,23 +340,26 @@ class ClientFromManualFlow(unittest.TestCase):
     @patch('time.time', unittest.mock.MagicMock(return_value=MOCK_NOW))
     def test_print_warning_on_http_redirect_uri(
             self, print_func, prompt_func, async_session, sync_session, client):
-        AUTH_URL = 'https://auth.url.com'
+        auth_url = 'https://auth.url.com'
 
         redirect_url = 'http://redirect.url.com'
 
         sync_session.return_value = sync_session
-        sync_session.create_authorization_url.return_value = AUTH_URL, None
-        sync_session.fetch_token.return_value = self.token
+        sync_session.create_authorization_url.return_value = auth_url, None
+        sync_session.fetch_token.return_value = self.raw_token
 
         client.return_value = 'returned client'
         prompt_func.return_value = 'http://redirect.url.com/?data'
 
         self.assertEqual('returned client',
                          auth.client_from_manual_flow(
-                             API_KEY, APP_SECRET, redirect_url, self.json_path))
+                             API_KEY, APP_SECRET, redirect_url, self.token_path))
 
-        with open(self.json_path, 'r') as f:
-            self.assertEqual(self.token, json.load(f))
+        with open(self.token_path, 'r') as f:
+            self.assertEqual({
+                'creation_timestamp': MOCK_NOW,
+                'token': self.raw_token
+            }, json.load(f))
 
         print_func.assert_any_call(AnyStringWith('will transmit data over HTTP'))
 
@@ -349,18 +371,18 @@ class ClientFromManualFlow(unittest.TestCase):
     @patch('time.time', unittest.mock.MagicMock(return_value=MOCK_NOW))
     def test_enforce_enums_disabled(
             self, prompt_func, async_session, sync_session, client):
-        AUTH_URL = 'https://auth.url.com'
+        auth_url = 'https://auth.url.com'
 
         sync_session.return_value = sync_session
-        sync_session.create_authorization_url.return_value = AUTH_URL, None
-        sync_session.fetch_token.return_value = self.token
+        sync_session.create_authorization_url.return_value = auth_url, None
+        sync_session.fetch_token.return_value = self.raw_token
 
         client.return_value = 'returned client'
         prompt_func.return_value = 'http://redirect.url.com/?data'
 
         self.assertEqual('returned client',
                          auth.client_from_manual_flow(
-                             API_KEY, APP_SECRET, REDIRECT_URL, self.json_path,
+                             API_KEY, APP_SECRET, REDIRECT_URL, self.token_path,
                              enforce_enums=False))
 
         client.assert_called_once_with(API_KEY, _, token_metadata=_,
@@ -374,18 +396,18 @@ class ClientFromManualFlow(unittest.TestCase):
     @patch('time.time', unittest.mock.MagicMock(return_value=MOCK_NOW))
     def test_enforce_enums_enabled(
             self, prompt_func, async_session, sync_session, client):
-        AUTH_URL = 'https://auth.url.com'
+        auth_url = 'https://auth.url.com'
 
         sync_session.return_value = sync_session
-        sync_session.create_authorization_url.return_value = AUTH_URL, None
-        sync_session.fetch_token.return_value = self.token
+        sync_session.create_authorization_url.return_value = auth_url, None
+        sync_session.fetch_token.return_value = self.raw_token
 
         client.return_value = 'returned client'
         prompt_func.return_value = 'http://redirect.url.com/?data'
 
         self.assertEqual('returned client',
                          auth.client_from_manual_flow(
-                             API_KEY, APP_SECRET, REDIRECT_URL, self.json_path))
+                             API_KEY, APP_SECRET, REDIRECT_URL, self.token_path))
 
         client.assert_called_once_with(API_KEY, _, token_metadata=_,
                                        enforce_enums=True)
@@ -395,16 +417,16 @@ class TokenMetadataTest(unittest.TestCase):
 
     @no_duplicates
     def test_from_loaded_token(self):
-        token = {'token': 'yes'}
+        token = {'token': 'yes', 'creation_timestamp': TOKEN_CREATION_TIMESTAMP}
 
         metadata = auth.TokenMetadata.from_loaded_token(
                 token, unwrapped_token_write_func=None)
-        self.assertEqual(metadata.token, token)
+        self.assertEqual(metadata.token, token['token'])
 
 
     @no_duplicates
     def test_wrapped_token_write_func_updates_stored_token(self):
-        token = {'token': 'yes'}
+        token = {'token': 'yes', 'creation_timestamp': TOKEN_CREATION_TIMESTAMP}
 
         updated = [False]
         def update_token(token):
@@ -418,3 +440,10 @@ class TokenMetadataTest(unittest.TestCase):
 
         self.assertTrue(updated[0])
         self.assertEqual(new_token, metadata.token)
+
+
+    @no_duplicates
+    def test_reject_tokens_without_creation_timestamp(self):
+        with self.assertRaisesRegex(ValueError, 'token format has changed'):
+            metadata = auth.TokenMetadata.from_loaded_token(
+                    {'token': 'yes'}, lambda t: None)
