@@ -120,6 +120,29 @@ pip's executable locations to your ``$PATH``. If you're having a hard time, feel
 free to ask for help on our `Discord server <https://discord.gg/BEr6y6Xqyv>`__.
 
 
+-------------------------
+Notes on Token Expiration
+-------------------------
+
+Tokens are only good for seven days. Under the hood, each token is actually good 
+for *thirty minutes*, but the library transparently issues a request to Schwab 
+to fetch a new token when it's time to do so. (This means the "token file" would 
+more accurately be called the "file containing the specifications required to 
+generate new tokens," but "token file" is simpler.) Once seven days have passed 
+since the token was originally created, they will refuse to grant new thirty 
+minute tokens, and you need to delete your old token file and create a new one 
+by following your preferred token creation flow.
+
+In practice, this means most users will want to adopt some sort of proactive 
+token refreshing method. For instance, if you trade during the weekdays, you may 
+want to delete and recreate your token on Sunday before the markets open. 
+
+For users wanting to craft more custom workflows, the client :meth:`exposes the 
+age of the token <schwab.client.Client.token_age>`. Note, however, that the 
+seven day token age restriction is implemented by Schwab, and so the token may 
+become expired sooner *or* later than seven days.
+
+
 ----------------------
 Advanced Functionality
 ----------------------
@@ -137,6 +160,7 @@ been looking for," you don't need this function. Please use the other helpers
 instead.
 
 .. autofunction:: schwab.auth.client_from_access_functions
+
 
 ---------------
 Troubleshooting

@@ -185,6 +185,13 @@ specification can be set using this method:
 .. automethod:: schwab.client.Client.set_timeout
 
 
++++++++++
+Token Age
++++++++++
+
+.. automethod:: schwab.client.Client.token_age
+
+
 ++++++++++++
 Account Info
 ++++++++++++

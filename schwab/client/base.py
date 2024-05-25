@@ -116,6 +116,16 @@ class BaseClient(EnumEnforcer):
                         examples.'''
         self.session.timeout = timeout
 
+    def token_age(self):
+        '''Get the age of the token used to create this client, in seconds. For 
+        users who prefer to proactively delete their token files before the 
+        become expired, this method can offer a hint for when to do so.
+
+        Note that the actual expiration is governed by Schwab's internal 
+        implementation, and the token might become expired sooner *or* later 
+        than the documented seven day term.'''
+        return self.token_metadata.token_age()
+
 
     ##########################################################################
     # Accounts

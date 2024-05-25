@@ -96,6 +96,16 @@ class _TestClient:
         self.assertEqual(timeout, self.client.session.timeout)
 
 
+    def test_token_age(self):
+        token_metadata = MagicMock()
+        token_metadata.token_age.return_value = 1000
+        client = self.client_class(
+                API_KEY, self.mock_session, token_metadata=token_metadata)
+
+        self.assertEqual(client.token_age(), 1000)
+
+
+
     # get_account
 
 
