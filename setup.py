@@ -46,6 +46,7 @@ setuptools.setup(
             'nose',
             'pytest',
             'pytz',
+            'setuptools',
             'sphinx_rtd_theme',
             'twine',
             'wheel',
