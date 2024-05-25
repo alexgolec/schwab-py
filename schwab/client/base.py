@@ -1028,7 +1028,7 @@ class BaseClient(EnumEnforcer):
             FOREX = 'forex'
 
     def get_market_hours(self, markets, *, date=None):
-        '''Get a list of the top ten movers for a given index.
+        '''Retrieve market hours for specified markets
 
         :param markets: Markets for which to return trading hours.
         :param date: Date for which to return market hours. Accepts values up to 
