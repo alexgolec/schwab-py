@@ -77,8 +77,8 @@ class TokenMetadata:
         '''
         if 'creation_timestamp' not in token:
             raise ValueError(
-                    'WARNING: The token format has changed since you created '+
-                    'this one. Please delete it and create a new one.')
+                    'WARNING: The token format has changed since this token '+
+                    'was created. Please delete it and create a new one.')
 
         return TokenMetadata(
                 token['token'],

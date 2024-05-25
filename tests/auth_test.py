@@ -440,3 +440,10 @@ class TokenMetadataTest(unittest.TestCase):
 
         self.assertTrue(updated[0])
         self.assertEqual(new_token, metadata.token)
+
+
+    @no_duplicates
+    def test_reject_tokens_without_creation_timestamp(self):
+        with self.assertRaisesRegex(ValueError, 'token format has changed'):
+            metadata = auth.TokenMetadata.from_loaded_token(
+                    {'token': 'yes'}, lambda t: None)
