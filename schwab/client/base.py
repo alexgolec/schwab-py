@@ -444,6 +444,9 @@ class BaseClient(EnumEnforcer):
         class Fields(Enum):
             QUOTE = 'quote'
             FUNDAMENTAL = 'fundamental'
+            EXTENDED = 'extended'
+            REFERENCE = 'reference'
+            REGULAR = 'regular'
 
     def get_quote(self, symbol, *, fields=None):
         '''
