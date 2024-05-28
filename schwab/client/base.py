@@ -547,6 +547,7 @@ class BaseClient(EnumEnforcer):
             OCTOBER = 'OCT'
             NOVEMBER = 'NOV'
             DECEMBER = 'DEC'
+            ALL = 'ALL'
 
         class Entitlement(Enum):
             PAYING_PRO = 'PP'
