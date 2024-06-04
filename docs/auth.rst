@@ -120,22 +120,18 @@ pip's executable locations to your ``$PATH``. If you're having a hard time, feel
 free to ask for help on our `Discord server <https://discord.gg/BEr6y6Xqyv>`__.
 
 
+.. _token_expiration:
+
 -------------------------
 Notes on Token Expiration
 -------------------------
 
-Tokens are only good for seven days. Under the hood, each token is actually good 
-for *thirty minutes*, but the library transparently issues a request to Schwab 
-to fetch a new token when it's time to do so. (This means the "token file" would 
-more accurately be called the "file containing the specifications required to 
-generate new tokens," but "token file" is simpler.) Once seven days have passed 
-since the token was originally created, they will refuse to grant new thirty 
-minute tokens, and you need to delete your old token file and create a new one 
-by following your preferred token creation flow.
-
-In practice, this means most users will want to adopt some sort of proactive 
-token refreshing method. For instance, if you trade during the weekdays, you may 
-want to delete and recreate your token on Sunday before the markets open. 
+Tokens are only good for seven days. Once seven days have passed since the token 
+was originally created, you'll :ref:`see failures <invalid_client>` and will 
+need to delete your old token file and create a new one.  In practice, this 
+means most users will want to adopt some sort of proactive token refreshing 
+method.  For instance, if you trade during the weekdays, you may want to delete 
+and recreate your token on Sunday before the markets open. 
 
 For users wanting to craft more custom workflows, the client :meth:`exposes the 
 age of the token <schwab.client.Client.token_age>`. Note, however, that the 
@@ -148,11 +144,11 @@ Advanced Functionality
 ----------------------
 
 The default token fetcher functions are designed for ease of use. They make some 
-common assumptions, most notably a writable filesystem, which are valid for 99% 
-of users. However, some very specialized users, for instance those hoping to 
-deploy ``schwab-py`` in serverless settings, require some more advanced 
-functionality.  This method provides the most flexible facility for fetching 
-tokens possible. 
+common assumptions, most notably a writable filesystem and a terminal that 
+accepts inputs, which are valid for 99% of users. However, some very specialized 
+users, for instance those hoping to deploy ``schwab-py`` in serverless settings, 
+require some more advanced functionality.  This method provides the most 
+flexible facility for fetching tokens possible. 
 
 **Important:** This is an extremely advanced method. If you read the 
 documentation and think anything other than "oh wow, this is exactly what I've 
@@ -162,16 +158,77 @@ instead.
 .. autofunction:: schwab.auth.client_from_access_functions
 
 
+++++++++++++++++++++++++++++++++++++++++
+Technical Details about Token Refreshing
+++++++++++++++++++++++++++++++++++++++++
+
+This section is for readers who are curious about the technical details of token 
+refreshing. If you just want to use the token, feel free to ignore it.
+
+Under the hood, what the library and documentation calls a "token" is actually 
+*two* tokens: an access token and a refresh token. Both tokens are randomly 
+generated strings that are associated with your account, but they serve two 
+different purposes. 
+
+Access tokens are attached to each API request and are used to verify your 
+identity to the API server. Requests with no token or invalid tokens are likely 
+to be rejected. However, the access token is only valid for thirty minutes at a 
+time. Requests associated with an access token older than thirty minutes are 
+rejected. This is a security measure: if someone were to intercept your access 
+token, they can only place requests as you for thirty minutes. 
+
+In order to continue using the API after thirty minutes, we must request a new 
+access token. This is where the refresh token comes into play: if you attempt to 
+place an API call but ``schwab-py`` detects that your access token is expired 
+(or about to expire), it will use the refresh token to request a new access 
+token from Schwab. Once it receives the new access token, it will place your API 
+request. This entire process is automatically managed and invisible to you.
+
+This is where Schwab implements token expiration and other security measures: 
+requests for a new access token using a refresh token older than seven days are 
+rejected with an :ref:`invalid_client error<invalid_client>`. There is currently 
+no way to make a refresh token last longer than seven days. Once you start 
+seeing this error, you have no choice but to delete your old token file and 
+create a new one.
+
+
 ---------------
 Troubleshooting
 ---------------
 
-As simple as it seems, this process is complex and mistakes are easy to make. 
-This section outlines some of the more common issues you might encounter. If you 
-find yourself dealing with something that isn't listed here, or if you try the 
+As simple as it seems, the auth is complex and mistakes are easy to make.  This 
+section outlines some of the more common issues you might encounter. If you find 
+yourself dealing with something that isn't listed here, or if you try the 
 suggested remedies and are still seeing issues, see the :ref:`help` page. You 
-can also `join our Discord server <https://discord.gg/M3vjtHj>`__ to ask questions.
+can also `join our Discord server <https://discord.gg/M3vjtHj>`__ to ask 
+questions.
 
+
+++++++++++++++++++++
+``401 Unauthorized``
+++++++++++++++++++++
+
+This error is raised when ``schwab-py`` attempts to perform an operation using 
+an invalid access token. If you don't know what that means, that's normal: you 
+shouldn't see this error. Some users have reported seeing it, and the 
+``schwab-py`` authors are working on updating the library to debug it. If you 
+see this error, please share the stack trace in our `Discord server 
+<https://discord.gg/Nq7AwrRV>`__. 
+
+In the meantime, you can work around this bug by deleting your old token and 
+creating a new one.
+
+
+.. _invalid_client:
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++
+``OAuthError: invalid_client: refresh token invalid``
++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Tokens can only be refreshed for approximately seven days, at which point Schwab 
+refuses to refresh your token and you need to recreate it. This error is thrown 
+by the library in response to Schwab's refusal. :ref:`See here to learn about 
+how tokens work. <token_expiration>`.
 
 
 ++++++++++++++++++++++
@@ -200,4 +257,4 @@ If you didn't do any of this and are still seeing issues using a token file that
 you're confident is valid, please `file a ticket 
 <https://github.com/alexgolec/schwab-py/issues>`__. Just remember, **never share 
 your token file, not even with** ``schwab-py`` **developers**. Sharing the token
-file is as dangerous as sharing your Schwab username and password. 
+file is as dangerous as sharing your Schwab username and password.
