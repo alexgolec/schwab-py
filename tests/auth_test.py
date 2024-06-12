@@ -101,11 +101,12 @@ class ClientFromLoginFlowTest(unittest.TestCase):
     @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     @patch('schwab.auth.webbrowser.open', new_callable=MagicMock)
-    def test_unprivileged_start_on_port_80(
+    def test_disallowed_hostname(
             self, mock_webbrowser_open, async_session, sync_session, client):
         callback_url = 'https://example.com/callback'
 
-        with self.assertRaisesRegex(ValueError,'disallowed netloc example.com'):
+        with self.assertRaisesRegex(
+                ValueError,'disallowed hostname example.com'):
             auth.client_from_login_flow(
                     API_KEY, APP_SECRET, callback_url, self.token_path)
 
