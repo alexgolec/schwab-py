@@ -197,6 +197,8 @@ class RedirectServerExitedError(Exception):
 def client_from_login_flow(api_key, app_secret, callback_url, token_path,
                            asyncio=False, enforce_enums=False, 
                            token_write_func=None, callback_timeout=300.0):
+    # TODO: documentation
+
     # Start the server
     parsed = urllib.parse.urlparse(callback_url)
 
