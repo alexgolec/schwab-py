@@ -165,11 +165,12 @@ def __fetch_and_register_token_from_redirect(
         token_metadata=metadata_manager, enforce_enums=enforce_enums)
 
 
-# This runs in a separate process and is invisible to coverage
-# pragma: no cover
 def __run_client_from_login_flow_server(q, callback_port, callback_path):
     '''Helper server for intercepting redirects to the callback URL. See
     client_from_login_flow for details.'''
+    # This runs in a separate process and is invisible to coverage
+    # pragma: no cover
+
     import flask
 
     app = flask.Flask(__name__)
