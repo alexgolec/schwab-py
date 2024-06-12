@@ -164,6 +164,8 @@ def __fetch_and_register_token_from_redirect(
         token_metadata=metadata_manager, enforce_enums=enforce_enums)
 
 
+# This runs in a separate process and is invisible to coverage
+# pragma: no cover
 def __run_client_from_login_flow_server(q, callback_port, callback_path):
     '''Helper server for intercepting redirects to the callback URL. See
     client_from_login_flow for details.'''
@@ -222,8 +224,10 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
         # Attempt to send a request to the server
         try:
             resp = requests.get(
-                    'https://127.0.0.1:{}//schwab-py-internal/status'.format(
+                    'https://127.0.0.1:{}/schwab-py-internal/status'.format(
                         callback_port))
+
+            # pragma: no cover
             break
         except requests.exceptions.ConnectionError as e:
             # Treat refusal to connect due to a self-signed certificate as a 
