@@ -1,15 +1,21 @@
-##########################################################################
-# Authentication Wrappers
+
 
 from authlib.integrations.httpx_client import AsyncOAuth2Client, OAuth2Client
 from prompt_toolkit import prompt
 
+import urllib
 import json
 import logging
+import multiprocessing
 import os
+import psutil
+import queue
+import requests
 import sys
 import time
+import urllib3
 import warnings
+import webbrowser
 
 from schwab.client import AsyncClient, Client
 from schwab.debug import register_redactions
@@ -157,6 +163,125 @@ def __fetch_and_register_token_from_redirect(
                       update_token=oauth_client_update_token,
                       leeway=300),
         token_metadata=metadata_manager, enforce_enums=enforce_enums)
+
+
+# This runs in a separate process and is invisible to coverage
+def __run_client_from_login_flow_server(
+        q, callback_port, callback_path):  # pragma: no cover
+    '''Helper server for intercepting redirects to the callback URL. See
+    client_from_login_flow for details.'''
+
+    import flask
+
+    app = flask.Flask(__name__)
+
+    @app.route(callback_path)
+    def handle_token():
+        q.put(flask.request.url)
+        return 'schwab-py callback received! You may now close this window/tab.'
+
+    @app.route('/schwab-py-internal/status')
+    def status():
+        return 'running'
+
+    app.run(port=callback_port, ssl_context='adhoc')
+
+
+class RedirectTimeoutError(Exception):
+    pass
+
+class RedirectServerExitedError(Exception):
+    pass
+
+
+def client_from_login_flow(api_key, app_secret, callback_url, token_path,
+                           asyncio=False, enforce_enums=False, 
+                           token_write_func=None, callback_timeout=300.0):
+    # TODO: documentation
+
+    # Start the server
+    parsed = urllib.parse.urlparse(callback_url)
+
+    if parsed.hostname != '127.0.0.1':
+        raise ValueError(
+                ('disallowed hostname {}. client_from_login_flow only allows '+
+                 'callback URLs with hostname 127.0.0.1').format(
+                     parsed.hostname))
+
+    callback_port = parsed.port if parsed.port else 80
+    callback_path = parsed.path if parsed.path else '/'
+
+    output_queue = multiprocessing.Queue()
+
+    server = multiprocessing.Process(
+            target=__run_client_from_login_flow_server,
+            args=(output_queue, callback_port, callback_path))
+
+    print('Running a server to intercept the callback. Please ignore the ' +
+          'following debug messages:')
+    print()
+    server.start()
+
+    # Wait until the server successfully starts
+    while True:
+        # Check if the server is still alive
+        if server.exitcode is not None:
+            raise RedirectServerExitedError(
+                    'Redirect server exited. Are you attempting to use a ' +
+                    'callback URL without a port number specified?')
+
+        import traceback
+
+        # Attempt to send a request to the server
+        try:
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                        'ignore', category=urllib3.exceptions.InsecureRequestWarning)
+
+                resp = requests.get(
+                        'https://127.0.0.1:{}/schwab-py-internal/status'.format(
+                            callback_port), verify=False)
+            break
+        except requests.exceptions.ConnectionError as e:
+            pass
+
+        time.sleep(0.1)
+
+    # Open the browser
+    oauth = OAuth2Client(api_key, redirect_uri=callback_url)
+    authorization_url, state = oauth.create_authorization_url(
+        'https://api.schwabapi.com/v1/oauth/authorize')
+
+    webbrowser.open(authorization_url)
+
+    # Wait for a response
+    now = time.time()
+    timeout_time = now + callback_timeout
+    callback_url = None
+    while now < timeout_time:
+        # Attempt to fetch from the queue
+        try:
+            callback_url = output_queue.get(
+                    timeout=min(timeout_time - now, 0.1))
+            break
+        except queue.Empty:
+            pass
+
+        now = time.time()
+
+    # Clean up and create the client
+    psutil.Process(server.pid).kill()
+
+    if callback_url:
+        return __fetch_and_register_token_from_redirect(
+            oauth, callback_url, api_key, app_secret, token_path, token_write_func,
+            asyncio, enforce_enums=enforce_enums)
+    else:
+        raise RedirectTimeoutError(
+                'Timed out waiting for a post-authorization callback. You '+
+                'can set a longer timeout by passing a value of ' +
+                'callback_timeout to client_from_login_flow.')
+
 
 
 def client_from_token_file(token_path, api_key, app_secret, asyncio=False,
