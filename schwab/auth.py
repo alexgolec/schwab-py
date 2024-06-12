@@ -199,6 +199,12 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
                            token_write_func=None, callback_timeout=300.0):
     # Start the server
     parsed = urllib.parse.urlparse(callback_url)
+
+    if not parsed.netloc.startswith('127.0.0.1'):
+        raise ValueError(
+                ('disallowed netloc {}. client_from_login_flow only supports '+
+                 'callback URLs with netloc 127.0.0.1').format(parsed.netloc))
+
     callback_port = parsed.port if parsed.port else 80
     callback_path = parsed.path if parsed.path else '/'
 
