@@ -32,8 +32,10 @@ setuptools.setup(
     install_requires=[
         'autopep8',
         'authlib',
+        'flask',
         'httpx',
         'prompt_toolkit',
+        'psutil',
         'python-dateutil',
         'selenium',
         'websockets'
