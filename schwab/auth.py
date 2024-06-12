@@ -13,6 +13,7 @@ import queue
 import requests
 import sys
 import time
+import urllib3
 import warnings
 import webbrowser
 
@@ -223,17 +224,16 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
 
         # Attempt to send a request to the server
         try:
-            resp = requests.get(
-                    'https://127.0.0.1:{}/schwab-py-internal/status'.format(
-                        callback_port))
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                        'ignore', category=urllib3.exceptions.InsecureRequestWarning)
 
-            # pragma: no cover
+                resp = requests.get(
+                        'https://127.0.0.1:{}/schwab-py-internal/status'.format(
+                            callback_port), verify=False)
             break
         except requests.exceptions.ConnectionError as e:
-            # Treat refusal to connect due to a self-signed certificate as a 
-            # sign that the server is running properly
-            if 'self-signed certificate' in str(e):
-                break
+            pass
 
         time.sleep(0.1)
 
@@ -251,7 +251,6 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
     while now < timeout_time:
         # Attempt to fetch from the queue
         try:
-            print(timeout_time - now)
             callback_url = output_queue.get(
                     timeout=min(timeout_time - now, 0.1))
             break
@@ -259,7 +258,6 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
             pass
 
         now = time.time()
-        print(now)
 
     # Clean up and create the client
     psutil.Process(server.pid).kill()
