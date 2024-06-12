@@ -247,6 +247,7 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
     while now < timeout_time:
         # Attempt to fetch from the queue
         try:
+            print(timeout_time - now)
             callback_url = output_queue.get(
                     timeout=min(timeout_time - now, 0.1))
             break
@@ -254,6 +255,7 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
             pass
 
         now = time.time()
+        print(now)
 
     # Clean up and create the client
     psutil.Process(server.pid).kill()
