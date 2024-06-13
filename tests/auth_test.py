@@ -14,8 +14,6 @@ import requests
 import tempfile
 import unittest
 
-import schwab
-
 
 API_KEY = 'APIKEY'
 APP_SECRET = '0x5EC07'
@@ -39,8 +37,8 @@ class ClientFromLoginFlowTest(unittest.TestCase):
     @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     @patch('schwab.auth.webbrowser.open', new_callable=MagicMock)
-    @patch('schwab.auth.prompt', unittest.mock.MagicMock(return_value=''))
-    @patch('time.time', unittest.mock.MagicMock(return_value=MOCK_NOW))
+    @patch('schwab.auth.prompt', MagicMock(return_value=''))
+    @patch('time.time', MagicMock(return_value=MOCK_NOW))
     def test_create_token_file(
             self, mock_webbrowser_open, async_session, sync_session, client):
         AUTH_URL = 'https://auth.url.com'
@@ -72,7 +70,7 @@ class ClientFromLoginFlowTest(unittest.TestCase):
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     @patch('schwab.auth.webbrowser.open', new_callable=MagicMock)
     @patch('schwab.auth.prompt')
-    @patch('time.time', unittest.mock.MagicMock(return_value=MOCK_NOW))
+    @patch('time.time', MagicMock(return_value=MOCK_NOW))
     def test_create_token_file_not_interactive(
             self, mock_prompt,mock_webbrowser_open, async_session, sync_session,
             client):
@@ -107,8 +105,8 @@ class ClientFromLoginFlowTest(unittest.TestCase):
     @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     @patch('schwab.auth.webbrowser.open', new_callable=MagicMock)
-    @patch('schwab.auth.prompt', unittest.mock.MagicMock(return_value=''))
-    @patch('time.time', unittest.mock.MagicMock(return_value=MOCK_NOW))
+    @patch('schwab.auth.prompt', MagicMock(return_value=''))
+    @patch('time.time', MagicMock(return_value=MOCK_NOW))
     def test_create_token_file_root_callback_url(
             self, mock_webbrowser_open, async_session, sync_session, client):
         AUTH_URL = 'https://auth.url.com'
@@ -139,12 +137,13 @@ class ClientFromLoginFlowTest(unittest.TestCase):
     @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     @patch('schwab.auth.webbrowser.open', new_callable=MagicMock)
+    @patch('time.time', MagicMock(return_value=MOCK_NOW))
     def test_disallowed_hostname(
             self, mock_webbrowser_open, async_session, sync_session, client):
         callback_url = 'https://example.com/callback'
 
         with self.assertRaisesRegex(
-                ValueError,'disallowed hostname example.com'):
+                ValueError, 'disallowed hostname example.com'):
             auth.client_from_login_flow(
                     API_KEY, APP_SECRET, callback_url, self.token_path)
 
@@ -153,12 +152,13 @@ class ClientFromLoginFlowTest(unittest.TestCase):
     @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     @patch('schwab.auth.webbrowser.open', new_callable=MagicMock)
+    @patch('time.time', MagicMock(return_value=MOCK_NOW))
     def test_disallowed_hostname_with_port(
             self, mock_webbrowser_open, async_session, sync_session, client):
         callback_url = 'https://example.com:8080/callback'
 
         with self.assertRaisesRegex(
-                ValueError,'disallowed hostname example.com'):
+                ValueError, 'disallowed hostname example.com'):
             auth.client_from_login_flow(
                     API_KEY, APP_SECRET, callback_url, self.token_path)
 
@@ -167,11 +167,12 @@ class ClientFromLoginFlowTest(unittest.TestCase):
     @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     @patch('schwab.auth.webbrowser.open', new_callable=MagicMock)
+    @patch('time.time', MagicMock(return_value=MOCK_NOW))
     def test_unprivileged_start_on_port_80(
             self, mock_webbrowser_open, async_session, sync_session, client):
         callback_url = 'https://127.0.0.1/callback'
 
-        with self.assertRaisesRegex(schwab.auth.RedirectServerExitedError,
+        with self.assertRaisesRegex(auth.RedirectServerExitedError,
                                     'callback URL without a port number'):
             auth.client_from_login_flow(
                     API_KEY, APP_SECRET, callback_url, self.token_path)
@@ -181,7 +182,8 @@ class ClientFromLoginFlowTest(unittest.TestCase):
     @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     @patch('schwab.auth.webbrowser.open', new_callable=MagicMock)
-    @patch('schwab.auth.prompt', unittest.mock.MagicMock(return_value=''))
+    @patch('schwab.auth.prompt', MagicMock(return_value=''))
+    @patch('time.time', MagicMock(return_value=MOCK_NOW))
     def test_time_out_waiting_for_request(
             self, mock_webbrowser_open, async_session, sync_session, client):
         AUTH_URL = 'https://auth.url.com'
@@ -192,7 +194,7 @@ class ClientFromLoginFlowTest(unittest.TestCase):
 
         callback_url = 'https://127.0.0.1:6969/callback'
 
-        with self.assertRaisesRegex(schwab.auth.RedirectTimeoutError,
+        with self.assertRaisesRegex(auth.RedirectTimeoutError,
                                     'Timed out waiting'):
             auth.client_from_login_flow(
                     API_KEY, APP_SECRET, callback_url, self.token_path,
@@ -451,7 +453,7 @@ class ClientFromManualFlow(unittest.TestCase):
     @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     @patch('schwab.auth.prompt')
-    @patch('time.time', unittest.mock.MagicMock(return_value=MOCK_NOW))
+    @patch('time.time', MagicMock(return_value=MOCK_NOW))
     def test_no_token_file(
             self, prompt_func, async_session, sync_session, client):
         AUTH_URL = 'https://auth.url.com'
@@ -478,7 +480,7 @@ class ClientFromManualFlow(unittest.TestCase):
     @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     @patch('schwab.auth.prompt')
-    @patch('time.time', unittest.mock.MagicMock(return_value=MOCK_NOW))
+    @patch('time.time', MagicMock(return_value=MOCK_NOW))
     def test_custom_token_write_func(
             self, prompt_func, async_session, sync_session, client):
         AUTH_URL = 'https://auth.url.com'
@@ -515,7 +517,7 @@ class ClientFromManualFlow(unittest.TestCase):
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     @patch('schwab.auth.prompt')
     @patch('builtins.print')
-    @patch('time.time', unittest.mock.MagicMock(return_value=MOCK_NOW))
+    @patch('time.time', MagicMock(return_value=MOCK_NOW))
     def test_print_warning_on_http_redirect_uri(
             self, print_func, prompt_func, async_session, sync_session, client):
         auth_url = 'https://auth.url.com'
@@ -546,7 +548,7 @@ class ClientFromManualFlow(unittest.TestCase):
     @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     @patch('schwab.auth.prompt')
-    @patch('time.time', unittest.mock.MagicMock(return_value=MOCK_NOW))
+    @patch('time.time', MagicMock(return_value=MOCK_NOW))
     def test_enforce_enums_disabled(
             self, prompt_func, async_session, sync_session, client):
         auth_url = 'https://auth.url.com'
@@ -571,7 +573,7 @@ class ClientFromManualFlow(unittest.TestCase):
     @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     @patch('schwab.auth.prompt')
-    @patch('time.time', unittest.mock.MagicMock(return_value=MOCK_NOW))
+    @patch('time.time', MagicMock(return_value=MOCK_NOW))
     def test_enforce_enums_enabled(
             self, prompt_func, async_session, sync_session, client):
         auth_url = 'https://auth.url.com'
@@ -628,7 +630,7 @@ class TokenMetadataTest(unittest.TestCase):
 
 
     @no_duplicates
-    @patch('time.time', unittest.mock.MagicMock(return_value=MOCK_NOW))
+    @patch('time.time', MagicMock(return_value=MOCK_NOW))
     def test_token_age(self):
         token = {'token': 'yes', 'creation_timestamp': TOKEN_CREATION_TIMESTAMP}
 

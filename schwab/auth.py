@@ -1,7 +1,7 @@
 from authlib.integrations.httpx_client import AsyncOAuth2Client, OAuth2Client
 from prompt_toolkit import prompt
 
-import atexit
+import contextlib
 import json
 import logging
 import multiprocessing
@@ -164,6 +164,10 @@ def __fetch_and_register_token_from_redirect(
         token_metadata=metadata_manager, enforce_enums=enforce_enums)
 
 
+################################################################################
+# client_from_login_flow
+
+
 # This runs in a separate process and is invisible to coverage
 def __run_client_from_login_flow_server(
         q, callback_port, callback_path):  # pragma: no cover
@@ -215,6 +219,7 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
     parsed = urllib.parse.urlparse(callback_url)
 
     if parsed.hostname != '127.0.0.1':
+        # TODO: document this error
         raise ValueError(
                 ('disallowed hostname {}. client_from_login_flow only allows '+
                  'callback URLs with hostname 127.0.0.1').format(
@@ -229,101 +234,110 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
             target=__run_client_from_login_flow_server,
             args=(output_queue, callback_port, callback_path))
 
-    server.start()
-    def kill_server():
+    # Context manager to kill the server upon completion
+    @contextlib.contextmanager
+    def callback_server():
+        server.start()
+
         try:
-            psutil.Process(server.pid).kill()
-        except psutil.NoSuchProcess:
-            pass
-    atexit.register(kill_server)
+            yield
+        finally:
+            try:
+                psutil.Process(server.pid).kill()
+            except psutil.NoSuchProcess:
+                pass
 
-    # Wait until the server successfully starts
-    while True:
-        # Check if the server is still alive
-        if server.exitcode is not None:
-            raise RedirectServerExitedError(
-                    'Redirect server exited. Are you attempting to use a ' +
-                    'callback URL without a port number specified?')
+    with callback_server():
+        # Wait until the server successfully starts
+        while True:
+            # Check if the server is still alive
+            if server.exitcode is not None:
+                # TODO: document this error
+                raise RedirectServerExitedError(
+                        'Redirect server exited. Are you attempting to use a ' +
+                        'callback URL without a port number specified?')
 
-        import traceback
+            import traceback
 
-        # Attempt to send a request to the server
-        try:
-            with warnings.catch_warnings():
-                warnings.filterwarnings(
-                        'ignore', category=urllib3.exceptions.InsecureRequestWarning)
+            # Attempt to send a request to the server
+            try:
+                with warnings.catch_warnings():
+                    warnings.filterwarnings(
+                            'ignore',
+                            category=urllib3.exceptions.InsecureRequestWarning)
 
-                resp = requests.get(
-                        'https://127.0.0.1:{}/schwab-py-internal/status'.format(
-                            callback_port), verify=False)
-            break
-        except requests.exceptions.ConnectionError as e:
-            pass
+                    resp = requests.get(
+                            'https://127.0.0.1:{}/schwab-py-internal/status'.format(
+                                callback_port), verify=False)
+                break
+            except requests.exceptions.ConnectionError as e:
+                pass
 
-        time.sleep(0.1)
+            time.sleep(0.1)
 
-    # Open the browser
-    oauth = OAuth2Client(api_key, redirect_uri=callback_url)
-    authorization_url, state = oauth.create_authorization_url(
-        'https://api.schwabapi.com/v1/oauth/authorize')
+        # Open the browser
+        oauth = OAuth2Client(api_key, redirect_uri=callback_url)
+        authorization_url, state = oauth.create_authorization_url(
+            'https://api.schwabapi.com/v1/oauth/authorize')
 
-    if interactive:
-        print()
-        print('**************************************************************')
-        print()
-        print('This is the browser-assisted login and token creation flow for')
-        print('schwab-py. This flow automatically opens the login page on your')
-        print('browser, captures the resulting OAuth callback, and creates a token')
-        print('using the result.')
-        print()
-        print('IMPORTANT: Your browser will give you a security warning about an')
-        print('invalid certificate prior to issuing the redirect. This is because')
-        print('schwab-py has started a server on your machine to receive the OAuth')
-        print('redirect using a self-signed SSL certificate. You can ignore that')
-        print('warning, but make sure to first check that the URL matches your')
-        print('callback URL. As a reminder, your callback URL is:')
-        print()
-        print('>>',callback_url)
-        print()
-        print('See here to learn more: TODO<add a documentation URL>')
-        print()
-        print('If you encounter any issues, see here for troubleshooting:')
-        print('https://schwab-py.readthedocs.io/en/latest/auth.html#troubleshooting')
-        print('\n**************************************************************')
-        print()
-        prompt('Press ENTER to open the browser. Note you can run ' +
-              'client_from_login_flow with interactive=False to skip this input')
+        if interactive:
+            print()
+            print('**************************************************************')
+            print()
+            print('This is the browser-assisted login and token creation flow for')
+            print('schwab-py. This flow automatically opens the login page on your')
+            print('browser, captures the resulting OAuth callback, and creates a token')
+            print('using the result.')
+            print()
+            print('IMPORTANT: Your browser will give you a security warning about an')
+            print('invalid certificate prior to issuing the redirect. This is because')
+            print('schwab-py has started a server on your machine to receive the OAuth')
+            print('redirect using a self-signed SSL certificate. You can ignore that')
+            print('warning, but make sure to first check that the URL matches your')
+            print('callback URL. As a reminder, your callback URL is:')
+            print()
+            print('>>',callback_url)
+            print()
+            print('See here to learn more: TODO<add a documentation URL>')
+            print()
+            print('If you encounter any issues, see here for troubleshooting:')
+            print('https://schwab-py.readthedocs.io/en/latest/auth.html#troubleshooting')
+            print('\n**************************************************************')
+            print()
+            prompt('Press ENTER to open the browser. Note you can run ' +
+                  'client_from_login_flow with interactive=False to skip this input')
 
-    webbrowser.open(authorization_url)
+        webbrowser.open(authorization_url)
 
-    # Wait for a response
-    now = __TIME_TIME()
-    timeout_time = now + callback_timeout
-    callback_url = None
-    while now < timeout_time:
-        # Attempt to fetch from the queue
-        try:
-            callback_url = output_queue.get(
-                    timeout=min(timeout_time - now, 0.1))
-            break
-        except queue.Empty:
-            pass
-
+        # Wait for a response
         now = __TIME_TIME()
+        timeout_time = now + callback_timeout
+        received_url = None
+        while now < timeout_time:
+            # Attempt to fetch from the queue
+            try:
+                received_url = output_queue.get(
+                        timeout=min(timeout_time - now, 0.1))
+                break
+            except queue.Empty:
+                pass
 
-    # Clean up and create the client
-    kill_server()
+            now = __TIME_TIME()
 
-    if callback_url:
+        if not received_url:
+            # TODO: document this error
+            raise RedirectTimeoutError(
+                    'Timed out waiting for a post-authorization callback. You '+
+                    'can set a longer timeout by passing a value of ' +
+                    'callback_timeout to client_from_login_flow.')
+
         return __fetch_and_register_token_from_redirect(
-            oauth, callback_url, api_key, app_secret, token_path, token_write_func,
-            asyncio, enforce_enums=enforce_enums)
-    else:
-        raise RedirectTimeoutError(
-                'Timed out waiting for a post-authorization callback. You '+
-                'can set a longer timeout by passing a value of ' +
-                'callback_timeout to client_from_login_flow.')
+            oauth, received_url, api_key, app_secret, token_path,
+            token_write_func, asyncio, enforce_enums=enforce_enums)
 
+
+################################################################################
+# client_from_token_path
 
 
 def client_from_token_file(token_path, api_key, app_secret, asyncio=False,
@@ -353,6 +367,10 @@ def client_from_token_file(token_path, api_key, app_secret, asyncio=False,
     return client_from_access_functions(
         api_key, app_secret, load, __update_token(token_path), asyncio=asyncio,
         enforce_enums=enforce_enums)
+
+
+################################################################################
+# client_from_manual_flow
 
 
 def client_from_manual_flow(api_key, app_secret, callback_url, token_path,
@@ -425,6 +443,10 @@ def client_from_manual_flow(api_key, app_secret, callback_url, token_path,
     return __fetch_and_register_token_from_redirect(
         oauth, redirected_url, api_key, app_secret, token_path, token_write_func,
         asyncio, enforce_enums=enforce_enums)
+
+
+################################################################################
+# client_from_access_functions
 
 
 def client_from_access_functions(api_key, app_secret, token_read_func,
