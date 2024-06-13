@@ -312,7 +312,7 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
         now = __TIME_TIME()
 
     # Clean up and create the client
-    psutil.Process(server.pid).kill()
+    kill_server()
 
     if callback_url:
         return __fetch_and_register_token_from_redirect(
