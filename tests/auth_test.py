@@ -39,6 +39,7 @@ class ClientFromLoginFlowTest(unittest.TestCase):
     @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     @patch('schwab.auth.webbrowser.open', new_callable=MagicMock)
+    @patch('schwab.auth.prompt', unittest.mock.MagicMock(return_value=''))
     @patch('time.time', unittest.mock.MagicMock(return_value=MOCK_NOW))
     def test_create_token_file(
             self, mock_webbrowser_open, async_session, sync_session, client):
@@ -70,6 +71,43 @@ class ClientFromLoginFlowTest(unittest.TestCase):
     @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     @patch('schwab.auth.webbrowser.open', new_callable=MagicMock)
+    @patch('schwab.auth.prompt')
+    @patch('time.time', unittest.mock.MagicMock(return_value=MOCK_NOW))
+    def test_create_token_file_not_interactive(
+            self, mock_prompt,mock_webbrowser_open, async_session, sync_session,
+            client):
+        AUTH_URL = 'https://auth.url.com'
+
+        sync_session.return_value = sync_session
+        sync_session.create_authorization_url.return_value = AUTH_URL, None
+        sync_session.fetch_token.return_value = self.raw_token
+
+        callback_url = 'https://127.0.0.1:6969/callback'
+
+        mock_webbrowser_open.side_effect = \
+                lambda auth_url: requests.get(
+                        'https://127.0.0.1:6969/callback', verify=False)
+
+        client.return_value = 'returned client'
+
+        auth.client_from_login_flow(
+                API_KEY, APP_SECRET, callback_url, self.token_path, 
+                interactive=False)
+
+        with open(self.token_path, 'r') as f:
+            self.assertEqual({
+                'creation_timestamp': MOCK_NOW,
+                'token': self.raw_token
+            }, json.load(f))
+
+        mock_prompt.assert_not_called()
+
+
+    @patch('schwab.auth.Client')
+    @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
+    @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
+    @patch('schwab.auth.webbrowser.open', new_callable=MagicMock)
+    @patch('schwab.auth.prompt', unittest.mock.MagicMock(return_value=''))
     @patch('time.time', unittest.mock.MagicMock(return_value=MOCK_NOW))
     def test_create_token_file_root_callback_url(
             self, mock_webbrowser_open, async_session, sync_session, client):
@@ -143,6 +181,7 @@ class ClientFromLoginFlowTest(unittest.TestCase):
     @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     @patch('schwab.auth.webbrowser.open', new_callable=MagicMock)
+    @patch('schwab.auth.prompt', unittest.mock.MagicMock(return_value=''))
     def test_time_out_waiting_for_request(
             self, mock_webbrowser_open, async_session, sync_session, client):
         AUTH_URL = 'https://auth.url.com'

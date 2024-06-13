@@ -1,9 +1,7 @@
-
-
 from authlib.integrations.httpx_client import AsyncOAuth2Client, OAuth2Client
 from prompt_toolkit import prompt
 
-import urllib
+import atexit
 import json
 import logging
 import multiprocessing
@@ -13,6 +11,7 @@ import queue
 import requests
 import sys
 import time
+import urllib
 import urllib3
 import warnings
 import webbrowser
@@ -184,7 +183,16 @@ def __run_client_from_login_flow_server(
     def status():
         return 'running'
 
-    app.run(port=callback_port, ssl_context='adhoc')
+    # Wrap this call in some hackery to suppress the flask startup messages
+    with open(os.devnull, 'w') as devnull:
+        import logging
+        log = logging.getLogger('werkzeug')
+        log.setLevel(logging.ERROR)
+
+        old_stdout = sys.stdout
+        sys.stdout = devnull
+        app.run(port=callback_port, ssl_context='adhoc')
+        sys.stdout = old_stdout
 
 
 class RedirectTimeoutError(Exception):
@@ -193,10 +201,14 @@ class RedirectTimeoutError(Exception):
 class RedirectServerExitedError(Exception):
     pass
 
+# Capture the real time.time so that we can use it in server initialization 
+# while simultaneously mocking it in testing
+__TIME_TIME = time.time
 
 def client_from_login_flow(api_key, app_secret, callback_url, token_path,
                            asyncio=False, enforce_enums=False, 
-                           token_write_func=None, callback_timeout=300.0):
+                           token_write_func=None, callback_timeout=300.0,
+                           interactive=True):
     # TODO: documentation
 
     # Start the server
@@ -217,10 +229,13 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
             target=__run_client_from_login_flow_server,
             args=(output_queue, callback_port, callback_path))
 
-    print('Running a server to intercept the callback. Please ignore the ' +
-          'following debug messages:')
-    print()
     server.start()
+    def kill_server():
+        try:
+            psutil.Process(server.pid).kill()
+        except psutil.NoSuchProcess:
+            pass
+    atexit.register(kill_server)
 
     # Wait until the server successfully starts
     while True:
@@ -252,10 +267,37 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
     authorization_url, state = oauth.create_authorization_url(
         'https://api.schwabapi.com/v1/oauth/authorize')
 
+    if interactive:
+        print()
+        print('**************************************************************')
+        print()
+        print('This is the browser-assisted login and token creation flow for')
+        print('schwab-py. This flow automatically opens the login page on your')
+        print('browser, captures the resulting OAuth callback, and creates a token')
+        print('using the result.')
+        print()
+        print('IMPORTANT: Your browser will give you a security warning about an')
+        print('invalid certificate prior to issuing the redirect. This is because')
+        print('schwab-py has started a server on your machine to receive the OAuth')
+        print('redirect using a self-signed SSL certificate. You can ignore that')
+        print('warning, but make sure to first check that the URL matches your')
+        print('callback URL. As a reminder, your callback URL is:')
+        print()
+        print('>>',callback_url)
+        print()
+        print('See here to learn more: TODO<add a documentation URL>')
+        print()
+        print('If you encounter any issues, see here for troubleshooting:')
+        print('https://schwab-py.readthedocs.io/en/latest/auth.html#troubleshooting')
+        print('\n**************************************************************')
+        print()
+        prompt('Press ENTER to open the browser. Note you can run ' +
+              'client_from_login_flow with interactive=False to skip this input')
+
     webbrowser.open(authorization_url)
 
     # Wait for a response
-    now = time.time()
+    now = __TIME_TIME()
     timeout_time = now + callback_timeout
     callback_url = None
     while now < timeout_time:
@@ -267,7 +309,7 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
         except queue.Empty:
             pass
 
-        now = time.time()
+        now = __TIME_TIME()
 
     # Clean up and create the client
     psutil.Process(server.pid).kill()
