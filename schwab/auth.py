@@ -212,7 +212,7 @@ __TIME_TIME = time.time
 def client_from_login_flow(api_key, app_secret, callback_url, token_path,
                            asyncio=False, enforce_enums=False, 
                            token_write_func=None, callback_timeout=300.0,
-                           interactive=True):
+                           interactive=True, requested_browser=None):
     # TODO: documentation
 
     # Start the server
@@ -307,7 +307,11 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
             prompt('Press ENTER to open the browser. Note you can run ' +
                   'client_from_login_flow with interactive=False to skip this input')
 
-        webbrowser.open(authorization_url)
+        # TODO: Add a link to the table for browsers:
+        # https://docs.python.org/3/library/webbrowser.html#webbrowser.register
+        controller = webbrowser.get(requested_browser)
+        print(webbrowser.get)
+        controller.open(authorization_url)
 
         # Wait for a response
         now = __TIME_TIME()
