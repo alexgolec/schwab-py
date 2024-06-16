@@ -45,22 +45,26 @@ sending an HTTP request to the callback URL with ingredients for the token in
 the URL query.
 
 The vast majority of users should set their callback URL to 
-``https://127.0.0.1`` (note the lack of a trailing slash). This means that once 
-the login flow is completed, the generated credentials are sent back to your 
-machine, rather than any external server. Certain advanced users may be able to 
-receive this data at a server, but this documentation assumes they are advanced 
+``https://127.0.0.1:8182`` (note the lack of a trailing slash). This means that 
+once the login flow is completed, the generated credentials are sent back to 
+your machine at port ``8182``, rather than any external server. Setting a port 
+number is not require to use ``schwab-py``, but it is required to use 
+:ref:`certain convenient features <login_flow>`.  Advanced users may be able to 
+use a non-local callback URL, but this documentation assumes they are advanced 
 enough not to need our help creating such a setup.
 
 In any case, note that whatever callback URL you choose, you must pass it to 
 ``schwab-py`` *exactly* in the same way as you specified it while creating your 
-app.  Any deviation (including the addition of trailing slashes!) can cause 
+app.  Any deviation (including adding or removing a trailing slash!) can cause 
 difficult-to-debug issues. Be careful not to mis-copy this value.
+
+.. _approved_pending:
 
 After your app is created, you will likely see it in an ``Approved - Pending`` 
 state when you view it in your dashboard. Don't be fooled by the word 
 ``Approved``: your app is not yet ready for use. You must wait for Schwab to 
-approve it, at which point its status will be ``Ready For Use.`` This can take 
-up to a few days. Only then can you proceed to using ``schwab-py``.
+*actually* approve it, at which point its status will be ``Ready For Use.`` This 
+can take up to a few days. Only then can you proceed to using ``schwab-py``.
 
 Once your app is created and approved, you will receive your app key and secret.  
 Neither of these are meant to be shared by anyone, so keep them safe. You will 
@@ -101,10 +105,9 @@ package:
 If this succeeded, you're ready to move on to :ref:`auth`.
 
 Note that if you are using a virtual environment and switch to a new terminal
-your virtual environment will not be active in the new terminal,
-and you need to run the activate command again.
-If you want to disable the loaded virtual environment in the same terminal window,
-use the command:
+your virtual environment will not be active in the new terminal, and you need to 
+run the activate command again. If you want to disable the loaded virtual 
+environment in the same terminal window, use the command:
 
 .. code-block:: shell
 
