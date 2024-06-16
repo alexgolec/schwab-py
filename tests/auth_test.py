@@ -178,7 +178,7 @@ class ClientFromLoginFlowTest(unittest.TestCase):
         callback_url = 'https://example.com/callback'
 
         with self.assertRaisesRegex(
-                ValueError, 'disallowed hostname example.com'):
+                ValueError, 'Disallowed hostname example.com'):
             auth.client_from_login_flow(
                     API_KEY, APP_SECRET, callback_url, self.token_path)
 
@@ -193,7 +193,7 @@ class ClientFromLoginFlowTest(unittest.TestCase):
         callback_url = 'https://example.com:8080/callback'
 
         with self.assertRaisesRegex(
-                ValueError, 'disallowed hostname example.com'):
+                ValueError, 'Disallowed hostname example.com'):
             auth.client_from_login_flow(
                     API_KEY, APP_SECRET, callback_url, self.token_path)
 
