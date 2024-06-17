@@ -178,9 +178,25 @@ class ClientFromLoginFlowTest(unittest.TestCase):
         callback_url = 'https://example.com/callback'
 
         with self.assertRaisesRegex(
-                ValueError, 'disallowed hostname example.com'):
+                ValueError, 'Disallowed hostname example.com'):
             auth.client_from_login_flow(
                     API_KEY, APP_SECRET, callback_url, self.token_path)
+
+
+    @patch('schwab.auth.Client')
+    @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
+    @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
+    @patch('schwab.auth.webbrowser.get', new_callable=MagicMock)
+    @patch('time.time', MagicMock(return_value=MOCK_NOW))
+    def test_negative_timeout(
+            self, mock_webbrowser_get, async_session, sync_session, client):
+        callback_url = 'https://example.com/callback'
+
+        with self.assertRaisesRegex(
+                ValueError, 'callback_timeout must be positive'):
+            auth.client_from_login_flow(
+                    API_KEY, APP_SECRET, callback_url, self.token_path,
+                    callback_timeout=-1)
 
 
     @patch('schwab.auth.Client')
@@ -193,7 +209,7 @@ class ClientFromLoginFlowTest(unittest.TestCase):
         callback_url = 'https://example.com:8080/callback'
 
         with self.assertRaisesRegex(
-                ValueError, 'disallowed hostname example.com'):
+                ValueError, 'Disallowed hostname example.com'):
             auth.client_from_login_flow(
                     API_KEY, APP_SECRET, callback_url, self.token_path)
 
@@ -203,7 +219,7 @@ class ClientFromLoginFlowTest(unittest.TestCase):
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     @patch('schwab.auth.webbrowser.get', new_callable=MagicMock)
     @patch('time.time', MagicMock(return_value=MOCK_NOW))
-    def test_unprivileged_start_on_port_80(
+    def test_start_on_port_443(
             self, mock_webbrowser_get, async_session, sync_session, client):
         callback_url = 'https://127.0.0.1/callback'
 
@@ -234,6 +250,50 @@ class ClientFromLoginFlowTest(unittest.TestCase):
             auth.client_from_login_flow(
                     API_KEY, APP_SECRET, callback_url, self.token_path,
                     callback_timeout=0.01)
+
+
+    @patch('schwab.auth.Client')
+    @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
+    @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
+    @patch('schwab.auth.webbrowser.get', new_callable=MagicMock)
+    @patch('schwab.auth.prompt', MagicMock(return_value=''))
+    @patch('time.time', MagicMock(return_value=MOCK_NOW))
+    def test_wait_forever_callback_timeout_equals_none(
+            self, mock_webbrowser_get, async_session, sync_session, client):
+        AUTH_URL = 'https://auth.url.com'
+
+        sync_session.return_value = sync_session
+        sync_session.create_authorization_url.return_value = AUTH_URL, None
+        sync_session.fetch_token.return_value = self.raw_token
+
+        callback_url = 'https://127.0.0.1:6969/callback'
+
+        with self.assertRaisesRegex(ValueError, 'endless wait requested'):
+            auth.client_from_login_flow(
+                    API_KEY, APP_SECRET, callback_url, self.token_path,
+                    callback_timeout=None)
+
+
+    @patch('schwab.auth.Client')
+    @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
+    @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
+    @patch('schwab.auth.webbrowser.get', new_callable=MagicMock)
+    @patch('schwab.auth.prompt', MagicMock(return_value=''))
+    @patch('time.time', MagicMock(return_value=MOCK_NOW))
+    def test_wait_forever_callback_timeout_equals_zero(
+            self, mock_webbrowser_get, async_session, sync_session, client):
+        AUTH_URL = 'https://auth.url.com'
+
+        sync_session.return_value = sync_session
+        sync_session.create_authorization_url.return_value = AUTH_URL, None
+        sync_session.fetch_token.return_value = self.raw_token
+
+        callback_url = 'https://127.0.0.1:6969/callback'
+
+        with self.assertRaisesRegex(ValueError, 'endless wait requested'):
+            auth.client_from_login_flow(
+                    API_KEY, APP_SECRET, callback_url, self.token_path,
+                    callback_timeout=0)
 
 
 class ClientFromTokenFileTest(unittest.TestCase):

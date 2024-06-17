@@ -14,7 +14,7 @@ last remaining hurdle: OAuth authentication.
 Before we begin, however, note that this guide is meant to users who want to run 
 applications on their own machines, without distributing them to others. If you 
 plan on distributing your app, or if you plan on running it on a server and 
-allowing access to other users, this login flow is not for you.
+allowing access to other users, these login flows are not for you.
 
 
 ---------------
@@ -78,10 +78,18 @@ using them easy.
 Fetching a Token and Creating a Client
 --------------------------------------
 
-.. _manual_login:
+.. _login_flow:
 
 This function will guide you through the process of logging in and creating a 
 token.
+
+.. autofunction:: schwab.auth.client_from_login_flow
+
+.. _manual_login:
+
+If for some reason you cannot open a web browser, such as when running in a 
+cloud environment, this function will guide you through the process of manually 
+creating a token by copy-pasting relevant URLs.
 
 .. autofunction:: schwab.auth.client_from_manual_flow
 
@@ -204,6 +212,33 @@ can also `join our Discord server <https://discord.gg/M3vjtHj>`__ to ask
 questions.
 
 
+.. _ssl_errors:
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Browser Warnings About Invalid/Self-Signed Certificates
++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+:ref:`ssl_errors`
+
+When creating a token using :func:`client_from_login_flow 
+<schwab.auth.client_from_login_flow>`, you will likely encounter a warning from 
+your browser about refusing to connect to a site using an invalid or self-signed 
+certificate. Under the hood,
+:func:`client_from_login_flow <schwab.auth.client_from_login_flow>` starts a 
+server on your machine to listen for the OAuth callback. Since Schwab requires 
+``https:`` callback URLs, this server must declare an SSL context. However, 
+certificate authorities do not sign certificates for ``localhost`` or 
+``127.0.0.1``, and so the server must self-sign the certificate. As this would 
+be a security issue in any other context, your browser shows you a stern 
+security warning.
+
+It is safe to ignore this warning and proceed anyway. *However*, you should 
+always verify that the address of the page displaying the warning matches your 
+callback URL.  :func:`client_from_login_flow 
+<schwab.auth.client_from_login_flow>` will print message reminding you of your 
+callback URL each time you run it.
+
+
 ++++++++++++++++++++
 ``401 Unauthorized``
 ++++++++++++++++++++
@@ -258,3 +293,24 @@ you're confident is valid, please `file a ticket
 <https://github.com/alexgolec/schwab-py/issues>`__. Just remember, **never share 
 your token file, not even with** ``schwab-py`` **developers**. Sharing the token
 file is as dangerous as sharing your Schwab username and password.
+
+++++++++++++++++++++++++++++++
+What If I Can't Use a Browser?
+++++++++++++++++++++++++++++++
+
+Launching a browser can be inconvenient in some situations, most notably in
+containerized applications running on a cloud provider. ``tda-api`` supports two
+alternatives to creating tokens by opening a web browser.
+
+Firstly, the :ref:`manual login flow<manual_login>` flow allows you to go
+through the login flow on a different machine than the one on which 
+``schwab-py`` is running. Instead of starting the web browser and automatically 
+opening the relevant URLs, this flow allows you to manually copy-paste around 
+the URLs. It's a little more cumbersome, but it has no dependency on selenium.
+
+Alterately, you can take advantage of the fact that token files are portable.
+Once you create a token on one machine, such as one where you can open a web
+browser, you can easily copy that token file to another machine, such as your
+application in the cloud. However, make sure you don't use the same token on
+two machines. It is recommended to delete the token created on the
+browser-capable machine as soon as it is copied to its destination.

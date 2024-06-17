@@ -187,6 +187,9 @@ def __run_client_from_login_flow_server(
     def status():
         return 'running'
 
+    if callback_port == 443:
+        return
+
     # Wrap this call in some hackery to suppress the flask startup messages
     with open(os.devnull, 'w') as devnull:
         import logging
@@ -213,7 +216,77 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
                            asyncio=False, enforce_enums=False, 
                            token_write_func=None, callback_timeout=300.0,
                            interactive=True, requested_browser=None):
-    # TODO: documentation
+    '''
+    Open a web browser to perform an OAuth webapp login flow and creates a 
+    client wrapped around the resulting token. The client will be configured to 
+    refresh the token as necessary, writing each updated version to 
+    ``token_path``.
+
+    .. _callback_url_advisory:
+
+    **Important Note:** This method operates by starting an HTTP server on the 
+    port specified in your callback URL. When you complete the Schwab login 
+    flow, Schwab sends a request to the callback URL with the required login 
+    data encoded in the request parameters. *Anyone who receives this request 
+    can steal your token and act on your account as though they were you.*
+
+    ``schwab-py`` takes your security seriously. As a result, we only allow
+    ``127.0.0.1`` as a host. We *strongly* recommend using a port number higher 
+    than ``1024``, as most operating systems require superuser privileges to listen 
+    on ports below ``1024``, and some also require changes to system firewalls 
+    to accept connections to those ports, even when the connections originate from
+    the same machine. The vast majority of users should just use
+    ``https://127.0.0.1:8182`` as a callback URL.
+
+    Note in particular that specifying *no* port number is equivalent to 
+    specifying port 443, which is the default port number for HTTPS. Your 
+    operating system will likely refuse to open this port for you, and this 
+    method will fail.
+
+    If you want to use this method but haven't specified a compatible callback 
+    URL, you must update your app's configuration on `Schwab's developer portal 
+    <https://developer.schwab.com/>`__. Note making this change will likely 
+    require app re-approval from Schwab, which typically takes a few days.
+
+    :param api_key: Your Schwab application's app key.
+    :param app_secret: Application secret provided upon :ref:`app approval 
+                       <approved_pending>`.
+    :param callback_url: Your Schwab application's callback URL. Note this must
+                         *exactly* match the value you've entered in your
+                         application configuration, otherwise login will fail
+                         with a security error. Be sure to check case and 
+                         trailing slashes. :ref:`See the above note for
+                         important information about setting your callback URL.
+                         <callback_url_advisory>`
+    :param token_path: Path to which the new token will be written. If the token
+                       file already exists, it will be overwritten with a new
+                       one. Updated tokens will be written to this path as well.
+    :param asyncio: If set to ``True``, this will enable async support allowing
+                    the client to be used in an async environment. Defaults to
+                    ``False``
+    :param enforce_enums: Set it to ``False`` to disable the enum checks on ALL
+                          the client methods. Only do it if you know you really
+                          need it. For most users, it is advised to use enums
+                          to avoid errors.
+    :param token_write_func: Function that writes the token on update. Will be
+                             called whenever the token is updated, such as when
+                             it is refreshed. See the above-mentioned example 
+                             for what parameters this method takes.
+    :param callback_timeout: How long to wait for a callback from the server 
+                             before giving up, in seconds. Wait forever if set
+                             to zero or ``None``.
+    :param interactive: Require user input before starting the browser.
+    :param requested_browser: Name of the browser to attempt to open. This 
+                              function uses the standard ``webbrowser`` library 
+                              under the hood, so you can find a table of valid 
+                              values
+                              `here <https://docs.python.org/3/library/webbrowser.html#webbrowser.register>`__
+    '''
+
+    if callback_timeout is None:
+        callback_timeout = 0
+    if callback_timeout < 0:
+        raise ValueError('callback_timeout must be positive')
 
     # Start the server
     parsed = urllib.parse.urlparse(callback_url)
@@ -221,11 +294,13 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
     if parsed.hostname != '127.0.0.1':
         # TODO: document this error
         raise ValueError(
-                ('disallowed hostname {}. client_from_login_flow only allows '+
-                 'callback URLs with hostname 127.0.0.1').format(
+                ('Disallowed hostname {}. client_from_login_flow only allows '+
+                 'callback URLs with hostname 127.0.0.1. See here for ' +
+                 'more information: https://schwab-py.readthedocs.io/en/' +
+                 'latest/auth.html#callback-url-advisory').format(
                      parsed.hostname))
 
-    callback_port = parsed.port if parsed.port else 80
+    callback_port = parsed.port if parsed.port else 443
     callback_path = parsed.path if parsed.path else '/'
 
     output_queue = multiprocessing.Queue()
@@ -280,35 +355,38 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
         authorization_url, state = oauth.create_authorization_url(
             'https://api.schwabapi.com/v1/oauth/authorize')
 
+        print()
+        print('***********************************************************************')
+        print()
+        print('This is the browser-assisted login and token creation flow for')
+        print('schwab-py. This flow automatically opens the login page on your')
+        print('browser, captures the resulting OAuth callback, and creates a token')
+        print('using the result. The authorization URL is:')
+        print()
+        print('>>', authorization_url)
+        print()
+        print('IMPORTANT: Your browser will give you a security warning about an')
+        print('invalid certificate prior to issuing the redirect. This is because')
+        print('schwab-py has started a server on your machine to receive the OAuth')
+        print('redirect using a self-signed SSL certificate. You can ignore that')
+        print('warning, but make sure to first check that the URL matches your')
+        print('callback URL, ignoring URL parameters. As a reminder, your callback URL')
+        print('is:')
+        print()
+        print('>>',callback_url)
+        print()
+        print('See here to learn more about self-signed SSL certificates:')
+        print('https://schwab-py.readthedocs.io/en/latest/auth.html#ssl-errors')
+        print()
+        print('If you encounter any issues, see here for troubleshooting:')
+        print('https://schwab-py.readthedocs.io/en/latest/auth.html#troubleshooting')
+        print('***********************************************************************')
+        print()
+
         if interactive:
-            print()
-            print('**************************************************************')
-            print()
-            print('This is the browser-assisted login and token creation flow for')
-            print('schwab-py. This flow automatically opens the login page on your')
-            print('browser, captures the resulting OAuth callback, and creates a token')
-            print('using the result.')
-            print()
-            print('IMPORTANT: Your browser will give you a security warning about an')
-            print('invalid certificate prior to issuing the redirect. This is because')
-            print('schwab-py has started a server on your machine to receive the OAuth')
-            print('redirect using a self-signed SSL certificate. You can ignore that')
-            print('warning, but make sure to first check that the URL matches your')
-            print('callback URL. As a reminder, your callback URL is:')
-            print()
-            print('>>',callback_url)
-            print()
-            print('See here to learn more: TODO<add a documentation URL>')
-            print()
-            print('If you encounter any issues, see here for troubleshooting:')
-            print('https://schwab-py.readthedocs.io/en/latest/auth.html#troubleshooting')
-            print('\n**************************************************************')
-            print()
             prompt('Press ENTER to open the browser. Note you can run ' +
                   'client_from_login_flow with interactive=False to skip this input')
 
-        # TODO: Add a link to the table for browsers:
-        # https://docs.python.org/3/library/webbrowser.html#webbrowser.register
         controller = webbrowser.get(requested_browser)
         print(webbrowser.get)
         controller.open(authorization_url)
@@ -317,7 +395,18 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
         now = __TIME_TIME()
         timeout_time = now + callback_timeout
         received_url = None
-        while now < timeout_time:
+        while True:
+            now = __TIME_TIME()
+            if now >= timeout_time:
+                if callback_timeout == 0:
+                    # XXX: We're detecting a test environment here to avoid an 
+                    #      infinite sleep. Surely there must be a better way to do 
+                    #      this...
+                    if __TIME_TIME != time.time:  # pragma: no cover
+                        raise ValueError('endless wait requested')
+                else:
+                    break
+
             # Attempt to fetch from the queue
             try:
                 received_url = output_queue.get(
@@ -326,10 +415,7 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
             except queue.Empty:
                 pass
 
-            now = __TIME_TIME()
-
         if not received_url:
-            # TODO: document this error
             raise RedirectTimeoutError(
                     'Timed out waiting for a post-authorization callback. You '+
                     'can set a longer timeout by passing a value of ' +
@@ -356,7 +442,8 @@ def client_from_token_file(token_path, api_key, app_secret, asyncio=False,
                        :func:`~schwab.auth.client_from_login_flow` or
                        :func:`~schwab.auth.easy_client` to create one.
     :param api_key: Your Schwab application's app key.
-    :param app_secret: Application secret. Provided upon app approval.
+    :param app_secret: Application secret. Provided upon :ref:`app approval 
+                       <approved_pending>`.
     :param asyncio: If set to ``True``, this will enable async support allowing
                     the client to be used in an async environment. Defaults to
                     ``False``
@@ -387,7 +474,8 @@ def client_from_manual_flow(api_key, app_secret, callback_url, token_path,
     each updated version to ``token_path``.
 
     :param api_key: Your Schwab application's app key.
-    :param app_secret: Application secret provided upon app approval.
+    :param app_secret: Application secret provided upon :ref:`app approval 
+                       <approved_pending>`.
     :param callback_url: Your Schwab application's callback URL. Note this must
                          *exactly* match the value you've entered in your
                          application configuration, otherwise login will fail
@@ -475,7 +563,8 @@ def client_from_access_functions(api_key, app_secret, token_read_func,
     client_from_access_functions.py>`__ for details.
 
     :param api_key: Your Schwab application's app key.
-    :param app_secret: Application secret. Provided upon app approval.
+    :param app_secret: Application secret. Provided upon :ref:`app approval 
+                       <approved_pending>`.
     :param token_read_func: Function that takes no arguments and returns a token
                             object.
     :param token_write_func: Function that writes the token on update. Will be
