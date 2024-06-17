@@ -187,6 +187,9 @@ def __run_client_from_login_flow_server(
     def status():
         return 'running'
 
+    if callback_port == 443:
+        return
+
     # Wrap this call in some hackery to suppress the flask startup messages
     with open(os.devnull, 'w') as devnull:
         import logging

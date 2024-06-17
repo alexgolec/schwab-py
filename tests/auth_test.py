@@ -219,7 +219,7 @@ class ClientFromLoginFlowTest(unittest.TestCase):
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     @patch('schwab.auth.webbrowser.get', new_callable=MagicMock)
     @patch('time.time', MagicMock(return_value=MOCK_NOW))
-    def test_unprivileged_start_on_port_80(
+    def test_start_on_port_443(
             self, mock_webbrowser_get, async_session, sync_session, client):
         callback_url = 'https://127.0.0.1/callback'
 
