@@ -399,7 +399,7 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
                     # XXX: We're detecting a test environment here to avoid an 
                     #      infinite sleep. Surely there must be a better way to do 
                     #      this...
-                    if __TIME_TIME != time.time:
+                    if __TIME_TIME != time.time:  # pragma: no cover
                         raise ValueError('endless wait requested')
                     continue
                 else:

@@ -188,6 +188,22 @@ class ClientFromLoginFlowTest(unittest.TestCase):
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     @patch('schwab.auth.webbrowser.get', new_callable=MagicMock)
     @patch('time.time', MagicMock(return_value=MOCK_NOW))
+    def test_negative_timeout(
+            self, mock_webbrowser_get, async_session, sync_session, client):
+        callback_url = 'https://example.com/callback'
+
+        with self.assertRaisesRegex(
+                ValueError, 'callback_timeout must be positive'):
+            auth.client_from_login_flow(
+                    API_KEY, APP_SECRET, callback_url, self.token_path,
+                    callback_timeout=-1)
+
+
+    @patch('schwab.auth.Client')
+    @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
+    @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
+    @patch('schwab.auth.webbrowser.get', new_callable=MagicMock)
+    @patch('time.time', MagicMock(return_value=MOCK_NOW))
     def test_disallowed_hostname_with_port(
             self, mock_webbrowser_get, async_session, sync_session, client):
         callback_url = 'https://example.com:8080/callback'
