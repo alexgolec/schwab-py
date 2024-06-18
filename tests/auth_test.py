@@ -837,7 +837,7 @@ class EasyClientTest(unittest.TestCase):
         mock_file_client.token_age.return_value = 9999999999
 
         mock_browser_client = MagicMock()
-        client_from_token_file.return_value = mock_browser_client
+        client_from_login_flow.return_value = mock_browser_client
         mock_browser_client.token_age.return_value = 1
 
         c = auth.easy_client(API_KEY, APP_SECRET, CALLBACK_URL, self.token_path)
