@@ -98,6 +98,11 @@ the login flow again.
 
 .. autofunction:: schwab.auth.client_from_token_file
 
+The following is a convenient wrapper around token creation and fetching, 
+calling each when appropriate:
+
+.. autofunction:: schwab.auth.easy_client
+
 If you don't want to create a client and just want to fetch a token, you can use
 the ``schwab-generate-token.py`` script that's installed with the library. This 
 method is particularly useful if you want to create your token on one machine 

@@ -19,7 +19,7 @@ API_KEY = 'APIKEY'
 APP_SECRET = '0x5EC07'
 TOKEN_CREATION_TIMESTAMP = 1613745000
 MOCK_NOW = 1613745082
-REDIRECT_URL = 'https://redirect.url.com'
+CALLBACK_URL = 'https://redirect.url.com'
 
 
 class ClientFromLoginFlowTest(unittest.TestCase):
@@ -562,7 +562,7 @@ class ClientFromManualFlow(unittest.TestCase):
 
         self.assertEqual('returned client',
                          auth.client_from_manual_flow(
-                             API_KEY, APP_SECRET, REDIRECT_URL, self.token_path))
+                             API_KEY, APP_SECRET, CALLBACK_URL, self.token_path))
 
         with open(self.token_path, 'r') as f:
             self.assertEqual({
@@ -594,7 +594,7 @@ class ClientFromManualFlow(unittest.TestCase):
 
         self.assertEqual('returned client',
                          auth.client_from_manual_flow(
-                             API_KEY, APP_SECRET, REDIRECT_URL,
+                             API_KEY, APP_SECRET, CALLBACK_URL,
                              self.token_path,
                              token_write_func=dummy_token_write_func))
 
@@ -657,7 +657,7 @@ class ClientFromManualFlow(unittest.TestCase):
 
         self.assertEqual('returned client',
                          auth.client_from_manual_flow(
-                             API_KEY, APP_SECRET, REDIRECT_URL, self.token_path,
+                             API_KEY, APP_SECRET, CALLBACK_URL, self.token_path,
                              enforce_enums=False))
 
         client.assert_called_once_with(API_KEY, _, token_metadata=_,
@@ -682,7 +682,7 @@ class ClientFromManualFlow(unittest.TestCase):
 
         self.assertEqual('returned client',
                          auth.client_from_manual_flow(
-                             API_KEY, APP_SECRET, REDIRECT_URL, self.token_path))
+                             API_KEY, APP_SECRET, CALLBACK_URL, self.token_path))
 
         client.assert_called_once_with(API_KEY, _, token_metadata=_,
                                        enforce_enums=True)
@@ -733,3 +733,161 @@ class TokenMetadataTest(unittest.TestCase):
                 token, unwrapped_token_write_func=None)
         self.assertEqual(metadata.token_age(),
                          MOCK_NOW - TOKEN_CREATION_TIMESTAMP)
+
+
+class EasyClientTest(unittest.TestCase):
+
+    def setUp(self):
+        self.tmp_dir = tempfile.TemporaryDirectory()
+        self.token_path = os.path.join(self.tmp_dir.name, 'token.json')
+        self.raw_token = {'token': 'yes'}
+
+    def put_token(self):
+        with open(self.token_path, 'w') as f:
+            f.write(json.dumps(self.raw_token))
+
+
+    @no_duplicates
+    @patch('schwab.auth.client_from_token_file')
+    @patch('schwab.auth.client_from_login_flow', new_callable=MockOAuthClient)
+    @patch('time.time', MagicMock(return_value=MOCK_NOW))
+    def test_no_token(
+            self, client_from_login_flow, client_from_token_file):
+        mock_client = MagicMock()
+        client_from_login_flow.return_value = mock_client
+
+        c = auth.easy_client(API_KEY, APP_SECRET, CALLBACK_URL, self.token_path)
+
+        assert c is mock_client
+
+
+    @no_duplicates
+    @patch('schwab.auth.client_from_token_file')
+    @patch('schwab.auth.client_from_login_flow', new_callable=MockOAuthClient)
+    @patch('time.time', MagicMock(return_value=MOCK_NOW))
+    def test_no_token_passing_parameters(
+            self, client_from_login_flow, client_from_token_file):
+        mock_client = MagicMock()
+        client_from_login_flow.return_value = mock_client
+
+        c = auth.easy_client(
+                API_KEY, APP_SECRET, CALLBACK_URL, self.token_path, 
+                asyncio='asyncio', enforce_enums='enforce_enums', 
+                callback_timeout='callback_timeout', interactive='interactive',
+                requested_browser='requested_browser')
+
+        assert c is mock_client
+
+        client_from_login_flow.assert_called_once_with(
+                API_KEY, APP_SECRET, CALLBACK_URL, self.token_path,
+                asyncio='asyncio', enforce_enums='enforce_enums',
+                callback_timeout='callback_timeout', interactive='interactive',
+                requested_browser='requested_browser')
+
+
+    @no_duplicates
+    @patch('schwab.auth.client_from_token_file')
+    @patch('schwab.auth.client_from_login_flow', new_callable=MockOAuthClient)
+    @patch('time.time', MagicMock(return_value=MOCK_NOW))
+    def test_existing_token(
+            self, client_from_login_flow, client_from_token_file):
+        self.put_token()
+
+        mock_client = MagicMock()
+        client_from_token_file.return_value = mock_client
+        mock_client.token_age.return_value = 1
+
+        c = auth.easy_client(API_KEY, APP_SECRET, CALLBACK_URL, self.token_path)
+
+        assert c is mock_client
+
+
+    @no_duplicates
+    @patch('schwab.auth.client_from_token_file')
+    @patch('schwab.auth.client_from_login_flow', new_callable=MockOAuthClient)
+    @patch('time.time', MagicMock(return_value=MOCK_NOW))
+    def test_existing_token_passing_parameters(
+            self, client_from_login_flow, client_from_token_file):
+        self.put_token()
+
+        mock_client = MagicMock()
+        client_from_token_file.return_value = mock_client
+        mock_client.token_age.return_value = 1
+
+        c = auth.easy_client(API_KEY, APP_SECRET, CALLBACK_URL, self.token_path,
+                             asyncio='asyncio', enforce_enums='enforce_enums')
+
+        assert c is mock_client
+
+        client_from_token_file.assert_called_once_with(
+                self.token_path, API_KEY, APP_SECRET,
+                asyncio='asyncio', enforce_enums='enforce_enums')
+
+
+    @no_duplicates
+    @patch('schwab.auth.client_from_token_file')
+    @patch('schwab.auth.client_from_login_flow', new_callable=MockOAuthClient)
+    @patch('time.time', MagicMock(return_value=MOCK_NOW))
+    def test_token_too_old(
+            self, client_from_login_flow, client_from_token_file):
+        self.put_token()
+
+        mock_file_client = MagicMock()
+        client_from_token_file.return_value = mock_file_client
+        mock_file_client.token_age.return_value = 9999999999
+
+        mock_browser_client = MagicMock()
+        client_from_login_flow.return_value = mock_browser_client
+        mock_browser_client.token_age.return_value = 1
+
+        c = auth.easy_client(API_KEY, APP_SECRET, CALLBACK_URL, self.token_path)
+
+        assert c is mock_browser_client
+
+
+    @no_duplicates
+    @patch('schwab.auth.client_from_token_file')
+    @patch('schwab.auth.client_from_login_flow', new_callable=MockOAuthClient)
+    @patch('time.time', MagicMock(return_value=MOCK_NOW))
+    def test_negative_max_token_age(
+            self, client_from_login_flow, client_from_token_file):
+        with self.assertRaisesRegex(
+                ValueError, 'max_token_age must be positive, zero, or None'):
+            c = auth.easy_client(API_KEY, APP_SECRET, CALLBACK_URL, 
+                                 self.token_path, max_token_age=-1)
+
+
+    @no_duplicates
+    @patch('schwab.auth.client_from_token_file')
+    @patch('schwab.auth.client_from_login_flow', new_callable=MockOAuthClient)
+    @patch('time.time', MagicMock(return_value=MOCK_NOW))
+    def test_none_max_token_age(
+            self, client_from_login_flow, client_from_token_file):
+        self.put_token()
+
+        mock_client = MagicMock()
+        client_from_token_file.return_value = mock_client
+        mock_client.token_age.return_value = 9999999999
+
+        c = auth.easy_client(API_KEY, APP_SECRET, CALLBACK_URL, self.token_path,
+                             max_token_age=None)
+
+        assert c is mock_client
+
+
+    @no_duplicates
+    @patch('schwab.auth.client_from_token_file')
+    @patch('schwab.auth.client_from_login_flow', new_callable=MockOAuthClient)
+    @patch('time.time', MagicMock(return_value=MOCK_NOW))
+    def test_zero_max_token_age(
+            self, client_from_login_flow, client_from_token_file):
+        self.put_token()
+
+        mock_client = MagicMock()
+        client_from_token_file.return_value = mock_client
+        mock_client.token_age.return_value = 9999999999
+
+        c = auth.easy_client(API_KEY, APP_SECRET, CALLBACK_URL, self.token_path,
+                             max_token_age=0)
+
+        assert c is mock_client

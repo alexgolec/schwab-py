@@ -384,8 +384,8 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
         print()
 
         if interactive:
-            prompt('Press ENTER to open the browser. Note you can run ' +
-                  'client_from_login_flow with interactive=False to skip this input')
+            prompt('Press ENTER to open the browser. Note you can call ' +
+                  'this method with interactive=False to skip this input.')
 
         controller = webbrowser.get(requested_browser)
         print(webbrowser.get)
@@ -610,3 +610,88 @@ def client_from_access_functions(api_key, app_secret, token_read_func,
                       leeway=300),
         token_metadata=metadata,
         enforce_enums=enforce_enums)
+
+
+################################################################################
+# easy_client
+
+
+def easy_client(api_key, app_secret, callback_url, token_path, asyncio=False, 
+                enforce_enums=True, max_token_age=60*60*24*6.5,
+                callback_timeout=300.0, interactive=True,
+                requested_browser=None):
+    '''
+    Convenient wrapper around :func:`client_from_login_flow` and
+    :func:`client_from_token_file`. If ``token_path`` exists, loads the token
+    from it. Otherwise open a login flow to fetch a new token. Returns a client
+    configured to refresh the token to ``token_path``.
+
+    *Reminder:* You should never create the token file yourself or modify it in
+    any way. If ``token_path`` refers to an existing file, this method will
+    assume that file is valid token and will attempt to parse it.
+
+    :param api_key: Your Schwab application's app key.
+    :param app_secret: Application secret provided upon :ref:`app approval 
+                       <approved_pending>`.
+    :param callback_url: Your Schwab application's callback URL. Note this must
+                         *exactly* match the value you've entered in your
+                         application configuration, otherwise login will fail
+                         with a security error. Be sure to check case and 
+                         trailing slashes. :ref:`See the above note for
+                         important information about setting your callback URL.
+                         <callback_url_advisory>`
+    :param token_path: Path to which the new token will be written. If the token
+                       file already exists, it will be overwritten with a new
+                       one. Updated tokens will be written to this path as well.
+    :param asyncio: If set to ``True``, this will enable async support allowing
+                    the client to be used in an async environment. Defaults to
+                    ``False``
+    :param enforce_enums: Set it to ``False`` to disable the enum checks on ALL
+                          the client methods. Only do it if you know you really
+                          need it. For most users, it is advised to use enums
+                          to avoid errors.
+    :param max_token_age: If the token is loaded from a file but is older than 
+                          this age (in seconds), proactively delete it and 
+                          create a new one. Assists with 
+                          :ref:`token expiration <token_expiration>`. If set to 
+                          None, never proactively delete the token.
+    :param callback_timeout: See the corresponding parameter to 
+                             :func:`client_from_login_flow 
+                             <client_from_login_flow>`.
+    :param interactive: See the corresponding parameter to 
+                        :func:`client_from_login_flow 
+                        <client_from_login_flow>`.
+    :param requested_browser: See the corresponding parameter to 
+                              :func:`client_from_login_flow 
+                              <client_from_login_flow>`.
+    '''
+    if max_token_age is None:
+        max_token_age = 0
+    if max_token_age < 0:
+        raise ValueError('max_token_age must be positive, zero, or None')
+
+    logger = get_logger()
+
+    c = None
+
+    if os.path.isfile(token_path):
+        c = client_from_token_file(token_path, api_key, app_secret,
+                                   asyncio=asyncio,
+                                   enforce_enums=enforce_enums)
+        logger.info('Loaded token from file \'%s\'', token_path)
+
+        if max_token_age > 0 and c.token_age() >= max_token_age:
+            logger.info('token too old, proactively creating a new one')
+            c = None
+
+    if c is None:
+        c = client_from_login_flow(
+            api_key, app_secret, callback_url, token_path, asyncio=asyncio,
+            enforce_enums=enforce_enums, callback_timeout=callback_timeout,
+            requested_browser=requested_browser, interactive=interactive)
+
+        logger.info(
+            'Returning client fetched using web browser, writing' +
+            'token to \'%s\'', token_path)
+
+    return c
