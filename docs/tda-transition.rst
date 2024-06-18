@@ -38,25 +38,6 @@ old that worked under ``tda-api``. You must delete that one and create a new
 one.
 
 
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-No More ``client_from_login_flow()`` or ``easy_client()``
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-``tda-api`` supported a convenient flow where the library opens a browser to 
-fetch a token, waits for you to complete login, and then closes the browser when 
-it notices you succeeded. Schwab seems to explicitly disallow this sort of 
-thing: if it notices your browser is under the control of automation software 
-(like the ``selenium`` library which ``tda-api`` used to control the browser) it 
-rejects all login credentials, even valid ones. 
-
-At this time, all token creation must be performed through 
-:meth:`client_from_manual_flow <schwab.auth.client_from_manual_flow>`. There 
-*appears* to be a way to recreate most of the old ``client_from_login_flow`` 
-functionality, but there is no timeline on when we'll begin to experiment with 
-it. Please don't pester the server with requests to implement this. You are 
-advised to transition to the manual method method for the foreseeable future.
-
-
 +++++++++++++++++++++++++++++++++
 Tokens lifetimes are much shorter
 +++++++++++++++++++++++++++++++++
