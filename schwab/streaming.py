@@ -403,17 +403,18 @@ class StreamClient(EnumEnforcer):
         values stored returned in the stream messages.
         '''
 
-        #: Unknown
-        FIELD_0 = 0
+        #: Passed back to the client from the request to identify a subscription this response belongs to.
+        SUBSCRIPTION_KEY = 0
 
-        #: Unknown
-        FIELD_1 = 1
+        #: Account Number that the activity occurred on.
+        ACCOUNT = 1
 
-        #: Unknown
-        FIELD_2 = 2
+        #: Message Type that dictates the format of the Message Data field.
+        MESSAGE_TYPE = 2
 
-        #: Unknown
-        FIELD_3 = 3
+        #: The core data for the message. Either JSON-formatted data describing the update, NULL in some cases,
+        #: or plain text in case of ERROR.
+        MESSAGE_DATA = 3
 
     async def account_activity_sub(self):
         '''
@@ -480,7 +481,7 @@ class StreamClient(EnumEnforcer):
         VOLUME = 6
 
         #: Chart timestamp
-        CHART_TIME_MILLIS = 7
+        CHART_TIME = 7
 
         #: Chart day
         CHART_DAY = 8
@@ -544,26 +545,26 @@ class StreamClient(EnumEnforcer):
         values stored returned in the stream messages.
         '''
 
-        #: UNKNOWN
-        FIELD_0 = 0
+        #: Ticker symbol in upper case.
+        SYMBOL = 0
 
-        #: UNKNOWN
-        FIELD_1 = 1
+        #: Milliseconds since Epoch
+        CHART_TIME = 1
 
-        #: UNKNOWN
-        FIELD_2 = 2
+        #: Opening price for the minute
+        OPEN_PRICE = 2
 
-        #: UNKNOWN
-        FIELD_3 = 3
+        #: Highest price for the minute
+        HIGH_PRICE = 3
 
-        #: UNKNOWN
-        FIELD_4 = 4
+        #: Chart's lowest price for the minute
+        LOW_PRICE = 4
 
-        #: UNKNOWN
-        FIELD_5 = 5
+        #: Closing price for the minute
+        CLOSE_PRICE = 5
 
-        #: UNKNOWN
-        FIELD_6 = 6
+        #: Total volume for the minute
+        VOLUME = 6
 
     async def chart_futures_subs(self, symbols):
         '''
@@ -727,19 +728,19 @@ class StreamClient(EnumEnforcer):
         MARK = 33
 
         #: Quote time in milliseconds
-        QUOTE_TIME_MILLIS = 34
+        QUOTE_TIME = 34
 
         #: Last trade time in milliseconds
-        TRADE_TIME_MILLIS = 35
+        TRADE_TIME = 35
 
         #: Regular market trade time in milliseconds
-        REGULAR_MARKET_TRADE_MILLIS = 36
+        REGULAR_MARKET_TRADE_TIME = 36
 
         #: Bid time in millis
-        BID_TIME_MILLIS = 37
+        BID_TIME = 37
 
         #: Ask time in millis
-        ASK_TIME_MILLIS = 38
+        ASK_TIME = 38
 
         #: Ask MIC ID
         ASK_MIC_ID = 39
@@ -751,19 +752,19 @@ class StreamClient(EnumEnforcer):
         LAST_MIC_ID = 41
 
         #: Net change in percent
-        NET_CHANGE_PERCENT = 42
+        NET_PERCENT_CHANGE = 42
 
         #: Regular market change in percent
-        REGULAR_MARKET_CHANGE_PERCENT = 43
+        REGULAR_MARKET_PERCENT_CHANGE = 43
 
         #: Mark change
         MARK_CHANGE = 44
 
         #: Mark change in percent
-        MARK_CHANGE_PERCENT = 45
+        MARK_PERCENT_CHANGE = 45
 
-        #: HTB quality
-        HTB_QUALITY = 46
+        #: HTB quantity
+        HTB_QUANTITY = 46
 
         #: HTB rate
         HTB_RATE = 47
@@ -778,7 +779,7 @@ class StreamClient(EnumEnforcer):
         POST_MARKET_NET_CHANGE = 50
 
         #: Post market net change percent
-        POST_MARKET_NET_CHANGE_PERCENT = 51
+        POST_MARKET_NET_PERCENT_CHANGE = 51
 
     async def level_one_equity_subs(self, symbols, *, fields=None):
         '''
@@ -866,7 +867,7 @@ class StreamClient(EnumEnforcer):
         #: Expiration year
         EXPIRATION_YEAR = 12
 
-        #: MULTIPLIER
+        #: Multiplier
         MULTIPLIER = 13
 
         #: Digits
@@ -914,7 +915,7 @@ class StreamClient(EnumEnforcer):
         #: Delta
         DELTA = 28
 
-        #: GAMMA
+        #: Gamma
         GAMMA = 29
 
         #: Theta
@@ -942,10 +943,10 @@ class StreamClient(EnumEnforcer):
         MARK = 37
 
         #: Quote time in millis
-        QUOTE_TIME_MILLIS = 38
+        QUOTE_TIME = 38
 
         #: Last trade time in millis
-        TRADE_TIME_MILLIS = 39
+        TRADE_TIME = 39
 
         #: Exchange ID
         EXCHANGE_ID = 40
@@ -966,7 +967,7 @@ class StreamClient(EnumEnforcer):
         MARK_CHANGE = 45
 
         #: Mark change in percent
-        MARK_CHANGE_PERCENT = 46
+        MARK_PERCENT_CHANGE = 46
 
         #: Implied yield
         IMPLIED_YIELD = 47
@@ -1041,113 +1042,128 @@ class StreamClient(EnumEnforcer):
         streaming-data#_Toc504640603>`__
         '''
 
-        #: UNKNOWN
-        FIELD_0 = 0
+        #: Ticker symbol in upper case.
+        SYMBOL = 0
 
-        #: UNKNOWN
-        FIELD_1 = 1
+        #: Current Best Bid Price
+        BID_PRICE = 1
 
-        #: UNKNOWN
-        FIELD_2 = 2
+        #: Current Best Ask Price
+        ASK_PRICE = 2
 
-        #: UNKNOWN
-        FIELD_3 = 3
+        #: Price at which the last trade was matched
+        LAST_PRICE = 3
 
-        #: UNKNOWN
-        FIELD_4 = 4
+        #: Number of contracts for bid
+        BID_SIZE = 4
 
-        #: UNKNOWN
-        FIELD_5 = 5
+        #: Number of contracts for ask
+        ASK_SIZE = 5
 
-        #: UNKNOWN
-        FIELD_6 = 6
+        #: Exchange with the best bid
+        BID_ID = 6
 
-        #: UNKNOWN
-        FIELD_7 = 7
+        #: Exchange with the best ask
+        ASK_ID = 7
 
-        #: UNKNOWN
-        FIELD_8 = 8
+        #: Aggregated contracts traded throughout the day, including pre/post market hours.
+        TOTAL_VOLUME = 8
 
-        #: UNKNOWN
-        FIELD_9 = 9
+        #: Number of contracts traded with last trade
+        LAST_SIZE = 9
 
-        #: UNKNOWN
-        FIELD_10 = 10
+        #: Time of the last quote in milliseconds since epoch
+        QUOTE_TIME = 10
 
-        #: UNKNOWN
-        FIELD_11 = 11
+        #: Time of the last trade in milliseconds since epoch
+        TRADE_TIME = 11
 
-        #: UNKNOWN
-        FIELD_12 = 12
+        #: Day's high trade price
+        HIGH_PRICE = 12
 
-        #: UNKNOWN
-        FIELD_13 = 13
+        #: Day's low trade price
+        LOW_PRICE = 13
 
-        #: UNKNOWN
-        FIELD_14 = 14
+        #: Previous day's closing price
+        CLOSE_PRICE = 14
 
-        #: UNKNOWN
-        FIELD_15 = 15
+        #: Primary "listing" Exchange
+        EXCHANGE_ID = 15
 
-        #: UNKNOWN
-        FIELD_16 = 16
+        #: Description of the product
+        DESCRIPTION = 16
 
-        #: UNKNOWN
-        FIELD_17 = 17
+        #: Exchange where last trade was executed
+        LAST_ID = 17
 
-        #: UNKNOWN
-        FIELD_18 = 18
+        #: Day's Open Price
+        OPEN_PRICE = 18
 
-        #: UNKNOWN
-        FIELD_19 = 19
+        #: Current Last-Prev Close
+        NET_CHANGE = 19
 
-        #: UNKNOWN
-        FIELD_20 = 20
+        #: Current percent change
+        FUTURE_PERCENT_CHANGE = 20
 
-        #: UNKNOWN
-        FIELD_21 = 21
+        #: Name of exchange
+        EXCHANGE_NAME = 21
 
-        #: UNKNOWN
-        FIELD_22 = 22
+        #: Trading status of the symbol
+        SECURITY_STATUS = 22
 
-        #: UNKNOWN
-        FIELD_23 = 23
+        #: The total number of futures contracts that are not closed or delivered on a particular day
+        OPEN_INTEREST = 23
 
-        #: UNKNOWN
-        FIELD_24 = 24
+        #: Mark-to-Market value is calculated daily using current prices to determine profit/loss
+        MARK = 24
 
-        #: UNKNOWN
-        FIELD_25 = 25
+        #: Minimum price movement
+        TICK = 25
 
-        #: UNKNOWN
-        FIELD_26 = 26
+        #: Minimum amount that the price of the market can change
+        TICK_AMOUNT = 26
 
-        #: UNKNOWN
-        FIELD_27 = 27
+        #: Futures product
+        PRODUCT = 27
 
-        #: UNKNOWN
-        FIELD_28 = 28
+        #: Display in fraction or decimal format.
+        FUTURE_PRICE_FORMAT = 28
 
-        #: UNKNOWN
-        FIELD_29 = 29
+        #: Trading hours
+        FUTURE_TRADING_HOURS = 29
 
-        #: UNKNOWN
-        FIELD_30 = 30
+        #: Flag to indicate if this future contract is tradable
+        FUTURE_IS_TRADABLE = 30
 
-        #: UNKNOWN
-        FIELD_31 = 31
+        #: Point value
+        FUTURE_MULTIPLIER = 31
 
-        #: UNKNOWN
-        FIELD_32 = 32
+        #: Indicates if this contract is active
+        FUTURE_IS_ACTIVE = 32
 
-        #: UNKNOWN
-        FIELD_33 = 33
+        #: Closing price
+        FUTURE_SETTLEMENT_PRICE = 33
 
-        #: UNKNOWN
-        FIELD_34 = 34
+        #: Symbol of the active contract
+        FUTURE_ACTIVE_SYMBOL = 34
 
-        #: UNKNOWN
-        FIELD_35 = 35
+        #: Expiration date of this contract
+        FUTURE_EXPIRATION_DATE = 35
+
+        #: Expiration Style
+        EXPIRATION_STYLE = 36
+
+        #: Time of the last ask-side quote in milliseconds since epoch
+        ASK_TIME = 37
+
+        #: Time of the last bid-side quote in milliseconds since epoch
+        BID_TIME = 38
+
+        #: Indicates if this contract has quoted during the active session
+        QUOTED_IN_SESSION = 39
+
+        #: Expiration date of this contract
+        SETTLEMENT_DATE = 40
 
     async def level_one_futures_subs(self, symbols, *, fields=None):
         '''
@@ -1161,8 +1177,8 @@ class StreamClient(EnumEnforcer):
                        the fields to return in streaming entries. If unset, all
                        fields will be requested.
         '''
-        if fields and self.LevelOneFuturesFields.FIELD_0 not in fields:
-            fields.append(self.LevelOneFuturesFields.FIELD_0)
+        if fields and self.LevelOneFuturesFields.SYMBOL not in fields:
+            fields.append(self.LevelOneFuturesFields.SYMBOL)
         await self._service_op(
             symbols, 'LEVELONE_FUTURES', 'SUBS', self.LevelOneFuturesFields,
             fields=fields)
@@ -1196,95 +1212,95 @@ class StreamClient(EnumEnforcer):
         streaming-data#_Toc504640606>`__
         '''
 
-        #: UNKNOWN
-        FIELD_0 = 0
+        #: Ticker symbol in upper case.
+        SYMBOL = 0
 
-        #: UNKNOWN
-        FIELD_1 = 1
+        #: Current Bid Price
+        BID_PRICE = 1
 
-        #: UNKNOWN
-        FIELD_2 = 2
+        #: Current Ask Price
+        ASK_PRICE = 2
 
-        #: UNKNOWN
-        FIELD_3 = 3
+        #: Price at which the last trade was matched
+        LAST_PRICE = 3
 
-        #: UNKNOWN
-        FIELD_4 = 4
+        #: Number of currency pairs for bid
+        BID_SIZE = 4
 
-        #: UNKNOWN
-        FIELD_5 = 5
+        #: Number of currency pairs for ask
+        ASK_SIZE = 5
 
-        #: UNKNOWN
-        FIELD_6 = 6
+        #: Aggregated currency pairs traded throughout the day, including pre/post market hours.
+        TOTAL_VOLUME = 6
 
-        #: UNKNOWN
-        FIELD_7 = 7
+        #: Number of currency pairs traded with last trade
+        LAST_SIZE = 7
 
-        #: UNKNOWN
-        FIELD_8 = 8
+        #: Trade time of the last quote in milliseconds since epoch
+        QUOTE_TIME = 8
 
-        #: UNKNOWN
-        FIELD_9 = 9
+        #: Trade time of the last trade in milliseconds since epoch
+        TRADE_TIME = 9
 
-        #: UNKNOWN
-        FIELD_10 = 10
+        #: Day's high trade price
+        HIGH_PRICE = 10
 
-        #: UNKNOWN
-        FIELD_11 = 11
+        #: Day's low trade price
+        LOW_PRICE = 11
 
-        #: UNKNOWN
-        FIELD_12 = 12
+        #: Previous day's closing price
+        CLOSE_PRICE = 12
 
-        #: UNKNOWN
-        FIELD_13 = 13
+        #: Exchange Id
+        EXCHANGE_ID = 13
 
-        #: UNKNOWN
-        FIELD_14 = 14
+        #: Description of the product
+        DESCRIPTION = 14
 
-        #: UNKNOWN
-        FIELD_15 = 15
+        #: Day's Open Price
+        OPEN_PRICE = 15
 
-        #: UNKNOWN
-        FIELD_16 = 16
+        #: Current Last-Prev Close
+        NET_CHANGE = 16
 
-        #: UNKNOWN
-        FIELD_17 = 17
+        #: Current percent change
+        PERCENT_CHANGE = 17
 
-        #: UNKNOWN
-        FIELD_18 = 18
+        #: Name of exchange
+        EXCHANGE_NAME = 18
 
-        #: UNKNOWN
-        FIELD_19 = 19
+        #: Valid decimal points
+        DIGITS = 19
 
-        #: UNKNOWN
-        FIELD_20 = 20
+        #: Trading status of the symbol
+        SECURITY_STATUS = 20
 
-        #: UNKNOWN
-        FIELD_21 = 21
+        #: Minimum price movement
+        TICK = 21
 
-        #: UNKNOWN
-        FIELD_22 = 22
+        #: Minimum amount that the price of the market can change
+        TICK_AMOUNT = 22
 
-        #: UNKNOWN
-        FIELD_23 = 23
+        #: Product name
+        PRODUCT = 23
 
-        #: UNKNOWN
-        FIELD_24 = 24
+        #: Trading hours
+        TRADING_HOURS = 24
 
-        #: UNKNOWN
-        FIELD_25 = 25
+        #: Flag to indicate if this forex is tradable
+        IS_TRADABLE = 25
 
-        #: UNKNOWN
-        FIELD_26 = 26
+        #: Market Maker
+        MARKET_MAKER = 26
 
-        #: UNKNOWN
-        FIELD_27 = 27
+        #: Highest price traded in the past 12 months, or 52 weeks
+        HIGH_PRICE_52_WEEK = 27
 
-        #: UNKNOWN
-        FIELD_28 = 28
+        #: Lowest price traded in the past 12 months, or 52 weeks
+        LOW_PRICE_52_WEEK = 28
 
-        #: UNKNOWN
-        FIELD_29 = 29
+        #: Mark-to-Market value is calculated daily using current prices to determine profit/loss
+        MARK = 29
 
     async def level_one_forex_subs(self, symbols, *, fields=None):
         '''
@@ -1298,8 +1314,8 @@ class StreamClient(EnumEnforcer):
                        the fields to return in streaming entries. If unset, all
                        fields will be requested.
         '''
-        if fields and self.LevelOneForexFields.FIELD_0 not in fields:
-            fields.append(self.LevelOneForexFields.FIELD_0)
+        if fields and self.LevelOneForexFields.SYMBOL not in fields:
+            fields.append(self.LevelOneForexFields.SYMBOL)
         await self._service_op(
             symbols, 'LEVELONE_FOREX', 'SUBS', self.LevelOneForexFields,
             fields=fields)
@@ -1333,113 +1349,101 @@ class StreamClient(EnumEnforcer):
         streaming-data#_Toc504640609>`__
         '''
 
-        #: UNKNOWN
-        FIELD_0 = 0
+        #: Ticker symbol in upper case.
+        SYMBOL = 0
 
-        #: UNKNOWN
-        FIELD_1 = 1
+        #: Current Bid Price
+        BID_PRICE = 1
 
-        #: UNKNOWN
-        FIELD_2 = 2
+        #: Current Ask Price
+        ASK_PRICE = 2
 
-        #: UNKNOWN
-        FIELD_3 = 3
+        #: Price at which the last trade was matched
+        LAST_PRICE = 3
 
-        #: UNKNOWN
-        FIELD_4 = 4
+        #: Number of contracts for bid
+        BID_SIZE = 4
 
-        #: UNKNOWN
-        FIELD_5 = 5
+        #: Number of contracts for ask
+        ASK_SIZE = 5
 
-        #: UNKNOWN
-        FIELD_6 = 6
+        #: Exchange with the bid
+        BID_ID = 6
 
-        #: UNKNOWN
-        FIELD_7 = 7
+        #: Exchange with the ask
+        ASK_ID = 7
 
-        #: UNKNOWN
-        FIELD_8 = 8
+        #: Aggregated contracts traded throughout the day, including pre/post market hours.
+        TOTAL_VOLUME = 8
 
-        #: UNKNOWN
-        FIELD_9 = 9
+        #: Number of contracts traded with last trade
+        LAST_SIZE = 9
 
-        #: UNKNOWN
-        FIELD_10 = 10
+        #: Trade time of the last quote in milliseconds since epoch
+        QUOTE_TIME = 10
 
-        #: UNKNOWN
-        FIELD_11 = 11
+        #: Trade time of the last trade in milliseconds since epoch
+        TRADE_TIME = 11
 
-        #: UNKNOWN
-        FIELD_12 = 12
+        #: Day's high trade price
+        HIGH_PRICE = 12
 
-        #: UNKNOWN
-        FIELD_13 = 13
+        #: Day's low trade price
+        LOW_PRICE = 13
 
-        #: UNKNOWN
-        FIELD_14 = 14
+        #: Previous day's closing price
+        CLOSE_PRICE = 14
 
-        #: UNKNOWN
-        FIELD_15 = 15
+        #: Exchange where last trade was executed
+        LAST_ID = 15
 
-        #: UNKNOWN
-        FIELD_16 = 16
+        #: Description of the product
+        DESCRIPTION = 16
 
-        #: UNKNOWN
-        FIELD_17 = 17
+        #: Day's Open Price
+        OPEN_PRICE = 17
 
-        #: UNKNOWN
-        FIELD_18 = 18
+        #: Open Interest
+        OPEN_INTEREST = 18
 
-        #: UNKNOWN
-        FIELD_19 = 19
+        #: Mark-to-Market value is calculated daily using current prices to determine profit/loss
+        MARK = 19
 
-        #: UNKNOWN
-        FIELD_20 = 20
+        #: Minimum price movement
+        TICK = 20
 
-        #: UNKNOWN
-        FIELD_21 = 21
+        #: Minimum amount that the price of the market can change
+        TICK_AMOUNT = 21
 
-        #: UNKNOWN
-        FIELD_22 = 22
+        #: Point value
+        FUTURE_MULTIPLIER = 22
 
-        #: UNKNOWN
-        FIELD_23 = 23
+        #: Closing price
+        FUTURE_SETTLEMENT_PRICE = 23
 
-        #: UNKNOWN
-        FIELD_24 = 24
+        #: Underlying symbol
+        UNDERLYING_SYMBOL = 24
 
-        #: UNKNOWN
-        FIELD_25 = 25
+        #: Strike Price
+        STRIKE_PRICE = 25
 
-        #: UNKNOWN
-        FIELD_26 = 26
+        #: Expiration date of this contract
+        FUTURE_EXPIRATION_DATE = 26
 
-        #: UNKNOWN
-        FIELD_27 = 27
+        #: Expiration Style
+        EXPIRATION_STYLE = 27
 
-        #: UNKNOWN
-        FIELD_28 = 28
+        #: Contract Type
+        CONTRACT_TYPE = 28
 
-        #: UNKNOWN
-        FIELD_29 = 29
+        #: Security Status
+        SECURITY_STATUS = 29
 
-        #: UNKNOWN
-        FIELD_30 = 30
+        #: Exchange character
+        EXCHANGE_ID = 30
 
-        #: UNKNOWN
-        FIELD_31 = 31
-
-        #: UNKNOWN
-        FIELD_32 = 32
-
-        #: UNKNOWN
-        FIELD_33 = 33
-
-        #: UNKNOWN
-        FIELD_34 = 34
-
-        #: UNKNOWN
-        FIELD_35 = 35
+        #: Display name of exchange
+        EXCHANGE_NAME = 31
 
     async def level_one_futures_options_subs(self, symbols, *, fields=None):
         '''
@@ -1453,8 +1457,8 @@ class StreamClient(EnumEnforcer):
                        representing the fields to return in streaming entries.
                        If unset, all fields will be requested.
         '''
-        if fields and self.LevelOneFuturesOptionsFields.FIELD_0 not in fields:
-            fields.append(self.LevelOneFuturesOptionsFields.FIELD_0)
+        if fields and self.LevelOneFuturesOptionsFields.SYMBOL not in fields:
+            fields.append(self.LevelOneFuturesOptionsFields.SYMBOL)
         await self._service_op(
             symbols, 'LEVELONE_FUTURES_OPTIONS', 'SUBS',
             self.LevelOneFuturesOptionsFields, fields=fields)
@@ -1671,30 +1675,30 @@ class StreamClient(EnumEnforcer):
             return new_msg
 
     ##########################################################################
-    # LISTED_BOOK
+    # NYSE_BOOK
 
-    async def listed_book_subs(self, symbols):
+    async def nyse_book_subs(self, symbols):
         '''
         Subscribe to the NYSE level two order book. Note this stream has no
         official documentation.
         '''
         await self._service_op(
-            symbols, 'LISTED_BOOK', 'SUBS',
+            symbols, 'NYSE_BOOK', 'SUBS',
             self.BookFields, fields=self.BookFields.all_fields())
 
-    async def listed_book_unsubs(self, symbols):
+    async def nyse_book_unsubs(self, symbols):
         '''
         Un-Subscribe to the NYSE level two order book. Note this stream has no
         official documentation.
         '''
-        await self._service_op(symbols, 'LISTED_BOOK', 'UNSUBS')
+        await self._service_op(symbols, 'NYSE_BOOK', 'UNSUBS')
 
-    def add_listed_book_handler(self, handler):
+    def add_nyse_book_handler(self, handler):
         '''
         Register a function to handle level two NYSE book data as it is updated
         See :ref:`registering_handlers` for details.
         '''
-        self._handlers['LISTED_BOOK'].append(
+        self._handlers['NYSE_BOOK'].append(
             self._BookHandler(handler, self.BookFields))
 
     ##########################################################################
