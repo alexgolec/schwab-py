@@ -197,6 +197,7 @@ class BaseClient(EnumEnforcer):
             :meth:`get_orders_for_all_linked_accounts`'''
             AWAITING_PARENT_ORDER = 'AWAITING_PARENT_ORDER'
             AWAITING_CONDITION = 'AWAITING_CONDITION'
+            AWAITING_STOP_CONDITION = 'AWAITING_STOP_CONDITION'
             AWAITING_MANUAL_REVIEW = 'AWAITING_MANUAL_REVIEW'
             ACCEPTED = 'ACCEPTED'
             AWAITING_UR_OUT = 'AWAITING_UR_OUT'
@@ -210,6 +211,11 @@ class BaseClient(EnumEnforcer):
             REPLACED = 'REPLACED'
             FILLED = 'FILLED'
             EXPIRED = 'EXPIRED'
+            NEW = 'NEW'
+            AWAITING_RELEASE_TIME = 'AWAITING_RELEASE_TIME'
+            PENDING_ACKNOWLEDGEMENT = 'PENDING_ACKNOWLEDGEMENT'
+            PENDING_RECALL = 'PENDING_RECALL'
+            UNKNOWN = 'UNKNOWN'
 
     def _make_order_query(self,
                           *,
