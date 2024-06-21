@@ -419,9 +419,9 @@ book is called "listed." Testing indicates this stream corresponds to the NYSE
 book, but if you find any behavior that suggests otherwise please
 `let us know <https://github.com/alexgolec/schwab-api/issues>`__.
 
-.. automethod:: schwab.streaming::StreamClient.listed_book_subs
-.. automethod:: schwab.streaming::StreamClient.listed_book_unsubs
-.. automethod:: schwab.streaming::StreamClient.add_listed_book_handler
+.. automethod:: schwab.streaming::StreamClient.nyse_book_subs
+.. automethod:: schwab.streaming::StreamClient.nyse_book_unsubs
+.. automethod:: schwab.streaming::StreamClient.add_nyse_book_handler
 
 .. automethod:: schwab.streaming::StreamClient.nasdaq_book_subs
 .. automethod:: schwab.streaming::StreamClient.nasdaq_book_unsubs
