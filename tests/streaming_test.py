@@ -364,6 +364,44 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
 
     ##########################################################################
+    # Logout
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_logout_success(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            1, 'ADMIN', 'LOGOUT'))]
+
+        await self.client.logout()
+
+        socket.send.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'ADMIN',
+            'command': 'LOGOUT',
+            'requestid': '1',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {}
+        })
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_logout_failure(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        response = self.success_response(1, 'ADMIN', 'LOGOUT')
+        response['response'][0]['content']['code'] = 9
+        socket.recv.side_effect = [json.dumps(response)]
+
+        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
+            await self.client.logout()
+
+
+    ##########################################################################
     # ACCT_ACTIVITY
 
     @no_duplicates
@@ -987,7 +1025,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_equity_subs_success_all_fields(self, ws_connect):
+    async def test_level_one_equity_subs_and_add_success_all_fields(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
         socket.recv.side_effect = [json.dumps(self.success_response(
@@ -1005,6 +1043,29 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             'SchwabClientCorrelId': self.pref_correl_id,
             'parameters': {
                 'keys': 'GOOG,MSFT',
+                'fields': ('0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,' +
+                           '20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,' +
+                           '36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51')
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_EQUITIES', 'ADD'))]
+
+        await self.client.level_one_equity_add(['INTC'])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_EQUITIES',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': self.pref_customer_id,
+            'SchwabClientCorrelId': self.pref_correl_id,
+            'parameters': {
+                'keys': 'INTC',
                 'fields': ('0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,' +
                            '20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,' +
                            '36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51')
@@ -1072,7 +1133,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_equity_subs_success_some_fields(self, ws_connect):
+    async def test_level_one_equity_subs_and_add_success_some_fields(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
         socket.recv.side_effect = [json.dumps(self.success_response(
@@ -1099,9 +1160,35 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             }
         })
 
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_EQUITIES', 'ADD'))]
+
+        await self.client.level_one_equity_add(['INTC'], fields=[
+            StreamClient.LevelOneEquityFields.SYMBOL,
+            StreamClient.LevelOneEquityFields.BID_PRICE,
+            StreamClient.LevelOneEquityFields.ASK_PRICE,
+            StreamClient.LevelOneEquityFields.LOW_PRICE,
+        ])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_EQUITIES',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': 'INTC',
+                'fields': '0,1,2,11'
+            }
+        })
+
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_equity_subs_success_some_fields_no_symbol(
+    async def test_level_one_equity_subs_and_add_success_some_fields_no_symbol(
             self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
@@ -1124,6 +1211,31 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
             'parameters': {
                 'keys': 'GOOG,MSFT',
+                'fields': '0,1,2,11'
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_EQUITIES', 'ADD'))]
+
+        await self.client.level_one_equity_add(['INTC'], fields=[
+            StreamClient.LevelOneEquityFields.BID_PRICE,
+            StreamClient.LevelOneEquityFields.ASK_PRICE,
+            StreamClient.LevelOneEquityFields.LOW_PRICE,
+        ])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_EQUITIES',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': 'INTC',
                 'fields': '0,1,2,11'
             }
         })
@@ -1151,6 +1263,18 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
         with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
             await self.client.level_one_equity_unsubs(['GOOG', 'MSFT'])
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_level_one_equity_add_failure(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        response = self.success_response(1, 'LEVELONE_EQUITIES', 'ADD')
+        response['response'][0]['content']['code'] = 21
+        socket.recv.side_effect = [json.dumps(response)]
+
+        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
+            await self.client.level_one_equity_add(['GOOG', 'MSFT'])
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
@@ -1426,7 +1550,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_option_subs_success_all_fields(self, ws_connect):
+    async def test_level_one_option_subs_and_add_success_all_fields(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
         socket.recv.side_effect = [json.dumps(self.success_response(
@@ -1445,6 +1569,30 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
             'parameters': {
                 'keys': 'GOOG  240517C00070000,MSFT  240517C00160000',
+                'fields': ('0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,' +
+                           '20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,' +
+                           '36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,' +
+                           '52,53,54,55')
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_OPTIONS', 'ADD'))]
+
+        await self.client.level_one_option_add(['ADBE  240614C00500000'])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_OPTIONS',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': 'ADBE  240614C00500000',
                 'fields': ('0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,' +
                            '20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,' +
                            '36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,' +
@@ -1519,7 +1667,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_option_subs_success_some_fields(self, ws_connect):
+    async def test_level_one_option_subs_and_add_success_some_fields(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
         socket.recv.side_effect = [json.dumps(self.success_response(
@@ -1547,9 +1695,36 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             }
         })
 
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_OPTIONS', 'ADD'))]
+
+        await self.client.level_one_option_add(
+            ['ADBE  240614C00500000'], fields=[
+                StreamClient.LevelOneOptionFields.SYMBOL,
+                StreamClient.LevelOneOptionFields.BID_PRICE,
+                StreamClient.LevelOneOptionFields.ASK_PRICE,
+                StreamClient.LevelOneOptionFields.VOLATILITY,
+            ])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_OPTIONS',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': 'ADBE  240614C00500000',
+                'fields': '0,2,3,10'
+            }
+        })
+
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_option_subs_success_some_fields_no_symbol(
+    async def test_level_one_option_subs_and_add_success_some_fields_no_symbol(
             self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
@@ -1573,6 +1748,32 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
             'parameters': {
                 'keys': 'GOOG  240517C00070000,MSFT  240517C00160000',
+                'fields': '0,2,3,10'
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_OPTIONS', 'ADD'))]
+
+        await self.client.level_one_option_add(
+            ['ADBE  240614C00500000'], fields=[
+                StreamClient.LevelOneOptionFields.BID_PRICE,
+                StreamClient.LevelOneOptionFields.ASK_PRICE,
+                StreamClient.LevelOneOptionFields.VOLATILITY,
+            ])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_OPTIONS',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': 'ADBE  240614C00500000',
                 'fields': '0,2,3,10'
             }
         })
@@ -1602,6 +1803,18 @@ class StreamClientTest(IsolatedAsyncioTestCase):
         with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
             await self.client.level_one_option_unsubs(
                 ['GOOG  240517C00070000', 'MSFT  240517C00160000'])
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_level_one_option_add_failure(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        response = self.success_response(1, 'LEVELONE_OPTIONS', 'ADD')
+        response['response'][0]['content']['code'] = 21
+        socket.recv.side_effect = [json.dumps(response)]
+
+        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
+            await self.client.level_one_option_add(['ADBE  240614C00500000'])
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
@@ -1890,7 +2103,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_futures_subs_success_all_fields(self, ws_connect):
+    async def test_level_one_futures_subs_and_add_success_all_fields(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
         socket.recv.side_effect = [json.dumps(self.success_response(
@@ -1910,6 +2123,29 @@ class StreamClientTest(IsolatedAsyncioTestCase):
                 'keys': '/ES,/CL',
                 'fields': ('0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,' +
                            '20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40')
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_FUTURES', 'ADD'))]
+
+        await self.client.level_one_futures_add(['/NQ'])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_FUTURES',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': '/NQ',
+                'fields': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,' +
+                '17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,' +
+                '34,35,36,37,38,39,40'
             }
         })
 
@@ -1971,7 +2207,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_futures_subs_success_some_fields(self, ws_connect):
+    async def test_level_one_futures_subs_and_add_success_some_fields(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
         socket.recv.side_effect = [json.dumps(self.success_response(
@@ -1998,9 +2234,35 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             }
         })
 
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_FUTURES', 'ADD'))]
+
+        await self.client.level_one_futures_add(['/NQ'], fields=[
+            StreamClient.LevelOneFuturesFields.SYMBOL,
+            StreamClient.LevelOneFuturesFields.BID_PRICE,
+            StreamClient.LevelOneFuturesFields.ASK_PRICE,
+            StreamClient.LevelOneFuturesFields.FUTURE_PRICE_FORMAT,
+        ])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_FUTURES',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': '/NQ',
+                'fields': '0,1,2,28'
+            }
+        })
+
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_futures_subs_success_some_fields_no_symbol(
+    async def test_level_one_futures_subs_and_add_success_some_fields_no_symbol(
             self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
@@ -2023,6 +2285,31 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
             'parameters': {
                 'keys': '/ES,/CL',
+                'fields': '0,1,2,28'
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_FUTURES', 'ADD'))]
+
+        await self.client.level_one_futures_add(['/NQ'], fields=[
+            StreamClient.LevelOneFuturesFields.BID_PRICE,
+            StreamClient.LevelOneFuturesFields.ASK_PRICE,
+            StreamClient.LevelOneFuturesFields.FUTURE_PRICE_FORMAT,
+        ])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_FUTURES',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': '/NQ',
                 'fields': '0,1,2,28'
             }
         })
@@ -2050,6 +2337,18 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
         with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
             await self.client.level_one_futures_unsubs(['/ES', '/CL'])
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_level_one_futures_add_failure(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        response = self.success_response(1, 'LEVELONE_FUTURES', 'ADD')
+        response['response'][0]['content']['code'] = 21
+        socket.recv.side_effect = [json.dumps(response)]
+
+        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
+            await self.client.level_one_futures_add(['/NQ'])
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
@@ -2271,7 +2570,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_forex_subs_success_all_fields(self, ws_connect):
+    async def test_level_one_forex_subs_and_add_success_all_fields(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
         socket.recv.side_effect = [json.dumps(self.success_response(
@@ -2289,6 +2588,28 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
             'parameters': {
                 'keys': 'EUR/USD,EUR/GBP',
+                'fields': ('0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,' +
+                           '20,21,22,23,24,25,26,27,28,29')
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_FOREX', 'ADD'))]
+
+        await self.client.level_one_forex_add(['JPY/USD'])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_FOREX',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': 'JPY/USD',
                 'fields': ('0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,' +
                            '20,21,22,23,24,25,26,27,28,29')
             }
@@ -2351,7 +2672,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_forex_subs_success_some_fields(self, ws_connect):
+    async def test_level_one_forex_subs_and_add_success_some_fields(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
         socket.recv.side_effect = [json.dumps(self.success_response(
@@ -2378,9 +2699,35 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             }
         })
 
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_FOREX', 'ADD'))]
+
+        await self.client.level_one_forex_add(['JPY/USD'], fields=[
+            StreamClient.LevelOneForexFields.SYMBOL,
+            StreamClient.LevelOneForexFields.HIGH_PRICE,
+            StreamClient.LevelOneForexFields.LOW_PRICE,
+            StreamClient.LevelOneForexFields.MARKET_MAKER,
+        ])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_FOREX',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': 'JPY/USD',
+                'fields': '0,10,11,26'
+            }
+        })
+
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_forex_subs_success_some_fields_no_symbol(
+    async def test_level_one_forex_subs_and_add_success_some_fields_no_symbol(
             self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
@@ -2403,6 +2750,31 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
             'parameters': {
                 'keys': 'EUR/USD,EUR/GBP',
+                'fields': '0,10,11,26'
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_FOREX', 'ADD'))]
+
+        await self.client.level_one_forex_add(['JPY/USD'], fields=[
+            StreamClient.LevelOneForexFields.HIGH_PRICE,
+            StreamClient.LevelOneForexFields.LOW_PRICE,
+            StreamClient.LevelOneForexFields.MARKET_MAKER,
+        ])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_FOREX',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': 'JPY/USD',
                 'fields': '0,10,11,26'
             }
         })
@@ -2430,6 +2802,18 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
         with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
             await self.client.level_one_forex_unsubs(['EUR/USD', 'EUR/GBP'])
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_level_one_forex_add_failure(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        response = self.success_response(1, 'LEVELONE_FOREX', 'ADD')
+        response['response'][0]['content']['code'] = 21
+        socket.recv.side_effect = [json.dumps(response)]
+
+        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
+            await self.client.level_one_forex_add(['JPY/USD'])
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
@@ -2604,7 +2988,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_futures_options_subs_success_all_fields(
+    async def test_level_one_futures_options_subs_and_add_success_all_fields(
             self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
@@ -2624,6 +3008,28 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
             'parameters': {
                 'keys': './E3DM24P5490,./Q3DM24C19960',
+                'fields': ('0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,' +
+                           '19,20,21,22,23,24,25,26,27,28,29,30,31')
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_FUTURES_OPTIONS', 'ADD'))]
+
+        await self.client.level_one_futures_options_add(['./OYMM24P38550'])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_FUTURES_OPTIONS',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': './OYMM24P38550',
                 'fields': ('0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,' +
                            '19,20,21,22,23,24,25,26,27,28,29,30,31')
             }
@@ -2693,7 +3099,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_futures_options_subs_success_some_fields(
+    async def test_level_one_futures_options_subs_and_add_success_some_fields(
             self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
@@ -2722,9 +3128,36 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             }
         })
 
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_FUTURES_OPTIONS', 'ADD'))]
+
+        await self.client.level_one_futures_options_add(
+            ['./OYMM24P38550'], fields=[
+                StreamClient.LevelOneFuturesOptionsFields.SYMBOL,
+                StreamClient.LevelOneFuturesOptionsFields.BID_SIZE,
+                StreamClient.LevelOneFuturesOptionsFields.ASK_SIZE,
+                StreamClient.LevelOneFuturesOptionsFields.CONTRACT_TYPE,
+            ])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_FUTURES_OPTIONS',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': './OYMM24P38550',
+                'fields': '0,4,5,28'
+            }
+        })
+
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_futures_options_subs_success_some_fields_no_symol(
+    async def test_level_one_futures_options_subs_and_add_success_some_fields_no_symbol(
             self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
@@ -2748,6 +3181,32 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
             'parameters': {
                 'keys': './E3DM24P5490,./Q3DM24C19960',
+                'fields': '0,4,5,28'
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_FUTURES_OPTIONS', 'ADD'))]
+
+        await self.client.level_one_futures_options_add(
+            ['./OYMM24P38550'], fields=[
+                StreamClient.LevelOneFuturesOptionsFields.BID_SIZE,
+                StreamClient.LevelOneFuturesOptionsFields.ASK_SIZE,
+                StreamClient.LevelOneFuturesOptionsFields.CONTRACT_TYPE,
+            ])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_FUTURES_OPTIONS',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': './OYMM24P38550',
                 'fields': '0,4,5,28'
             }
         })
@@ -2777,6 +3236,18 @@ class StreamClientTest(IsolatedAsyncioTestCase):
         with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
             await self.client.level_one_futures_options_unsubs(
                 ['./E3DM24P5490', './Q3DM24C19960'])
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_level_one_futures_options_add_failure(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        response = self.success_response(1, 'LEVELONE_FUTURES_OPTIONS', 'ADD')
+        response['response'][0]['content']['code'] = 21
+        socket.recv.side_effect = [json.dumps(response)]
+
+        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
+            await self.client.level_one_futures_options_add(['./OYMM24P38550'])
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
@@ -2960,7 +3431,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_nyse_book_subs_success_all_fields(self, ws_connect):
+    async def test_nyse_book_subs_success_and_add_all_fields(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
         socket.recv.side_effect = [json.dumps(self.success_response(
@@ -2978,6 +3449,27 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
             'parameters': {
                 'keys': 'GOOG,MSFT',
+                'fields': '0,1,2,3'
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'NYSE_BOOK', 'ADD'))]
+
+        await self.client.nyse_book_add(['INTC'])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'NYSE_BOOK',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': 'INTC',
                 'fields': '0,1,2,3'
             }
         })
@@ -3066,12 +3558,24 @@ class StreamClientTest(IsolatedAsyncioTestCase):
         with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
             await self.client.nyse_book_unsubs(['GOOG', 'MSFT'])
 
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_nyse_book_add_failure(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        response = self.success_response(1, 'NYSE_BOOK', 'ADD')
+        response['response'][0]['content']['code'] = 21
+        socket.recv.side_effect = [json.dumps(response)]
+
+        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
+            await self.client.nyse_book_add(['INTC'])
+
     ##########################################################################
     # NASDAQ_BOOK
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_nasdaq_book_subs_success_all_fields(self, ws_connect):
+    async def test_nasdaq_book_subs_success_and_add_all_fields(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
         socket.recv.side_effect = [json.dumps(self.success_response(
@@ -3090,6 +3594,27 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             'parameters': {
                 'keys': 'GOOG,MSFT',
                 'fields': ('0,1,2,3')
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'NASDAQ_BOOK', 'ADD'))]
+
+        await self.client.nasdaq_book_add(['INTC'])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'NASDAQ_BOOK',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': 'INTC',
+                'fields': '0,1,2,3'
             }
         })
 
@@ -3177,12 +3702,24 @@ class StreamClientTest(IsolatedAsyncioTestCase):
         with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
             await self.client.nasdaq_book_unsubs(['GOOG', 'MSFT'])
 
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_nasdaq_book_add_failure(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        response = self.success_response(1, 'NASDAQ_BOOK', 'ADD')
+        response['response'][0]['content']['code'] = 21
+        socket.recv.side_effect = [json.dumps(response)]
+
+        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
+            await self.client.nasdaq_book_add(['INTC'])
+
     ##########################################################################
     # OPTIONS_BOOK
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_options_book_subs_success_all_fields(self, ws_connect):
+    async def test_options_book_subs_and_add_success_all_fields(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
         socket.recv.side_effect = [json.dumps(self.success_response(
@@ -3201,6 +3738,27 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
             'parameters': {
                 'keys': 'GOOG  240517C00070000,MSFT  240517C00160000',
+                'fields': '0,1,2,3'
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'OPTIONS_BOOK', 'ADD'))]
+
+        await self.client.options_book_add(['ADBE  240614C00500000'])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'OPTIONS_BOOK',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': 'ADBE  240614C00500000',
                 'fields': '0,1,2,3'
             }
         })
@@ -3292,6 +3850,18 @@ class StreamClientTest(IsolatedAsyncioTestCase):
         with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
             await self.client.options_book_unsubs(
                 ['GOOG  240517C00070000', 'MSFT  240517C00160000'])
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_options_book_add_failure(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        response = self.success_response(1, 'OPTIONS_BOOK', 'ADD')
+        response['response'][0]['content']['code'] = 21
+        socket.recv.side_effect = [json.dumps(response)]
+
+        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
+            await self.client.options_book_add(['ADBE  240614C00500000'])
 
     ##########################################################################
     # Common book handler functionality

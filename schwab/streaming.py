@@ -391,6 +391,22 @@ class StreamClient(EnumEnforcer):
             await self._await_response(request_id, 'ADMIN', 'LOGIN')
 
     ##########################################################################
+    # LOGOUT
+
+    async def logout(self):
+        '''
+        Performs a logout operation on the stream. After this method is called,
+        no further stream operations are possible. The client must be
+        re-initialized with :meth:`login` to perform further operations.
+        '''
+        request, request_id = self._make_request(
+            service='ADMIN', command='LOGOUT',
+            parameters={})
+        async with self._lock:
+            await self._send({'requests': [request]})
+            await self._await_response(request_id, 'ADMIN', 'LOGOUT')
+
+    ##########################################################################
     # ACCT_ACTIVITY
 
     class AccountActivityFields(_BaseFieldEnum):
@@ -811,6 +827,24 @@ class StreamClient(EnumEnforcer):
 
         await self._service_op(symbols, 'LEVELONE_EQUITIES', 'UNSUBS')
 
+    async def level_one_equity_add(self, symbols, *, fields=None):
+        '''
+        `Official documentation <https://developer.tdameritrade.com/content/
+        streaming-data#_Toc504640599>`__
+
+        Add symbols to the list to receive quotes for.
+
+        :param symbols: Equity symbols to receive quotes for
+        :param fields: Iterable of :class:`LevelOneEquityFields` representing
+                       the fields to return in streaming entries. If unset, all
+                       fields will be requested.
+        '''
+        if fields and self.LevelOneEquityFields.SYMBOL not in fields:
+            fields.append(self.LevelOneEquityFields.SYMBOL)
+        await self._service_op(
+            symbols, 'LEVELONE_EQUITIES', 'ADD',
+            self.LevelOneEquityFields, fields=fields)
+
     def add_level_one_equity_handler(self, handler):
         '''
         Register a function to handle level one equity quotes as they are sent.
@@ -1025,6 +1059,24 @@ class StreamClient(EnumEnforcer):
         '''
         await self._service_op(symbols, 'LEVELONE_OPTIONS', 'UNSUBS')
 
+    async def level_one_option_add(self, symbols, *, fields=None):
+        '''
+        `Official documentation <https://developer.tdameritrade.com/content/
+        streaming-data#_Toc504640602>`__
+
+        Add symbols to the list to receive quotes for.
+
+        :param symbols: Option symbols to add to list to receive quotes for
+        :param fields: Iterable of :class:`LevelOneOptionFields` representing
+                       the fields to return in streaming entries. If unset, all
+                       fields will be requested.
+        '''
+        if fields and self.LevelOneOptionFields.SYMBOL not in fields:
+            fields.append(self.LevelOneOptionFields.SYMBOL)
+        await self._service_op(
+            symbols, 'LEVELONE_OPTIONS', 'ADD',
+            self.LevelOneOptionFields, fields=fields)
+
     def add_level_one_option_handler(self, handler):
         '''
         Register a function to handle level one options quotes as they are sent.
@@ -1195,6 +1247,24 @@ class StreamClient(EnumEnforcer):
 
         await self._service_op(symbols, 'LEVELONE_FUTURES', 'UNSUBS')
 
+    async def level_one_futures_add(self, symbols, *, fields=None):
+        '''
+        `Official documentation <https://developer.tdameritrade.com/content/
+        streaming-data#_Toc504640604>`__
+
+        Add symbols to the list to receive quotes for.
+
+        :param symbols: Futures symbols to add to the list to receive quotes for
+        :param fields: Iterable of :class:`LevelOneFuturesFields` representing
+                       the fields to return in streaming entries. If unset, all
+                       fields will be requested.
+        '''
+        if fields and self.LevelOneFuturesFields.SYMBOL not in fields:
+            fields.append(self.LevelOneFuturesFields.SYMBOL)
+        await self._service_op(
+            symbols, 'LEVELONE_FUTURES', 'ADD',
+            self.LevelOneFuturesFields, fields=fields)
+
     def add_level_one_futures_handler(self, handler):
         '''
         Register a function to handle level one futures quotes as they are sent.
@@ -1331,6 +1401,25 @@ class StreamClient(EnumEnforcer):
         '''
 
         await self._service_op(symbols, 'LEVELONE_FOREX', 'UNSUBS')
+
+    async def level_one_forex_add(self, symbols, *, fields=None):
+        '''
+        `Official documentation <https://developer.tdameritrade.com/content/
+        streaming-data#_Toc504640606>`__
+
+        Add symbols to the list to receive quotes for.
+
+        :param symbols: Forex symbols to add to list to receive quotes for
+        :param fields: Iterable of :class:`LevelOneForexFields` representing
+                       the fields to return in streaming entries. If unset, all
+                       fields will be requested.
+
+        '''
+        if fields and self.LevelOneForexFields.SYMBOL not in fields:
+            fields.append(self.LevelOneForexFields.SYMBOL)
+        await self._service_op(
+            symbols, 'LEVELONE_FOREX', 'ADD',
+            self.LevelOneForexFields, fields=fields)
 
     def add_level_one_forex_handler(self, handler):
         '''
@@ -1475,6 +1564,24 @@ class StreamClient(EnumEnforcer):
 
         await self._service_op(symbols, 'LEVELONE_FUTURES_OPTIONS', 'UNSUBS')
 
+    async def level_one_futures_options_add(self, symbols, *, fields=None):
+        '''
+        `Official documentation <https://developer.tdameritrade.com/content/
+        streaming-data#_Toc504640610>`__
+
+        Add symbols to the list to receive quotes for.
+
+        :param symbols: Futures options symbols add to list to receive quotes for
+        :param fields: Iterable of :class:`LevelOneFuturesOptionsFields`
+                       representing the fields to return in streaming entries.
+                       If unset, all fields will be requested.
+        '''
+        if fields and self.LevelOneFuturesOptionsFields.SYMBOL not in fields:
+            fields.append(self.LevelOneFuturesOptionsFields.SYMBOL)
+        await self._service_op(
+            symbols, 'LEVELONE_FUTURES_OPTIONS', 'ADD',
+            self.LevelOneFuturesOptionsFields, fields=fields)
+
     def add_level_one_futures_options_handler(self, handler):
         '''
         Register a function to handle level one futures options quotes as they
@@ -1550,8 +1657,9 @@ class StreamClient(EnumEnforcer):
 
     async def nyse_book_subs(self, symbols):
         '''
-        Subscribe to the NYSE level two order book. Note this stream has no
-        official documentation.
+        Subscribe to the NYSE level two order book.
+
+        :param symbols: NYSE symbols to subscribe to.
         '''
         await self._service_op(
             symbols, 'NYSE_BOOK', 'SUBS',
@@ -1559,10 +1667,19 @@ class StreamClient(EnumEnforcer):
 
     async def nyse_book_unsubs(self, symbols):
         '''
-        Un-Subscribe to the NYSE level two order book. Note this stream has no
-        official documentation.
+        Un-Subscribe to the NYSE level two order book.
+
+        :param symbols: NYSE symbols to unsubscribe from.
         '''
         await self._service_op(symbols, 'NYSE_BOOK', 'UNSUBS')
+
+    async def nyse_book_add(self, symbols):
+        '''
+        Add to the NYSE level two order book.
+
+        :param symbols: NYSE symbols to add to the subscription.
+        '''
+        await self._service_op(symbols, 'NYSE_BOOK', 'ADD', self.BookFields)
 
     def add_nyse_book_handler(self, handler):
         '''
@@ -1577,8 +1694,9 @@ class StreamClient(EnumEnforcer):
 
     async def nasdaq_book_subs(self, symbols):
         '''
-        Subscribe to the NASDAQ level two order book. Note this stream has no
-        official documentation.
+        Subscribe to the NASDAQ level two order book.
+
+        :param symbols: NASDAQ symbols to subscribe to.
         '''
         await self._service_op(symbols, 'NASDAQ_BOOK', 'SUBS',
                                self.BookFields,
@@ -1586,10 +1704,19 @@ class StreamClient(EnumEnforcer):
 
     async def nasdaq_book_unsubs(self, symbols):
         '''
-        Un-Subscribe to the NASDAQ level two order book. Note this stream has no
-        official documentation.
+        Un-Subscribe to the NASDAQ level two order book.
+
+        :param symbols: NASDAQ symbols to unsubscribe from.
         '''
         await self._service_op(symbols, 'NASDAQ_BOOK', 'UNSUBS')
+
+    async def nasdaq_book_add(self, symbols):
+        '''
+        Add to the NASDAQ level two order book.
+
+        :param symbols: NASDAQ symbols to add to the subscription.
+        '''
+        await self._service_op(symbols, 'NASDAQ_BOOK', 'ADD', self.BookFields)
 
     def add_nasdaq_book_handler(self, handler):
         '''
@@ -1604,9 +1731,9 @@ class StreamClient(EnumEnforcer):
 
     async def options_book_subs(self, symbols):
         '''
-        Subscribe to the level two order book for options. Note this stream has no
-        official documentation, and it's not entirely clear what exchange it
-        corresponds to. Use at your own risk.
+        Subscribe to the level two order book for options.
+
+        :param symbols: Option symbols to subscribe to.
         '''
         await self._service_op(symbols, 'OPTIONS_BOOK', 'SUBS',
                                self.BookFields,
@@ -1614,11 +1741,19 @@ class StreamClient(EnumEnforcer):
 
     async def options_book_unsubs(self, symbols):
         '''
-        Un-Subscribe to the level two order book for options. Note this stream has no
-        official documentation, and it's not entirely clear what exchange it
-        corresponds to. Use at your own risk.
+        Un-Subscribe to the level two order book for options.
+
+        :param symbols: Option symbols to unsubscribe from.
         '''
         await self._service_op(symbols, 'OPTIONS_BOOK', 'UNSUBS')
+
+    async def options_book_add(self, symbols):
+        '''
+        Add to the level two order book for options.
+
+        :param symbols: Option symbols to add to the subscription.
+        '''
+        await self._service_op(symbols, 'OPTIONS_BOOK', 'ADD', self.BookFields)
 
     def add_options_book_handler(self, handler):
         '''

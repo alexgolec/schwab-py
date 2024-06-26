@@ -76,6 +76,15 @@ exception.
 .. automethod:: schwab.streaming.StreamClient.login
 
 
+----------
+Logging In
+----------
+
+For a clean exit, it's recommended to log out of the stream when you're done.
+
+.. automethod:: schwab.streaming.StreamClient.logout
+
+
 ----------------------
 Subscribing to Streams
 ----------------------
@@ -96,14 +105,24 @@ subscription methods again seems to clear the old subscription and create a new
 one. Note this behavior is not officially documented, so this interpretation may 
 be incorrect.
 
+
+----------------------
+Add symbols to Streams
+----------------------
+
+These functions have names that follow the pattern ``SERVICE_NAME_add``.
+These functions send a request to add to the list of subscribed symbols for a
+particular data stream.
+
+
 -------------------------
 Un-Subscribing to Streams
 -------------------------
 
-These functions have names that follow the pattern ``SERVICE_NAME_unsubs``.  
-These functions send a request to disable the symbols of a streaming data for a 
-particular data stream. They are *not* thread safe, so they should only be 
-called in series. When unsubscribing to services with symbols, symbols which 
+These functions have names that follow the pattern ``SERVICE_NAME_unsubs``.
+These functions send a request to disable the symbols of a streaming data for a
+particular data stream. They are *not* thread safe, so they should only be
+called in series. When unsubscribing to services with symbols, symbols which
 were not explicitly unsubscribed remain subscribed.
 
 
@@ -224,11 +243,14 @@ to our `Discord server <https://discord.gg/BEr6y6Xqyv>`__. We'll be updating
 this page as we discover new things.
 
 The following streams are confirmed working:
- * :ref:`equity_charts`
- * :ref:`level_one_quotes_stream`
- * :ref:`level_one_option_stream`
+ * :ref:`charts`
+ * :ref:`level_one`
  * :ref:`level_two`
+ * :ref:`screener`
+ * :ref:`account_activity`
 
+
+.. _charts:
 
 ++++++++++++
 OHLCV Charts
@@ -293,6 +315,7 @@ Level one quotes for equities traded on NYSE, AMEX, and PACIFIC.
 
 .. automethod:: schwab.streaming::StreamClient.level_one_equity_subs
 .. automethod:: schwab.streaming::StreamClient.level_one_equity_unsubs
+.. automethod:: schwab.streaming::StreamClient.level_one_equity_add
 .. automethod:: schwab.streaming::StreamClient.add_level_one_equity_handler
 .. autoclass:: schwab.streaming::StreamClient.LevelOneEquityFields
   :members:
@@ -311,11 +334,14 @@ available option symbols.
 
 .. automethod:: schwab.streaming::StreamClient.level_one_option_subs
 .. automethod:: schwab.streaming::StreamClient.level_one_option_unsubs
+.. automethod:: schwab.streaming::StreamClient.level_one_option_add
 .. automethod:: schwab.streaming::StreamClient.add_level_one_option_handler
 .. autoclass:: schwab.streaming::StreamClient.LevelOneOptionFields
   :members:
   :undoc-members:
 
+
+.. _level_one_futures_stream:
 
 --------------
 Futures Quotes
@@ -325,25 +351,14 @@ Level one quotes for futures.
 
 .. automethod:: schwab.streaming::StreamClient.level_one_futures_subs
 .. automethod:: schwab.streaming::StreamClient.level_one_futures_unsubs
+.. automethod:: schwab.streaming::StreamClient.level_one_futures_add
 .. automethod:: schwab.streaming::StreamClient.add_level_one_futures_handler
 .. autoclass:: schwab.streaming::StreamClient.LevelOneFuturesFields
   :members:
   :undoc-members:
 
 
-------------
-Forex Quotes
-------------
-
-Level one quotes for foreign exchange pairs.
-
-.. automethod:: schwab.streaming::StreamClient.level_one_forex_subs
-.. automethod:: schwab.streaming::StreamClient.level_one_forex_unsubs
-.. automethod:: schwab.streaming::StreamClient.add_level_one_forex_handler
-.. autoclass:: schwab.streaming::StreamClient.LevelOneForexFields
-  :members:
-  :undoc-members:
-
+.. _level_one_futures_options_stream:
 
 ----------------------
 Futures Options Quotes
@@ -353,8 +368,26 @@ Level one quotes for futures options.
 
 .. automethod:: schwab.streaming::StreamClient.level_one_futures_options_subs
 .. automethod:: schwab.streaming::StreamClient.level_one_futures_options_unsubs
+.. automethod:: schwab.streaming::StreamClient.level_one_futures_options_add
 .. automethod:: schwab.streaming::StreamClient.add_level_one_futures_options_handler
 .. autoclass:: schwab.streaming::StreamClient.LevelOneFuturesOptionsFields
+  :members:
+  :undoc-members:
+
+
+.. _level_one_forex_stream:
+
+------------
+Forex Quotes
+------------
+
+Level one quotes for foreign exchange pairs.
+
+.. automethod:: schwab.streaming::StreamClient.level_one_forex_subs
+.. automethod:: schwab.streaming::StreamClient.level_one_forex_unsubs
+.. automethod:: schwab.streaming::StreamClient.level_one_forex_add
+.. automethod:: schwab.streaming::StreamClient.add_level_one_forex_handler
+.. autoclass:: schwab.streaming::StreamClient.LevelOneForexFields
   :members:
   :undoc-members:
 
@@ -421,10 +454,12 @@ book, but if you find any behavior that suggests otherwise please
 
 .. automethod:: schwab.streaming::StreamClient.nyse_book_subs
 .. automethod:: schwab.streaming::StreamClient.nyse_book_unsubs
+.. automethod:: schwab.streaming::StreamClient.nyse_book_add
 .. automethod:: schwab.streaming::StreamClient.add_nyse_book_handler
 
 .. automethod:: schwab.streaming::StreamClient.nasdaq_book_subs
 .. automethod:: schwab.streaming::StreamClient.nasdaq_book_unsubs
+.. automethod:: schwab.streaming::StreamClient.nasdaq_book_add
 .. automethod:: schwab.streaming::StreamClient.add_nasdaq_book_handler
 
 
@@ -440,8 +475,11 @@ exchanges, although this is an admittedly an uneducated guess.
 
 .. automethod:: schwab.streaming::StreamClient.options_book_subs
 .. automethod:: schwab.streaming::StreamClient.options_book_unsubs
+.. automethod:: schwab.streaming::StreamClient.options_book_add
 .. automethod:: schwab.streaming::StreamClient.add_options_book_handler
 
+
+.. _screener:
 
 ++++++++
 Screener
@@ -489,6 +527,8 @@ Screener Option
 .. automethod:: schwab.streaming::StreamClient.screener_option_add
 .. automethod:: schwab.streaming::StreamClient.add_screener_option_handler
 
+
+.. _account_activity:
 
 ++++++++++++++++
 Account Activity
