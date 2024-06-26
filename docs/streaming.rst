@@ -443,62 +443,6 @@ exchanges, although this is an admittedly an uneducated guess.
 .. automethod:: schwab.streaming::StreamClient.add_options_book_handler
 
 
-++++++++++++
-Time of Sale
-++++++++++++
-
-The data in :ref:`level_two` describes the bids and asks for various 
-instruments, but by itself is insufficient to determine when trades actually 
-take place. The time of sale streams notify on trades as they happen. Together 
-with the level two data, they provide a fairly complete picture of what is 
-happening on an exchange.
-
-All time of sale streams uss a common set of fields:
-
-.. autoclass:: schwab.streaming::StreamClient.TimesaleFields
-  :members:
-  :undoc-members:
-
-
--------------
-Equity Trades
--------------
-
-.. automethod:: schwab.streaming::StreamClient.timesale_equity_subs
-.. automethod:: schwab.streaming::StreamClient.timesale_equity_unsubs
-.. automethod:: schwab.streaming::StreamClient.add_timesale_equity_handler
-
-
---------------
-Futures Trades
---------------
-
-.. automethod:: schwab.streaming::StreamClient.timesale_futures_subs
-.. automethod:: schwab.streaming::StreamClient.timesale_futures_unsubs
-.. automethod:: schwab.streaming::StreamClient.add_timesale_futures_handler
-
-
---------------
-Options Trades
---------------
-
-.. automethod:: schwab.streaming::StreamClient.timesale_options_subs
-.. automethod:: schwab.streaming::StreamClient.timesale_options_unsubs
-.. automethod:: schwab.streaming::StreamClient.add_timesale_options_handler
-
-
-++++++++++++++
-News Headlines
-++++++++++++++
-
-.. automethod:: schwab.streaming::StreamClient.news_headline_subs
-.. automethod:: schwab.streaming::StreamClient.news_headline_unsubs
-.. automethod:: schwab.streaming::StreamClient.add_news_headline_handler
-.. autoclass:: schwab.streaming::StreamClient.NewsHeadlineFields
-  :members:
-  :undoc-members:
-
-
 ++++++++++++++++
 Account Activity
 ++++++++++++++++
