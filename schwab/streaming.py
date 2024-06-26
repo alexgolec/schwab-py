@@ -481,7 +481,7 @@ class StreamClient(EnumEnforcer):
         VOLUME = 6
 
         #: Chart timestamp
-        CHART_TIME = 7
+        CHART_TIME_MILLIS = 7
 
         #: Chart day
         CHART_DAY = 8
@@ -549,7 +549,7 @@ class StreamClient(EnumEnforcer):
         SYMBOL = 0
 
         #: Milliseconds since Epoch
-        CHART_TIME = 1
+        CHART_TIME_MILLIS = 1
 
         #: Opening price for the minute
         OPEN_PRICE = 2
@@ -728,19 +728,19 @@ class StreamClient(EnumEnforcer):
         MARK = 33
 
         #: Quote time in milliseconds
-        QUOTE_TIME = 34
+        QUOTE_TIME_MILLIS = 34
 
         #: Last trade time in milliseconds
-        TRADE_TIME = 35
+        TRADE_TIME_MILLIS = 35
 
         #: Regular market trade time in milliseconds
-        REGULAR_MARKET_TRADE_TIME = 36
+        REGULAR_MARKET_TRADE_MILLIS = 36
 
         #: Bid time in millis
-        BID_TIME = 37
+        BID_TIME_MILLIS = 37
 
         #: Ask time in millis
-        ASK_TIME = 38
+        ASK_TIME_MILLIS = 38
 
         #: Ask MIC ID
         ASK_MIC_ID = 39
@@ -752,16 +752,16 @@ class StreamClient(EnumEnforcer):
         LAST_MIC_ID = 41
 
         #: Net change in percent
-        NET_PERCENT_CHANGE = 42
+        NET_CHANGE_PERCENT = 42
 
         #: Regular market change in percent
-        REGULAR_MARKET_PERCENT_CHANGE = 43
+        REGULAR_MARKET_CHANGE_PERCENT = 43
 
         #: Mark change
         MARK_CHANGE = 44
 
         #: Mark change in percent
-        MARK_PERCENT_CHANGE = 45
+        MARK_CHANGE_PERCENT = 45
 
         #: HTB quantity
         HTB_QUANTITY = 46
@@ -779,7 +779,7 @@ class StreamClient(EnumEnforcer):
         POST_MARKET_NET_CHANGE = 50
 
         #: Post market net change percent
-        POST_MARKET_NET_PERCENT_CHANGE = 51
+        POST_MARKET_NET_CHANGE_PERCENT = 51
 
     async def level_one_equity_subs(self, symbols, *, fields=None):
         '''
@@ -943,10 +943,10 @@ class StreamClient(EnumEnforcer):
         MARK = 37
 
         #: Quote time in millis
-        QUOTE_TIME = 38
+        QUOTE_TIME_MILLIS = 38
 
         #: Last trade time in millis
-        TRADE_TIME = 39
+        TRADE_TIME_MILLIS = 39
 
         #: Exchange ID
         EXCHANGE_ID = 40
@@ -961,13 +961,13 @@ class StreamClient(EnumEnforcer):
         SETTLEMENT_TYPE = 43
 
         #: Net percent change
-        NET_PERCENT_CHANGE = 44
+        NET_CHANGE_PERCENT = 44
 
         #: Mark change
         MARK_CHANGE = 45
 
         #: Mark change in percent
-        MARK_PERCENT_CHANGE = 46
+        MARK_CHANGE_PERCENT = 46
 
         #: Implied yield
         IMPLIED_YIELD = 47
@@ -1073,10 +1073,10 @@ class StreamClient(EnumEnforcer):
         LAST_SIZE = 9
 
         #: Time of the last quote in milliseconds since epoch
-        QUOTE_TIME = 10
+        QUOTE_TIME_MILLIS = 10
 
         #: Time of the last trade in milliseconds since epoch
-        TRADE_TIME = 11
+        TRADE_TIME_MILLIS = 11
 
         #: Day's high trade price
         HIGH_PRICE = 12
@@ -1103,7 +1103,7 @@ class StreamClient(EnumEnforcer):
         NET_CHANGE = 19
 
         #: Current percent change
-        FUTURE_PERCENT_CHANGE = 20
+        FUTURE_CHANGE_PERCENT = 20
 
         #: Name of exchange
         EXCHANGE_NAME = 21
@@ -1154,10 +1154,10 @@ class StreamClient(EnumEnforcer):
         EXPIRATION_STYLE = 36
 
         #: Time of the last ask-side quote in milliseconds since epoch
-        ASK_TIME = 37
+        ASK_TIME_MILLIS = 37
 
         #: Time of the last bid-side quote in milliseconds since epoch
-        BID_TIME = 38
+        BID_TIME_MILLIS = 38
 
         #: Indicates if this contract has quoted during the active session
         QUOTED_IN_SESSION = 39
@@ -1237,10 +1237,10 @@ class StreamClient(EnumEnforcer):
         LAST_SIZE = 7
 
         #: Trade time of the last quote in milliseconds since epoch
-        QUOTE_TIME = 8
+        QUOTE_TIME_MILLIS = 8
 
         #: Trade time of the last trade in milliseconds since epoch
-        TRADE_TIME = 9
+        TRADE_TIME_MILLIS = 9
 
         #: Day's high trade price
         HIGH_PRICE = 10
@@ -1264,7 +1264,7 @@ class StreamClient(EnumEnforcer):
         NET_CHANGE = 16
 
         #: Current percent change
-        PERCENT_CHANGE = 17
+        CHANGE_PERCENT = 17
 
         #: Name of exchange
         EXCHANGE_NAME = 18
@@ -1380,10 +1380,10 @@ class StreamClient(EnumEnforcer):
         LAST_SIZE = 9
 
         #: Trade time of the last quote in milliseconds since epoch
-        QUOTE_TIME = 10
+        QUOTE_TIME_MILLIS = 10
 
         #: Trade time of the last trade in milliseconds since epoch
-        TRADE_TIME = 11
+        TRADE_TIME_MILLIS = 11
 
         #: Day's high trade price
         HIGH_PRICE = 12
