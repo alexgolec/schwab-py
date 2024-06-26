@@ -1627,3 +1627,86 @@ class StreamClient(EnumEnforcer):
         '''
         self._handlers['OPTIONS_BOOK'].append(
             self._BookHandler(handler, self.BookFields))
+
+    ##########################################################################
+    # SCREENER_EQUITY/SCREENER_OPTION
+
+    class ScreenerFields(_BaseFieldEnum):
+        #: The symbol used to look up either actives, gainers or losers
+        SYMBOL = 0
+
+        #: Market snapshot timestamp in milliseconds since Epoch
+        TIMESTAMP = 1
+
+        #: Field to sort on
+        SORT_FIELD = 2
+
+        #: Frequency of data to sort
+        FREQUENCY = 3
+
+        #: Array of fields
+        ITEMS = 4
+
+    async def screener_equity_subs(self, symbols):
+        '''
+        Subscribe to Screener Equity.
+
+        :param symbols: Equity symbols to subscribe to.
+        '''
+        await self._service_op(symbols, 'SCREENER_EQUITY', 'SUBS', self.ScreenerFields)
+
+    async def screener_equity_unsubs(self, symbols):
+        '''
+        Un-Subscribe to Screener Equity.
+
+        :param symbols: Equity symbols to unsubscribe from.
+        '''
+        await self._service_op(symbols, 'SCREENER_EQUITY', 'UNSUBS')
+
+    async def screener_equity_add(self, symbols):
+        '''
+        Add symbols to the Screener Equity list.
+
+        :param symbols: Equity symbols to add to the subscription.
+        '''
+        await self._service_op(symbols, 'SCREENER_EQUITY', 'ADD', self.ScreenerFields)
+
+    def add_screener_equity_handler(self, handler):
+        '''
+        Register a function to handle Screener Equity data as it is
+        updated See :ref:`registering_handlers` for details.
+        '''
+        self._handlers['SCREENER_EQUITY'].append(
+            _Handler(handler, self.ScreenerFields))
+
+    async def screener_option_subs(self, symbols):
+        '''
+        Subscribe to Screener Option.
+
+        :param symbols: Option symbols to subscribe to.
+        '''
+        await self._service_op(symbols, 'SCREENER_OPTION', 'SUBS', self.ScreenerFields)
+
+    async def screener_option_unsubs(self, symbols):
+        '''
+        Un-Subscribe to Screener Option.
+
+        :param symbols: Option symbols to unsubscribe from.
+        '''
+        await self._service_op(symbols, 'SCREENER_OPTION', 'UNSUBS')
+
+    async def screener_option_add(self, symbols):
+        '''
+        Add symbols to the Screener Option list.
+
+        :param symbols: Option symbols to add to the subscription.
+        '''
+        await self._service_op(symbols, 'SCREENER_OPTION', 'ADD', self.ScreenerFields)
+
+    def add_screener_option_handler(self, handler):
+        '''
+        Register a function to handle Screener Option data as it is
+        updated See :ref:`registering_handlers` for details.
+        '''
+        self._handlers['SCREENER_OPTION'].append(
+            _Handler(handler, self.ScreenerFields))

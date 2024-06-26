@@ -443,6 +443,53 @@ exchanges, although this is an admittedly an uneducated guess.
 .. automethod:: schwab.streaming::StreamClient.add_options_book_handler
 
 
+++++++++
+Screener
+++++++++
+
+Top 10 advances and decliners by volume, trades, percent change and average percent
+volume.
+
+Symbols in upper case and separated by commas.
+
+(PREFIX)_(SORTFIELD)_(FREQUENCY) where PREFIX is:
+ * Indices: $COMPX $DJI, $SPX.X, INDEX_ALL
+ * Exchanges: NYSE, NASDAQ, OTCBB, EQUITY_ALL
+ * Option: OPTION_PUT, OPTION_CALL, OPTION_ALL
+
+and sortField is:
+ * VOLUME, TRADES, PERCENT_CHANGE_UP, PERCENT_CHANGE_DOWN, AVERAGE_PERCENT_VOLUME
+
+and frequency is:
+ * 0, 1, 5, 10, 30 60 minutes (0 is for all day)
+
+Both the equity and option screener streams use a common set of fields:
+
+.. autoclass:: schwab.streaming::StreamClient.ScreenerFields
+  :members:
+  :undoc-members:
+
+
+---------------
+Screener Equity
+---------------
+
+.. automethod:: schwab.streaming::StreamClient.screener_equity_subs
+.. automethod:: schwab.streaming::StreamClient.screener_equity_unsubs
+.. automethod:: schwab.streaming::StreamClient.screener_equity_add
+.. automethod:: schwab.streaming::StreamClient.add_screener_equity_handler
+
+
+---------------
+Screener Option
+---------------
+
+.. automethod:: schwab.streaming::StreamClient.screener_option_subs
+.. automethod:: schwab.streaming::StreamClient.screener_option_unsubs
+.. automethod:: schwab.streaming::StreamClient.screener_option_add
+.. automethod:: schwab.streaming::StreamClient.add_screener_option_handler
+
+
 ++++++++++++++++
 Account Activity
 ++++++++++++++++

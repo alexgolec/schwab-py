@@ -3744,6 +3744,1225 @@ class StreamClientTest(IsolatedAsyncioTestCase):
         self.assert_handler_called_once_with(handler, expected_item)
         self.assert_handler_called_once_with(async_handler, expected_item)
 
+    ##########################################################################
+    # SCREENER_EQUITY
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_screener_equity_subs_and_add_success_all_fields(
+            self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            1, 'SCREENER_EQUITY', 'SUBS'))]
+
+        await self.client.screener_equity_subs(['NYSE_VOLUME_5', 'NASDAQ_VOLUME_5'])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'SCREENER_EQUITY',
+            'command': 'SUBS',
+            'requestid': '1',
+            'SchwabClientCustomerId': self.pref_customer_id,
+            'SchwabClientCorrelId': self.pref_correl_id,
+            'parameters': {
+                'keys': 'NYSE_VOLUME_5,NASDAQ_VOLUME_5',
+                'fields': '0,1,2,3,4'
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'SCREENER_EQUITY', 'ADD'))]
+
+        await self.client.screener_equity_add(['$DJI_TRADES_10'])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'SCREENER_EQUITY',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': self.pref_customer_id,
+            'SchwabClientCorrelId': self.pref_correl_id,
+            'parameters': {
+                'keys': '$DJI_TRADES_10',
+                'fields': '0,1,2,3,4'
+            }
+        })
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_screener_equity_unsubs_success_all_fields(
+            self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        stream_item = self.streaming_entry('SCREENER_EQUITY', 'SUBS')
+
+        socket.recv.side_effect = [
+            json.dumps(self.success_response(1, 'SCREENER_EQUITY', 'SUBS')),
+            json.dumps(stream_item),
+            json.dumps(self.success_response(2, 'SCREENER_EQUITY', 'UNSUBS', 'UNSUBS command succeeded'))
+        ]
+        handler = Mock()
+        async_handler = AsyncMock()
+        self.client.add_screener_equity_handler(handler)
+        self.client.add_screener_equity_handler(async_handler)
+
+        await self.client.screener_equity_subs(['NYSE_VOLUME_5', 'NASDAQ_VOLUME_5'])
+        await self.client.handle_message()
+        await self.client.screener_equity_unsubs(['NYSE_VOLUME_5', 'NASDAQ_VOLUME_5'])
+
+        self.assert_handler_called_once_with(
+                handler, {'service': 'SCREENER_EQUITY',
+                          'command': 'SUBS',
+                          'timestamp': REQUEST_TIMESTAMP})
+        self.assert_handler_called_once_with(
+                async_handler, {'service': 'SCREENER_EQUITY',
+                                'command': 'SUBS',
+                                'timestamp': REQUEST_TIMESTAMP})
+
+        send_awaited = [
+            call(StringMatchesJson({
+                'requests': [{
+                    'service': 'SCREENER_EQUITY',
+                    'requestid': '1',
+                    'command': 'SUBS',
+                    'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+                    'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+                    'parameters': {
+                        'keys': 'NYSE_VOLUME_5,NASDAQ_VOLUME_5',
+                        'fields': '0,1,2,3,4'
+                    }
+                }]
+            })),
+            call(StringMatchesJson({
+                'requests': [{
+                    'service': 'SCREENER_EQUITY',
+                    'requestid': '2',
+                    'command': 'UNSUBS',
+                    'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+                    'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+                    'parameters': {
+                        'keys': 'NYSE_VOLUME_5,NASDAQ_VOLUME_5'
+                    }
+                }]
+            })),
+        ]
+        socket.send.assert_has_awaits(send_awaited, any_order=False)
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_screener_equity_subs_failure(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        response = self.success_response(1, 'SCREENER_EQUITY', 'SUBS')
+        response['response'][0]['content']['code'] = 21
+        socket.recv.side_effect = [json.dumps(response)]
+
+        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
+            await self.client.screener_equity_subs(['NYSE_VOLUME_5', 'NASDAQ_VOLUME_5'])
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_screener_equity_unsubs_failure(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        response = self.success_response(1, 'SCREENER_EQUITY', 'UNSUBS')
+        response['response'][0]['content']['code'] = 21
+        socket.recv.side_effect = [json.dumps(response)]
+
+        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
+            await self.client.screener_equity_unsubs(['NYSE_VOLUME_5', 'NASDAQ_VOLUME_5'])
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_screener_equity_add_failure(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        response = self.success_response(1, 'SCREENER_EQUITY', 'ADD')
+        response['response'][0]['content']['code'] = 21
+        socket.recv.side_effect = [json.dumps(response)]
+
+        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
+            await self.client.screener_equity_add(['$DJI_TRADES_10'])
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_screener_equity_handler(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        stream_item = {
+            'data': [{
+                'service': 'SCREENER_EQUITY',
+                'timestamp': 1718996308740,
+                'command': 'SUBS',
+                'content': [{
+                    'key': 'NYSE_VOLUME_5',
+                    '1': 1718996308700,
+                    '2': 'VOLUME',
+                    '3': 5,
+                    '4': [{
+                        'symbol': 'XLF',
+                        'description': 'SELECT STR FINANCIAL SELECT SPDR ETF',
+                        'lastPrice': 41.305,
+                        'netChange': 41.305,
+                        'netPercentChange': 1,
+                        'marketShare': 3.40228332,
+                        'totalVolume': 51730877,
+                        'volume': 1760031,
+                        'trades': 644
+                    }, {
+                        'symbol': 'HYG',
+                        'description': 'ISHARES IBOXX HIGH YIELD BOND ETF',
+                        'lastPrice': 77.34,
+                        'netChange': 77.34,
+                        'netPercentChange': 1,
+                        'marketShare': 2.10192454,
+                        'totalVolume': 51730877,
+                        'volume': 1087344,
+                        'trades': 354
+                    }, {
+                        'symbol': 'CX',
+                        'description': 'Cemex Sab De C V ADR',
+                        'lastPrice': 6.26,
+                        'netChange': 6.26,
+                        'netPercentChange': 1,
+                        'marketShare': 1.93456028,
+                        'totalVolume': 51730877,
+                        'volume': 1000765,
+                        'trades': 825
+                    }, {
+                        'symbol': 'ABEV',
+                        'description': 'Ambev S A ADR',
+                        'lastPrice': 2.05,
+                        'netChange': 2.05,
+                        'netPercentChange': 1,
+                        'marketShare': 1.84930559,
+                        'totalVolume': 51730877,
+                        'volume': 956662,
+                        'trades': 1598
+                    }, {
+                        'symbol': 'CHPT',
+                        'description': 'Chargepoint Holdings A',
+                        'lastPrice': 1.365,
+                        'netChange': 1.365,
+                        'netPercentChange': 1,
+                        'marketShare': 1.73645809,
+                        'totalVolume': 51730877,
+                        'volume': 898285,
+                        'trades': 1024
+                    }, {
+                        'symbol': 'GME',
+                        'description': 'Gamestop Corp A',
+                        'lastPrice': 23.78,
+                        'netChange': 23.78,
+                        'netPercentChange': 1,
+                        'marketShare': 1.28934021,
+                        'totalVolume': 51730877,
+                        'volume': 666987,
+                        'trades': 5590
+                    }, {
+                        'symbol': 'DNA',
+                        'description': 'GINKGO BIOWORKS HLDG A',
+                        'lastPrice': 0.4151,
+                        'netChange': 0.4151,
+                        'netPercentChange': 1,
+                        'marketShare': 0.93249917,
+                        'totalVolume': 51730877,
+                        'volume': 482390,
+                        'trades': 880
+                    }, {
+                        'symbol': 'TELL',
+                        'description': 'Tellurian Investment',
+                        'lastPrice': 0.6347,
+                        'netChange': 0.6347,
+                        'netPercentChange': 1,
+                        'marketShare': 0.84341311,
+                        'totalVolume': 51730877,
+                        'volume': 436305,
+                        'trades': 378
+                    }, {
+                        'symbol': 'KVUE',
+                        'description': 'KENVUE Inc',
+                        'lastPrice': 18.775,
+                        'netChange': 18.775,
+                        'netPercentChange': 1,
+                        'marketShare': 0.82902519,
+                        'totalVolume': 51730877,
+                        'volume': 428862,
+                        'trades': 1654
+                    }, {
+                        'symbol': 'DNN',
+                        'description': 'DENISON MINES CORP',
+                        'lastPrice': 2.02,
+                        'netChange': 2.02,
+                        'netPercentChange': 1,
+                        'marketShare': 0.82405717,
+                        'totalVolume': 51730877,
+                        'volume': 426292,
+                        'trades': 270
+                    }]
+                }, {
+                    'key': 'NASDAQ_VOLUME_5',
+                    '1': 1718996308714,
+                    '2': 'VOLUME',
+                    '3': 5,
+                    '4': [{
+                        'symbol': 'NVDA',
+                        'description': 'Nvidia Corp',
+                        'lastPrice': 126.5299,
+                        'netChange': 126.5299,
+                        'netPercentChange': 1,
+                        'marketShare': 5.84329551,
+                        'totalVolume': 41090169,
+                        'volume': 2401020,
+                        'trades': 18452
+                    },
+                    {
+                        'symbol': 'AREB',
+                        'description': 'AMERICAN REBEL HLDGS',
+                        'lastPrice': 0.7776,
+                        'netChange': 0.7776,
+                        'netPercentChange': 1,
+                        'marketShare': 4.2931729,
+                        'totalVolume': 41090169,
+                        'volume': 1764072,
+                        'trades': 2192
+                    },
+                    {
+                        'symbol': 'KTRA',
+                        'description': 'KINTARA THERAPEUTICS',
+                        'lastPrice': 0.25335,
+                        'netChange': 0.25335,
+                        'netPercentChange': 1,
+                        'marketShare': 2.12389976,
+                        'totalVolume': 41090169,
+                        'volume': 872714,
+                        'trades': 333
+                    },
+                    {
+                        'symbol': 'AAPL',
+                        'description': 'Apple Inc',
+                        'lastPrice': 210.2967,
+                        'netChange': 210.2967,
+                        'netPercentChange': 1,
+                        'marketShare': 1.71872012,
+                        'totalVolume': 41090169,
+                        'volume': 706225,
+                        'trades': 7024
+                    },
+                    {
+                        'symbol': 'NKLA',
+                        'description': 'NIKOLA CORP',
+                        'lastPrice': 0.359,
+                        'netChange': 0.359,
+                        'netPercentChange': 1,
+                        'marketShare': 1.64388226,
+                        'totalVolume': 41090169,
+                        'volume': 675474,
+                        'trades': 1016
+                    },
+                    {
+                        'symbol': 'SHCR',
+                        'description': 'SHARECARE INC A',
+                        'lastPrice': 1.365,
+                        'netChange': 1.365,
+                        'netPercentChange': 1,
+                        'marketShare': 1.6360288,
+                        'totalVolume': 41090169,
+                        'volume': 672247,
+                        'trades': 265
+                    },
+                    {
+                        'symbol': 'SIRI',
+                        'description': 'Sirius Xm Hldgs Inc',
+                        'lastPrice': 2.995,
+                        'netChange': 2.995,
+                        'netPercentChange': 1,
+                        'marketShare': 1.63058224,
+                        'totalVolume': 41090169,
+                        'volume': 670009,
+                        'trades': 983
+                    },
+                    {
+                        'symbol': 'CRKN',
+                        'description': 'Crown Electrokinetic',
+                        'lastPrice': 0.0401,
+                        'netChange': 0.0401,
+                        'netPercentChange': 1,
+                        'marketShare': 1.34467201,
+                        'totalVolume': 41090169,
+                        'volume': 552528,
+                        'trades': 885
+                    },
+                    {
+                        'symbol': 'TSLA',
+                        'description': 'Tesla Inc',
+                        'lastPrice': 181.4049,
+                        'netChange': 181.4049,
+                        'netPercentChange': 1,
+                        'marketShare': 1.0218454,
+                        'totalVolume': 41090169,
+                        'volume': 419878,
+                        'trades': 4613
+                    },
+                    {
+                        'symbol': 'WBD',
+                        'description': 'Warner Brothers Disc',
+                        'lastPrice': 7.125,
+                        'netChange': 7.125,
+                        'netPercentChange': 1,
+                        'marketShare': 0.89736793,
+                        'totalVolume': 41090169,
+                        'volume': 368730,
+                        'trades': 1249
+                    }]
+                }]
+            }]
+        }
+
+        socket.recv.side_effect = [
+            json.dumps(self.success_response(
+                1, 'SCREENER_EQUITY', 'SUBS')),
+            json.dumps(stream_item)]
+        await self.client.screener_equity_subs(['NYSE_VOLUME_5', 'NASDAQ_VOLUME_5'])
+
+        handler = Mock()
+        async_handler = AsyncMock()
+        self.client.add_screener_equity_handler(handler)
+        self.client.add_screener_equity_handler(async_handler)
+        await self.client.handle_message()
+
+        expected_item = {
+            'service': 'SCREENER_EQUITY',
+            'timestamp': 1718996308740,
+            'command': 'SUBS',
+            'content': [{
+                'key': 'NYSE_VOLUME_5',
+                'TIMESTAMP': 1718996308700,
+                'SORT_FIELD': 'VOLUME',
+                'FREQUENCY': 5,
+                'ITEMS': [{
+                    'symbol': 'XLF',
+                    'description': 'SELECT STR FINANCIAL SELECT SPDR ETF',
+                    'lastPrice': 41.305,
+                    'netChange': 41.305,
+                    'netPercentChange': 1,
+                    'marketShare': 3.40228332,
+                    'totalVolume': 51730877,
+                    'volume': 1760031,
+                    'trades': 644
+                }, {
+                    'symbol': 'HYG',
+                    'description': 'ISHARES IBOXX HIGH YIELD BOND ETF',
+                    'lastPrice': 77.34,
+                    'netChange': 77.34,
+                    'netPercentChange': 1,
+                    'marketShare': 2.10192454,
+                    'totalVolume': 51730877,
+                    'volume': 1087344,
+                    'trades': 354
+                }, {
+                    'symbol': 'CX',
+                    'description': 'Cemex Sab De C V ADR',
+                    'lastPrice': 6.26,
+                    'netChange': 6.26,
+                    'netPercentChange': 1,
+                    'marketShare': 1.93456028,
+                    'totalVolume': 51730877,
+                    'volume': 1000765,
+                    'trades': 825
+                }, {
+                    'symbol': 'ABEV',
+                    'description': 'Ambev S A ADR',
+                    'lastPrice': 2.05,
+                    'netChange': 2.05,
+                    'netPercentChange': 1,
+                    'marketShare': 1.84930559,
+                    'totalVolume': 51730877,
+                    'volume': 956662,
+                    'trades': 1598
+                },{
+                    'symbol': 'CHPT',
+                    'description': 'Chargepoint Holdings A',
+                    'lastPrice': 1.365,
+                    'netChange': 1.365,
+                    'netPercentChange': 1,
+                    'marketShare': 1.73645809,
+                    'totalVolume': 51730877,
+                    'volume': 898285,
+                    'trades': 1024
+                }, {
+                    'symbol': 'GME',
+                    'description': 'Gamestop Corp A',
+                    'lastPrice': 23.78,
+                    'netChange': 23.78,
+                    'netPercentChange': 1,
+                    'marketShare': 1.28934021,
+                    'totalVolume': 51730877,
+                    'volume': 666987,
+                    'trades': 5590
+                }, {
+                    'symbol': 'DNA',
+                    'description': 'GINKGO BIOWORKS HLDG A',
+                    'lastPrice': 0.4151,
+                    'netChange': 0.4151,
+                    'netPercentChange': 1,
+                    'marketShare': 0.93249917,
+                    'totalVolume': 51730877,
+                    'volume': 482390,
+                    'trades': 880
+                }, {
+                    'symbol': 'TELL',
+                    'description': 'Tellurian Investment',
+                    'lastPrice': 0.6347,
+                    'netChange': 0.6347,
+                    'netPercentChange': 1,
+                    'marketShare': 0.84341311,
+                    'totalVolume': 51730877,
+                    'volume': 436305,
+                    'trades': 378
+                }, {
+                    'symbol': 'KVUE',
+                    'description': 'KENVUE Inc',
+                    'lastPrice': 18.775,
+                    'netChange': 18.775,
+                    'netPercentChange': 1,
+                    'marketShare': 0.82902519,
+                    'totalVolume': 51730877,
+                    'volume': 428862,
+                    'trades': 1654
+                }, {
+                    'symbol': 'DNN',
+                    'description': 'DENISON MINES CORP',
+                    'lastPrice': 2.02,
+                    'netChange': 2.02,
+                    'netPercentChange': 1,
+                    'marketShare': 0.82405717,
+                    'totalVolume': 51730877,
+                    'volume': 426292,
+                    'trades': 270
+                }]
+            }, {
+                'key': 'NASDAQ_VOLUME_5',
+                'TIMESTAMP': 1718996308714,
+                'SORT_FIELD': 'VOLUME',
+                'FREQUENCY': 5,
+                'ITEMS': [{
+                    'symbol': 'NVDA',
+                    'description': 'Nvidia Corp',
+                    'lastPrice': 126.5299,
+                    'netChange': 126.5299,
+                    'netPercentChange': 1,
+                    'marketShare': 5.84329551,
+                    'totalVolume': 41090169,
+                    'volume': 2401020,
+                    'trades': 18452
+                }, {
+                    'symbol': 'AREB',
+                    'description': 'AMERICAN REBEL HLDGS',
+                    'lastPrice': 0.7776,
+                    'netChange': 0.7776,
+                    'netPercentChange': 1,
+                    'marketShare': 4.2931729,
+                    'totalVolume': 41090169,
+                    'volume': 1764072,
+                    'trades': 2192
+                }, {
+                    'symbol': 'KTRA',
+                    'description': 'KINTARA THERAPEUTICS',
+                    'lastPrice': 0.25335,
+                    'netChange': 0.25335,
+                    'netPercentChange': 1,
+                    'marketShare': 2.12389976,
+                    'totalVolume': 41090169,
+                    'volume': 872714,
+                    'trades': 333
+                }, {
+                    'symbol': 'AAPL',
+                    'description': 'Apple Inc',
+                    'lastPrice': 210.2967,
+                    'netChange': 210.2967,
+                    'netPercentChange': 1,
+                    'marketShare': 1.71872012,
+                    'totalVolume': 41090169,
+                    'volume': 706225,
+                    'trades': 7024
+                }, {
+                    'symbol': 'NKLA',
+                    'description': 'NIKOLA CORP',
+                    'lastPrice': 0.359,
+                    'netChange': 0.359,
+                    'netPercentChange': 1,
+                    'marketShare': 1.64388226,
+                    'totalVolume': 41090169,
+                    'volume': 675474,
+                    'trades': 1016
+                }, {
+                    'symbol': 'SHCR',
+                    'description': 'SHARECARE INC A',
+                    'lastPrice': 1.365,
+                    'netChange': 1.365,
+                    'netPercentChange': 1,
+                    'marketShare': 1.6360288,
+                    'totalVolume': 41090169,
+                    'volume': 672247,
+                    'trades': 265
+                }, {
+                    'symbol': 'SIRI',
+                    'description': 'Sirius Xm Hldgs Inc',
+                    'lastPrice': 2.995,
+                    'netChange': 2.995,
+                    'netPercentChange': 1,
+                    'marketShare': 1.63058224,
+                    'totalVolume': 41090169,
+                    'volume': 670009,
+                    'trades': 983
+                }, {
+                    'symbol': 'CRKN',
+                    'description': 'Crown Electrokinetic',
+                    'lastPrice': 0.0401,
+                    'netChange': 0.0401,
+                    'netPercentChange': 1,
+                    'marketShare': 1.34467201,
+                    'totalVolume': 41090169,
+                    'volume': 552528,
+                    'trades': 885
+                }, {
+                    'symbol': 'TSLA',
+                    'description': 'Tesla Inc',
+                    'lastPrice': 181.4049,
+                    'netChange': 181.4049,
+                    'netPercentChange': 1,
+                    'marketShare': 1.0218454,
+                    'totalVolume': 41090169,
+                    'volume': 419878,
+                    'trades': 4613
+                }, {
+                    'symbol': 'WBD',
+                    'description': 'Warner Brothers Disc',
+                    'lastPrice': 7.125,
+                    'netChange': 7.125,
+                    'netPercentChange': 1,
+                    'marketShare': 0.89736793,
+                    'totalVolume': 41090169,
+                    'volume': 368730,
+                    'trades': 1249
+                }]
+            }]
+        }
+
+        self.assert_handler_called_once_with(handler, expected_item)
+        self.assert_handler_called_once_with(async_handler, expected_item)
+
+    ##########################################################################
+    # SCREENER_OPTION
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_screener_option_subs_and_add_success_all_fields(
+            self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            1, 'SCREENER_OPTION', 'SUBS'))]
+
+        await self.client.screener_option_subs(['OPTION_PUT_VOLUME_5', 'OPTION_CALL_VOLUME_5'])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'SCREENER_OPTION',
+            'command': 'SUBS',
+            'requestid': '1',
+            'SchwabClientCustomerId': self.pref_customer_id,
+            'SchwabClientCorrelId': self.pref_correl_id,
+            'parameters': {
+                'keys': 'OPTION_PUT_VOLUME_5,OPTION_CALL_VOLUME_5',
+                'fields': '0,1,2,3,4'
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'SCREENER_OPTION', 'ADD'))]
+
+        await self.client.screener_option_add(['OPTION_ALL_TRADES_10'])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'SCREENER_OPTION',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': self.pref_customer_id,
+            'SchwabClientCorrelId': self.pref_correl_id,
+            'parameters': {
+                'keys': 'OPTION_ALL_TRADES_10',
+                'fields': '0,1,2,3,4'
+            }
+        })
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_screener_option_unsubs_success_all_fields(
+            self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        stream_item = self.streaming_entry('SCREENER_OPTION', 'SUBS')
+
+        socket.recv.side_effect = [
+            json.dumps(self.success_response(1, 'SCREENER_OPTION', 'SUBS')),
+            json.dumps(stream_item),
+            json.dumps(self.success_response(2, 'SCREENER_OPTION', 'UNSUBS', 'UNSUBS command succeeded'))
+        ]
+        handler = Mock()
+        async_handler = AsyncMock()
+        self.client.add_screener_option_handler(handler)
+        self.client.add_screener_option_handler(async_handler)
+
+        await self.client.screener_option_subs(['OPTION_PUT_VOLUME_5', 'OPTION_CALL_VOLUME_5'])
+        await self.client.handle_message()
+        await self.client.screener_option_unsubs(['OPTION_PUT_VOLUME_5', 'OPTION_CALL_VOLUME_5'])
+
+        self.assert_handler_called_once_with(
+                handler, {'service': 'SCREENER_OPTION',
+                          'command': 'SUBS',
+                          'timestamp': REQUEST_TIMESTAMP})
+        self.assert_handler_called_once_with(
+                async_handler, {'service': 'SCREENER_OPTION',
+                                'command': 'SUBS',
+                                'timestamp': REQUEST_TIMESTAMP})
+
+        send_awaited = [
+            call(StringMatchesJson({
+                'requests': [{
+                    'service': 'SCREENER_OPTION',
+                    'requestid': '1',
+                    'command': 'SUBS',
+                    'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+                    'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+                    'parameters': {
+                        'keys': 'OPTION_PUT_VOLUME_5,OPTION_CALL_VOLUME_5',
+                        'fields': '0,1,2,3,4'
+                    }
+                }]
+            })),
+            call(StringMatchesJson({
+                'requests': [{
+                    'service': 'SCREENER_OPTION',
+                    'requestid': '2',
+                    'command': 'UNSUBS',
+                    'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+                    'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+                    'parameters': {
+                        'keys': 'OPTION_PUT_VOLUME_5,OPTION_CALL_VOLUME_5'
+                    }
+                }]
+            })),
+        ]
+        socket.send.assert_has_awaits(send_awaited, any_order=False)
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_screener_option_subs_failure(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        response = self.success_response(1, 'SCREENER_OPTION', 'SUBS')
+        response['response'][0]['content']['code'] = 21
+        socket.recv.side_effect = [json.dumps(response)]
+
+        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
+            await self.client.screener_option_subs(['OPTION_PUT_VOLUME_5', 'OPTION_CALL_VOLUME_5'])
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_screener_option_unsubs_failure(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        response = self.success_response(1, 'SCREENER_OPTION', 'UNSUBS')
+        response['response'][0]['content']['code'] = 21
+        socket.recv.side_effect = [json.dumps(response)]
+
+        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
+            await self.client.screener_option_unsubs(['OPTION_PUT_VOLUME_5', 'OPTION_CALL_VOLUME_5'])
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_screener_option_add_failure(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        response = self.success_response(1, 'SCREENER_OPTION', 'ADD')
+        response['response'][0]['content']['code'] = 21
+        socket.recv.side_effect = [json.dumps(response)]
+
+        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
+            await self.client.screener_option_add(['OPTION_ALL_TRADES_10'])
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_screener_option_handler(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        stream_item = {
+            'data': [{
+                'service': 'SCREENER_OPTION',
+                'timestamp': 1718996045319,
+                'command': 'SUBS',
+                'content': [{
+                    'key': 'OPTION_PUT_VOLUME_5',
+                    '1': 1718996045310,
+                    '2': 'VOLUME',
+                    '3': 5,
+                    '4': [{
+                        'symbol': 'SPY   240621P00541000',
+                        'description': 'SPY    Jun 21 2024 541.0 Put',
+                        'lastPrice': 0.02,
+                        'netChange': -0.275,
+                        'netPercentChange': -0.93220339,
+                        'marketShare': 9.01754274,
+                        'totalVolume': 218951,
+                        'volume': 19744,
+                        'trades': 151
+                    }, {
+                        'symbol': 'SPY   240816P00514000',
+                        'description': 'SPY    Aug 16 2024 514.0 Put',
+                        'lastPrice': 2.31,
+                        'netChange': -0.045,
+                        'netPercentChange': -0.01910828,
+                        'marketShare': 2.84995273,
+                        'totalVolume': 218951,
+                        'volume': 6240,
+                        'trades': 3
+                    }, {
+                        'symbol': 'NVDA  240621P00130000',
+                        'description': 'NVDA   Jun 21 2024 130.0 Put',
+                        'lastPrice': 3.35,
+                        'netChange': 1.895,
+                        'netPercentChange': 1.3024055,
+                        'marketShare': 2.6544752,
+                        'totalVolume': 218951,
+                        'volume': 5812,
+                        'trades': 213
+                    }, {
+                        'symbol': 'SPY   240621P00542000',
+                        'description': 'SPY    Jun 21 2024 542.0 Put',
+                        'lastPrice': 0.05,
+                        'netChange': -0.395,
+                        'netPercentChange': -0.88764045,
+                        'marketShare': 2.44940649,
+                        'totalVolume': 218951,
+                        'volume': 5363,
+                        'trades': 108
+                    }, {
+                        'symbol': 'SPY   240621P00544000',
+                        'description': 'SPY    Jun 21 2024 544.0 Put',
+                        'lastPrice': 0.38,
+                        'netChange': -0.565,
+                        'netPercentChange': -0.5978836,
+                        'marketShare': 2.34481688,
+                        'totalVolume': 218951,
+                        'volume': 5134,
+                        'trades': 427
+                    }, {
+                        'symbol': 'NVDA  240621P00125000',
+                        'description': 'NVDA   Jun 21 2024 125.0 Put',
+                        'lastPrice': 0.19,
+                        'netChange': -0.1956,
+                        'netPercentChange': -0.50726141,
+                        'marketShare': 2.0223703,
+                        'totalVolume': 218951,
+                        'volume': 4428,
+                        'trades': 526
+                    }, {
+                        'symbol': 'NVDA  240621P00126000',
+                        'description': 'NVDA   Jun 21 2024 126.0 Put',
+                        'lastPrice': 0.47,
+                        'netChange': -0.06,
+                        'netPercentChange': -0.11320755,
+                        'marketShare': 1.62821819,
+                        'totalVolume': 218951,
+                        'volume': 3565,
+                        'trades': 367
+                    }, {
+                        'symbol': 'SPY   240816P00530000',
+                        'description': 'SPY    Aug 16 2024 530.0 Put',
+                        'lastPrice': 4.33,
+                        'netChange': 0.0296,
+                        'netPercentChange': 0.00688308,
+                        'marketShare': 1.42863015,
+                        'totalVolume': 218951,
+                        'volume': 3128,
+                        'trades': 7
+                    }, {
+                        'symbol': 'QQQ   240621P00480000',
+                        'description': 'QQQ    Jun 21 2024 480.0 Put',
+                        'lastPrice': 0.51,
+                        'netChange': -0.7029,
+                        'netPercentChange': -0.57952016,
+                        'marketShare': 1.25918585,
+                        'totalVolume': 218951,
+                        'volume': 2757,
+                        'trades': 197
+                    }, {
+                        'symbol': 'SPY   240621P00543000',
+                        'description': 'SPY    Jun 21 2024 543.0 Put',
+                        'lastPrice': 0.14,
+                        'netChange': -0.515,
+                        'netPercentChange': -0.78625954,
+                        'marketShare': 1.23909002,
+                        'totalVolume': 218951,
+                        'volume': 2713,
+                        'trades': 237
+                    }]
+                }, {
+                    'key': 'OPTION_CALL_VOLUME_5',
+                    '1': 1718996045320,
+                    '2': 'VOLUME',
+                    '3': 5,
+                    '4': [{
+                        'symbol': 'SPY   240621C00546000',
+                        'description': 'SPY    Jun 21 2024 546.0 Call',
+                        'lastPrice': 0.07,
+                        'netChange': -1.1656,
+                        'netPercentChange': -0.94334736,
+                        'marketShare': 3.07333386,
+                        'totalVolume': 276898,
+                        'volume': 8510,
+                        'trades': 280
+                    }, {
+                        'symbol': 'SPY   240621C00545000',
+                        'description': 'SPY    Jun 21 2024 545.0 Call',
+                        'lastPrice': 0.25,
+                        'netChange': -1.75,
+                        'netPercentChange': -0.875,
+                        'marketShare': 2.45613908,
+                        'totalVolume': 276898,
+                        'volume': 6801,
+                        'trades': 503
+                    }, {
+                        'symbol': 'SIRI  240621C00003000',
+                        'description': 'SIRI   Jun 21 2024 3.0 Call',
+                        'lastPrice': 0.02,
+                        'netChange': -0.035,
+                        'netPercentChange': -0.63636364,
+                        'marketShare': 1.90286676,
+                        'totalVolume': 276898,
+                        'volume': 5269,
+                        'trades': 150
+                    }, {
+                        'symbol': 'NVDA  240621C00128000',
+                        'description': 'NVDA   Jun 21 2024 128.0 Call',
+                        'lastPrice': 0.26,
+                        'netChange': -3.4431,
+                        'netPercentChange': -0.92978856,
+                        'marketShare': 1.77610528,
+                        'totalVolume': 276898,
+                        'volume': 4918,
+                        'trades': 306
+                    }, {
+                        'symbol': 'NVDA  240621C00127000',
+                        'description': 'NVDA   Jun 21 2024 127.0 Call',
+                        'lastPrice': 0.6,
+                        'netChange': -3.9032,
+                        'netPercentChange': -0.86676141,
+                        'marketShare': 1.6320089,
+                        'totalVolume': 276898,
+                        'volume': 4519,
+                        'trades': 491
+                    }, {
+                        'symbol': 'NVDA  240621C00130000',
+                        'description': 'NVDA   Jun 21 2024 130.0 Call',
+                        'lastPrice': 0.05,
+                        'netChange': -2.2177,
+                        'netPercentChange': -0.97795123,
+                        'marketShare': 1.4745502,
+                        'totalVolume': 276898,
+                        'volume': 4083,
+                        'trades': 217
+                    }, {
+                        'symbol': 'SPY   240621C00544000',
+                        'description': 'SPY    Jun 21 2024 544.0 Call',
+                        'lastPrice': 0.68,
+                        'netChange': -2.32,
+                        'netPercentChange': -0.77333333,
+                        'marketShare': 1.42254549,
+                        'totalVolume': 276898,
+                        'volume': 3939,
+                        'trades': 286
+                    }, {
+                        'symbol': 'IWM   240621C00200000',
+                        'description': 'IWM    Jun 21 2024 200.0 Call',
+                        'lastPrice': 0.11,
+                        'netChange': -0.7012,
+                        'netPercentChange': -0.86439842,
+                        'marketShare': 1.24197358,
+                        'totalVolume': 276898,
+                        'volume': 3439,
+                        'trades': 108
+                    }, {
+                        'symbol': 'EWZ   240802C00030000',
+                        'description': 'EWZ    Aug 2 2024 30.0 Call',
+                        'lastPrice': 0.2,
+                        'netChange': 0.0446,
+                        'netPercentChange': 0.28700129,
+                        'marketShare': 1.20983178,
+                        'totalVolume': 276898,
+                        'volume': 3350,
+                        'trades': 1
+                    }, {
+                        'symbol': 'CYH   240719C00004000',
+                        'description': 'CYH    Jul 19 2024 4.0 Call',
+                        'lastPrice': 0.1,
+                        'netChange': 0,
+                        'netPercentChange': 0,
+                        'marketShare': 1.08415373,
+                        'totalVolume': 276898,
+                        'volume': 3002,
+                        'trades': 96
+                    }]
+                }]
+            }]
+        }
+
+        socket.recv.side_effect = [
+            json.dumps(self.success_response(
+                1, 'SCREENER_OPTION', 'SUBS')),
+            json.dumps(stream_item)]
+        await self.client.screener_option_subs(['OPTION_PUT_VOLUME_5', 'OPTION_CALL_VOLUME_5'])
+
+        handler = Mock()
+        async_handler = AsyncMock()
+        self.client.add_screener_option_handler(handler)
+        self.client.add_screener_option_handler(async_handler)
+        await self.client.handle_message()
+
+        expected_item = {
+            'service': 'SCREENER_OPTION',
+            'timestamp': 1718996045319,
+            'command': 'SUBS',
+            'content': [{
+                'key': 'OPTION_PUT_VOLUME_5',
+                'TIMESTAMP': 1718996045310,
+                'SORT_FIELD': 'VOLUME',
+                'FREQUENCY': 5,
+                'ITEMS': [{
+                    'symbol': 'SPY   240621P00541000',
+                    'description': 'SPY    Jun 21 2024 541.0 Put',
+                    'lastPrice': 0.02,
+                    'netChange': -0.275,
+                    'netPercentChange': -0.93220339,
+                    'marketShare': 9.01754274,
+                    'totalVolume': 218951,
+                    'volume': 19744,
+                    'trades': 151
+                }, {
+                    'symbol': 'SPY   240816P00514000',
+                    'description': 'SPY    Aug 16 2024 514.0 Put',
+                    'lastPrice': 2.31,
+                    'netChange': -0.045,
+                    'netPercentChange': -0.01910828,
+                    'marketShare': 2.84995273,
+                    'totalVolume': 218951,
+                    'volume': 6240,
+                    'trades': 3
+                }, {
+                    'symbol': 'NVDA  240621P00130000',
+                    'description': 'NVDA   Jun 21 2024 130.0 Put',
+                    'lastPrice': 3.35,
+                    'netChange': 1.895,
+                    'netPercentChange': 1.3024055,
+                    'marketShare': 2.6544752,
+                    'totalVolume': 218951,
+                    'volume': 5812,
+                    'trades': 213
+                }, {
+                    'symbol': 'SPY   240621P00542000',
+                    'description': 'SPY    Jun 21 2024 542.0 Put',
+                    'lastPrice': 0.05,
+                    'netChange': -0.395,
+                    'netPercentChange': -0.88764045,
+                    'marketShare': 2.44940649,
+                    'totalVolume': 218951,
+                    'volume': 5363,
+                    'trades': 108
+                }, {
+                    'symbol': 'SPY   240621P00544000',
+                    'description': 'SPY    Jun 21 2024 544.0 Put',
+                    'lastPrice': 0.38,
+                    'netChange': -0.565,
+                    'netPercentChange': -0.5978836,
+                    'marketShare': 2.34481688,
+                    'totalVolume': 218951,
+                    'volume': 5134,
+                    'trades': 427
+                }, {
+                    'symbol': 'NVDA  240621P00125000',
+                    'description': 'NVDA   Jun 21 2024 125.0 Put',
+                    'lastPrice': 0.19,
+                    'netChange': -0.1956,
+                    'netPercentChange': -0.50726141,
+                    'marketShare': 2.0223703,
+                    'totalVolume': 218951,
+                    'volume': 4428,
+                    'trades': 526
+                }, {
+                    'symbol': 'NVDA  240621P00126000',
+                    'description': 'NVDA   Jun 21 2024 126.0 Put',
+                    'lastPrice': 0.47,
+                    'netChange': -0.06,
+                    'netPercentChange': -0.11320755,
+                    'marketShare': 1.62821819,
+                    'totalVolume': 218951,
+                    'volume': 3565,
+                    'trades': 367
+                }, {
+                    'symbol': 'SPY   240816P00530000',
+                    'description': 'SPY    Aug 16 2024 530.0 Put',
+                    'lastPrice': 4.33,
+                    'netChange': 0.0296,
+                    'netPercentChange': 0.00688308,
+                    'marketShare': 1.42863015,
+                    'totalVolume': 218951,
+                    'volume': 3128,
+                    'trades': 7
+                }, {
+                    'symbol': 'QQQ   240621P00480000',
+                    'description': 'QQQ    Jun 21 2024 480.0 Put',
+                    'lastPrice': 0.51,
+                    'netChange': -0.7029,
+                    'netPercentChange': -0.57952016,
+                    'marketShare': 1.25918585,
+                    'totalVolume': 218951,
+                    'volume': 2757,
+                    'trades': 197
+                }, {
+                    'symbol': 'SPY   240621P00543000',
+                    'description': 'SPY    Jun 21 2024 543.0 Put',
+                    'lastPrice': 0.14,
+                    'netChange': -0.515,
+                    'netPercentChange': -0.78625954,
+                    'marketShare': 1.23909002,
+                    'totalVolume': 218951,
+                    'volume': 2713,
+                    'trades': 237
+                }]
+            }, {
+                'key': 'OPTION_CALL_VOLUME_5',
+                'TIMESTAMP': 1718996045320,
+                'SORT_FIELD': 'VOLUME',
+                'FREQUENCY': 5,
+                'ITEMS': [{
+                    'symbol': 'SPY   240621C00546000',
+                    'description': 'SPY    Jun 21 2024 546.0 Call',
+                    'lastPrice': 0.07,
+                    'netChange': -1.1656,
+                    'netPercentChange': -0.94334736,
+                    'marketShare': 3.07333386,
+                    'totalVolume': 276898,
+                    'volume': 8510,
+                    'trades': 280
+                }, {
+                    'symbol': 'SPY   240621C00545000',
+                    'description': 'SPY    Jun 21 2024 545.0 Call',
+                    'lastPrice': 0.25,
+                    'netChange': -1.75,
+                    'netPercentChange': -0.875,
+                    'marketShare': 2.45613908,
+                    'totalVolume': 276898,
+                    'volume': 6801,
+                    'trades': 503
+                }, {
+                    'symbol': 'SIRI  240621C00003000',
+                    'description': 'SIRI   Jun 21 2024 3.0 Call',
+                    'lastPrice': 0.02,
+                    'netChange': -0.035,
+                    'netPercentChange': -0.63636364,
+                    'marketShare': 1.90286676,
+                    'totalVolume': 276898,
+                    'volume': 5269,
+                    'trades': 150
+                }, {
+                    'symbol': 'NVDA  240621C00128000',
+                    'description': 'NVDA   Jun 21 2024 128.0 Call',
+                    'lastPrice': 0.26,
+                    'netChange': -3.4431,
+                    'netPercentChange': -0.92978856,
+                    'marketShare': 1.77610528,
+                    'totalVolume': 276898,
+                    'volume': 4918,
+                    'trades': 306
+                }, {
+                    'symbol': 'NVDA  240621C00127000',
+                    'description': 'NVDA   Jun 21 2024 127.0 Call',
+                    'lastPrice': 0.6,
+                    'netChange': -3.9032,
+                    'netPercentChange': -0.86676141,
+                    'marketShare': 1.6320089,
+                    'totalVolume': 276898,
+                    'volume': 4519,
+                    'trades': 491
+                }, {
+                    'symbol': 'NVDA  240621C00130000',
+                    'description': 'NVDA   Jun 21 2024 130.0 Call',
+                    'lastPrice': 0.05,
+                    'netChange': -2.2177,
+                    'netPercentChange': -0.97795123,
+                    'marketShare': 1.4745502,
+                    'totalVolume': 276898,
+                    'volume': 4083,
+                    'trades': 217
+                }, {
+                    'symbol': 'SPY   240621C00544000',
+                    'description': 'SPY    Jun 21 2024 544.0 Call',
+                    'lastPrice': 0.68,
+                    'netChange': -2.32,
+                    'netPercentChange': -0.77333333,
+                    'marketShare': 1.42254549,
+                    'totalVolume': 276898,
+                    'volume': 3939,
+                    'trades': 286
+                }, {
+                    'symbol': 'IWM   240621C00200000',
+                    'description': 'IWM    Jun 21 2024 200.0 Call',
+                    'lastPrice': 0.11,
+                    'netChange': -0.7012,
+                    'netPercentChange': -0.86439842,
+                    'marketShare': 1.24197358,
+                    'totalVolume': 276898,
+                    'volume': 3439,
+                    'trades': 108
+                }, {
+                    'symbol': 'EWZ   240802C00030000',
+                    'description': 'EWZ    Aug 2 2024 30.0 Call',
+                    'lastPrice': 0.2,
+                    'netChange': 0.0446,
+                    'netPercentChange': 0.28700129,
+                    'marketShare': 1.20983178,
+                    'totalVolume': 276898,
+                    'volume': 3350,
+                    'trades': 1
+                }, {
+                    'symbol': 'CYH   240719C00004000',
+                    'description': 'CYH    Jul 19 2024 4.0 Call',
+                    'lastPrice': 0.1,
+                    'netChange': 0,
+                    'netPercentChange': 0,
+                    'marketShare': 1.08415373,
+                    'totalVolume': 276898,
+                    'volume': 3002,
+                    'trades': 96
+                }]
+            }]
+        }
+
+        self.assert_handler_called_once_with(handler, expected_item)
+        self.assert_handler_called_once_with(async_handler, expected_item)
+
     ###########################################################################
     # Handler edge cases
     #
