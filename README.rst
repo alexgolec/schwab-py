@@ -79,7 +79,7 @@ daily historical price data for the past twenty years:
   token_path = '/path/to/token.json'
 
   try:
-      c = auth.client_from_token_file(token_path, api_key)
+      c = auth.client_from_token_file(token_path, api_key, app_secret)
   except FileNotFoundError:
       c = auth.client_from_manual_flow(
           api_key, app_secret, redirect_uri, token_path)
