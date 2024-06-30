@@ -2,13 +2,13 @@ from authlib.integrations.httpx_client import AsyncOAuth2Client, OAuth2Client
 from prompt_toolkit import prompt
 
 import contextlib
+import httpx
 import json
 import logging
 import multiprocessing
 import os
 import psutil
 import queue
-import requests
 import sys
 import time
 import urllib
@@ -341,11 +341,11 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
                             'ignore',
                             category=urllib3.exceptions.InsecureRequestWarning)
 
-                    resp = requests.get(
+                    resp = httpx.get(
                             'https://127.0.0.1:{}/schwab-py-internal/status'.format(
                                 callback_port), verify=False)
                 break
-            except requests.exceptions.ConnectionError as e:
+            except httpx.ConnectError as e:
                 pass
 
             time.sleep(0.1)
