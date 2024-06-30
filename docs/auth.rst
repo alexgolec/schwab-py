@@ -110,23 +110,22 @@ and use it on another.
 
 .. code-block:: bash
 
-  # Notice we don't prefix this with "python" because this is a script that was 
-  # installed by pip when you installed schwab-py
-  > schwab-generate-token.py --help
-  usage: schwab-generate-token.py [-h] --token_file TOKEN_FILE --api_key API_KEY 
-  --redirect_uri REDIRECT_URI
+  usage: schwab-generate-token.py [-h] --token_file TOKEN_FILE --api_key API_KEY --app_secret APP_SECRET --callback_url CALLBACK_URL [--browser BROWSER]
 
   Fetch a new token and write it to a file
 
-  optional arguments:
+  options:
     -h, --help            show this help message and exit
 
   required arguments:
     --token_file TOKEN_FILE
-                        Path to token file. Any existing file will be overwritten
+                          Path to token file. Any existing file will be overwritten
     --api_key API_KEY
-    --redirect_uri REDIRECT_URI
-
+    --app_secret APP_SECRET
+    --callback_url CALLBACK_URL
+    --browser BROWSER     Manually specify a browser in which to start the login flow. See here for available options:
+                          https://docs.python.org/3/library/webbrowser.html#webbrowser.register
+    
 
 This script is installed by ``pip``, and will only be accessible if you've added
 pip's executable locations to your ``$PATH``. If you're having a hard time, feel
