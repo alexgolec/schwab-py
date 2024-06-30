@@ -36,9 +36,8 @@ setuptools.setup(
         'httpx',
         'prompt_toolkit',
         'psutil',
-        'requests',
         'python-dateutil',
-        'selenium',
+        'urllib3',
         'websockets'
     ],
     extras_require={
