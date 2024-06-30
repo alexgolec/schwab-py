@@ -388,7 +388,6 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
                   'this method with interactive=False to skip this input.')
 
         controller = webbrowser.get(requested_browser)
-        print(webbrowser.get)
         controller.open(authorization_url)
 
         # Wait for a response
