@@ -37,6 +37,7 @@ setuptools.setup(
         'prompt_toolkit',
         'psutil',
         'python-dateutil',
+        'urllib3',
         'websockets'
     ],
     extras_require={
