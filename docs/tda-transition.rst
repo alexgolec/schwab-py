@@ -85,6 +85,15 @@ Code that manipulates them may need to be updated. ``schwab-py`` provides a
 symbols easier.
 
 
+++++++++++++++++++++++++++++++++++
+Equity index symbols are different
+++++++++++++++++++++++++++++++++++
+
+TDAmeritrade used equity index symbols that ended in ``.X``. For instance, the 
+symbol for the S&P 500 index used to be ``$SPX.X``. Now, these indices are 
+referred to without that suffix, so S&P 500 is just ``$SPX``.
+
+
 ++++++++++++++++++++++++++++++++++++++++++++++
 ``schwab-py`` only supports python 3.10 and up
 ++++++++++++++++++++++++++++++++++++++++++++++
