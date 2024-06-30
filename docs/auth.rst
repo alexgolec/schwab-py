@@ -216,6 +216,32 @@ can also `join our Discord server <https://discord.gg/M3vjtHj>`__ to ask
 questions.
 
 
+++++++++++++++++++++++++++++++++++++
+Suspicious errors during signin flow
+++++++++++++++++++++++++++++++++++++
+
+All API endpoints require an approved app. When you app is first created and 
+anytime it's modified, it will go into state ``Approved - Pending``, a
+confusingly-named status indicating that the application is being manually 
+approved by Schwab. Until that status changes to ``Ready for Use``, you cannot 
+proceed using ``schwab-py``, and you will encounter difficult-to-debug errors. A 
+listing of the types of errors people have reported:
+
+ * ``401 Unauthorized`` errors in the signin flow
+ * ``4001``, ``Session rejected``, or ``assertion_rejected`` payloads
+ * ``Access Denied`` and ``You don't have permission to access 
+   "http://api.schwabapi.com/v1/oauth/authorize?" on this server"``
+
+.. image:: _static/access-denied.png
+   :width: 500
+   :align: center
+
+Approval appears to be  a manual process, and most users have reported 
+transitioning to the ``Ready for Use`` status within a few days. Please note 
+this behavior is implemented on Schwab's side, so the library authors have no 
+ability to influence this or speed up your approval time.
+
+
 .. _ssl_errors:
 
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++
