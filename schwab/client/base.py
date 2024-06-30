@@ -1119,6 +1119,9 @@ class BaseClient(EnumEnforcer):
              - String, or array of strings
              - Symbols for which to return fundamentals. Exact match.
         '''
+        if isinstance(symbols, str):
+            symbols = [symbols]
+
         projection = self.convert_enum(projection, self.Instrument.Projection)
 
         params = {

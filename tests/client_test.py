@@ -2178,6 +2178,15 @@ class _TestClient:
                 'projection': 'fundamental'})
 
 
+    def test_get_instruments_string_args(self):
+        self.client.get_instruments(
+            'AAPL', self.client_class.Instrument.Projection.FUNDAMENTAL)
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/marketdata/v1/instruments'), params={
+                'symbol': 'AAPL',
+                'projection': 'fundamental'})
+
+
     def test_get_instruments_projection_unchecked(self):
         self.client.set_enforce_enums(False)
         self.client.get_instruments(
