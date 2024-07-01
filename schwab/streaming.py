@@ -995,7 +995,7 @@ class StreamClient(EnumEnforcer):
         SETTLEMENT_TYPE = 43
 
         #: Net percent change
-        NET_CHANGE_PERCENT = 44
+        NET_PERCENT_CHANGE = 44
 
         #: Mark change
         MARK_CHANGE = 45

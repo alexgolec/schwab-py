@@ -76,9 +76,9 @@ exception.
 .. automethod:: schwab.streaming.StreamClient.login
 
 
-----------
-Logging In
-----------
+-----------
+Logging Out
+-----------
 
 For a clean exit, it's recommended to log out of the stream when you're done.
 
