@@ -364,6 +364,44 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
 
     ##########################################################################
+    # Logout
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_logout_success(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            1, 'ADMIN', 'LOGOUT'))]
+
+        await self.client.logout()
+
+        socket.send.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'ADMIN',
+            'command': 'LOGOUT',
+            'requestid': '1',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {}
+        })
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_logout_failure(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        response = self.success_response(1, 'ADMIN', 'LOGOUT')
+        response['response'][0]['content']['code'] = 9
+        socket.recv.side_effect = [json.dumps(response)]
+
+        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
+            await self.client.logout()
+
+
+    ##########################################################################
     # ACCT_ACTIVITY
 
     @no_duplicates
@@ -515,9 +553,9 @@ class StreamClientTest(IsolatedAsyncioTestCase):
                 {
                     'seq': 1,
                     'key': CLIENT_CORRELATION_ID,
-                    'FIELD_1': '1001',
-                    'FIELD_2': 'OrderEntryRequest',
-                    'FIELD_3': ''
+                    'ACCOUNT': '1001',
+                    'MESSAGE_TYPE': 'OrderEntryRequest',
+                    'MESSAGE_DATA': ''
                 }
             ]
         }
@@ -961,21 +999,21 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             'content': [{
                 'seq': 0,
                 'key': '/ES',
-                'FIELD_1': 1590597840000,
-                'FIELD_2': 2996.25,
-                'FIELD_3': 2997.25,
-                'FIELD_4': 2995.25,
-                'FIELD_5': 2997.25,
-                'FIELD_6': 1501.0
+                'CHART_TIME_MILLIS': 1590597840000,
+                'OPEN_PRICE': 2996.25,
+                'HIGH_PRICE': 2997.25,
+                'LOW_PRICE': 2995.25,
+                'CLOSE_PRICE': 2997.25,
+                'VOLUME': 1501.0
             }, {
                 'seq': 0,
                 'key': '/CL',
-                'FIELD_1': 1590597840000,
-                'FIELD_2': 33.34,
-                'FIELD_3': 33.35,
-                'FIELD_4': 33.32,
-                'FIELD_5': 33.35,
-                'FIELD_6': 186.0
+                'CHART_TIME_MILLIS': 1590597840000,
+                'OPEN_PRICE': 33.34,
+                'HIGH_PRICE': 33.35,
+                'LOW_PRICE': 33.32,
+                'CLOSE_PRICE': 33.35,
+                'VOLUME': 186.0
             }]
         }
 
@@ -987,7 +1025,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_equity_subs_success_all_fields(self, ws_connect):
+    async def test_level_one_equity_subs_and_add_success_all_fields(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
         socket.recv.side_effect = [json.dumps(self.success_response(
@@ -1005,6 +1043,29 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             'SchwabClientCorrelId': self.pref_correl_id,
             'parameters': {
                 'keys': 'GOOG,MSFT',
+                'fields': ('0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,' +
+                           '20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,' +
+                           '36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51')
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_EQUITIES', 'ADD'))]
+
+        await self.client.level_one_equity_add(['INTC'])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_EQUITIES',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': self.pref_customer_id,
+            'SchwabClientCorrelId': self.pref_correl_id,
+            'parameters': {
+                'keys': 'INTC',
                 'fields': ('0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,' +
                            '20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,' +
                            '36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51')
@@ -1072,7 +1133,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_equity_subs_success_some_fields(self, ws_connect):
+    async def test_level_one_equity_subs_and_add_success_some_fields(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
         socket.recv.side_effect = [json.dumps(self.success_response(
@@ -1099,9 +1160,35 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             }
         })
 
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_EQUITIES', 'ADD'))]
+
+        await self.client.level_one_equity_add(['INTC'], fields=[
+            StreamClient.LevelOneEquityFields.SYMBOL,
+            StreamClient.LevelOneEquityFields.BID_PRICE,
+            StreamClient.LevelOneEquityFields.ASK_PRICE,
+            StreamClient.LevelOneEquityFields.LOW_PRICE,
+        ])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_EQUITIES',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': 'INTC',
+                'fields': '0,1,2,11'
+            }
+        })
+
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_equity_subs_success_some_fields_no_symbol(
+    async def test_level_one_equity_subs_and_add_success_some_fields_no_symbol(
             self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
@@ -1124,6 +1211,31 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
             'parameters': {
                 'keys': 'GOOG,MSFT',
+                'fields': '0,1,2,11'
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_EQUITIES', 'ADD'))]
+
+        await self.client.level_one_equity_add(['INTC'], fields=[
+            StreamClient.LevelOneEquityFields.BID_PRICE,
+            StreamClient.LevelOneEquityFields.ASK_PRICE,
+            StreamClient.LevelOneEquityFields.LOW_PRICE,
+        ])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_EQUITIES',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': 'INTC',
                 'fields': '0,1,2,11'
             }
         })
@@ -1151,6 +1263,18 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
         with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
             await self.client.level_one_equity_unsubs(['GOOG', 'MSFT'])
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_level_one_equity_add_failure(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        response = self.success_response(1, 'LEVELONE_EQUITIES', 'ADD')
+        response['response'][0]['content']['code'] = 21
+        socket.recv.side_effect = [json.dumps(response)]
+
+        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
+            await self.client.level_one_equity_add(['GOOG', 'MSFT'])
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
@@ -1350,7 +1474,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
                     "REGULAR_MARKET_CHANGE_PERCENT": 0,
                     "MARK_CHANGE": 1.2,
                     "MARK_CHANGE_PERCENT": 0.28859335,
-                    "HTB_QUALITY": 95711793,
+                    "HTB_QUANTITY": 95711793,
                     "HTB_RATE": 0,
                     "HARD_TO_BORROW": 0,
                     "IS_SHORTABLE": 1,
@@ -1408,7 +1532,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
                     "REGULAR_MARKET_CHANGE_PERCENT": 0,
                     "MARK_CHANGE": 0.82,
                     "MARK_CHANGE_PERCENT": 0.47693829,
-                    "HTB_QUALITY": 67295343,
+                    "HTB_QUANTITY": 67295343,
                     "HTB_RATE": 0,
                     "HARD_TO_BORROW": 0,
                     "IS_SHORTABLE": 1,
@@ -1426,14 +1550,14 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_option_subs_success_all_fields(self, ws_connect):
+    async def test_level_one_option_subs_and_add_success_all_fields(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
         socket.recv.side_effect = [json.dumps(self.success_response(
             1, 'LEVELONE_OPTIONS', 'SUBS'))]
 
         await self.client.level_one_option_subs(
-            ['GOOG_052920C620', 'MSFT_052920C145'])
+            ['GOOG  240517C00070000', 'MSFT  240517C00160000'])
         socket.recv.assert_awaited_once()
         request = self.request_from_socket_mock(socket)
 
@@ -1444,7 +1568,31 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
             "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
             'parameters': {
-                'keys': 'GOOG_052920C620,MSFT_052920C145',
+                'keys': 'GOOG  240517C00070000,MSFT  240517C00160000',
+                'fields': ('0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,' +
+                           '20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,' +
+                           '36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,' +
+                           '52,53,54,55')
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_OPTIONS', 'ADD'))]
+
+        await self.client.level_one_option_add(['ADBE  240614C00500000'])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_OPTIONS',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': 'ADBE  240614C00500000',
                 'fields': ('0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,' +
                            '20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,' +
                            '36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,' +
@@ -1470,10 +1618,10 @@ class StreamClientTest(IsolatedAsyncioTestCase):
         self.client.add_level_one_option_handler(async_handler)
 
         await self.client.level_one_option_subs(
-            ['GOOG_052920C620', 'MSFT_052920C145'])
+            ['GOOG  240517C00070000', 'MSFT  240517C00160000'])
         await self.client.handle_message()
         await self.client.level_one_option_unsubs(
-            ['GOOG_052920C620', 'MSFT_052920C145'])
+            ['GOOG  240517C00070000', 'MSFT  240517C00160000'])
 
         self.assert_handler_called_once_with(
                 handler, {'service': 'LEVELONE_OPTIONS',
@@ -1493,7 +1641,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
                     "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
                     "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
                     "parameters": {
-                        "keys": "GOOG_052920C620,MSFT_052920C145", 
+                        "keys": "GOOG  240517C00070000,MSFT  240517C00160000",
                         "fields": "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,"+
                         "17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,"+
                         "34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,"+
@@ -1509,7 +1657,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
                     "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
                     "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
                     "parameters": {
-                        "keys": "GOOG_052920C620,MSFT_052920C145"
+                        "keys": "GOOG  240517C00070000,MSFT  240517C00160000"
                     }
                 }]
             })),
@@ -1519,14 +1667,14 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_option_subs_success_some_fields(self, ws_connect):
+    async def test_level_one_option_subs_and_add_success_some_fields(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
         socket.recv.side_effect = [json.dumps(self.success_response(
             1, 'LEVELONE_OPTIONS', 'SUBS'))]
 
         await self.client.level_one_option_subs(
-            ['GOOG_052920C620', 'MSFT_052920C145'], fields=[
+            ['GOOG  240517C00070000', 'MSFT  240517C00160000'], fields=[
                 StreamClient.LevelOneOptionFields.SYMBOL,
                 StreamClient.LevelOneOptionFields.BID_PRICE,
                 StreamClient.LevelOneOptionFields.ASK_PRICE,
@@ -1542,14 +1690,41 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
             "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
             'parameters': {
-                'keys': 'GOOG_052920C620,MSFT_052920C145',
+                'keys': 'GOOG  240517C00070000,MSFT  240517C00160000',
+                'fields': '0,2,3,10'
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_OPTIONS', 'ADD'))]
+
+        await self.client.level_one_option_add(
+            ['ADBE  240614C00500000'], fields=[
+                StreamClient.LevelOneOptionFields.SYMBOL,
+                StreamClient.LevelOneOptionFields.BID_PRICE,
+                StreamClient.LevelOneOptionFields.ASK_PRICE,
+                StreamClient.LevelOneOptionFields.VOLATILITY,
+            ])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_OPTIONS',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': 'ADBE  240614C00500000',
                 'fields': '0,2,3,10'
             }
         })
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_option_subs_success_some_fields_no_symbol(
+    async def test_level_one_option_subs_and_add_success_some_fields_no_symbol(
             self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
@@ -1557,7 +1732,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             1, 'LEVELONE_OPTIONS', 'SUBS'))]
 
         await self.client.level_one_option_subs(
-            ['GOOG_052920C620', 'MSFT_052920C145'], fields=[
+            ['GOOG  240517C00070000', 'MSFT  240517C00160000'], fields=[
                 StreamClient.LevelOneOptionFields.BID_PRICE,
                 StreamClient.LevelOneOptionFields.ASK_PRICE,
                 StreamClient.LevelOneOptionFields.VOLATILITY,
@@ -1572,7 +1747,33 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
             "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
             'parameters': {
-                'keys': 'GOOG_052920C620,MSFT_052920C145',
+                'keys': 'GOOG  240517C00070000,MSFT  240517C00160000',
+                'fields': '0,2,3,10'
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_OPTIONS', 'ADD'))]
+
+        await self.client.level_one_option_add(
+            ['ADBE  240614C00500000'], fields=[
+                StreamClient.LevelOneOptionFields.BID_PRICE,
+                StreamClient.LevelOneOptionFields.ASK_PRICE,
+                StreamClient.LevelOneOptionFields.VOLATILITY,
+            ])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_OPTIONS',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': 'ADBE  240614C00500000',
                 'fields': '0,2,3,10'
             }
         })
@@ -1588,7 +1789,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
         with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
             await self.client.level_one_option_subs(
-                ['GOOG_052920C620', 'MSFT_052920C145'])
+                ['GOOG  240517C00070000', 'MSFT  240517C00160000'])
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
@@ -1601,7 +1802,19 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
         with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
             await self.client.level_one_option_unsubs(
-                ['GOOG_052920C620', 'MSFT_052920C145'])
+                ['GOOG  240517C00070000', 'MSFT  240517C00160000'])
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_level_one_option_add_failure(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        response = self.success_response(1, 'LEVELONE_OPTIONS', 'ADD')
+        response['response'][0]['content']['code'] = 21
+        socket.recv.side_effect = [json.dumps(response)]
+
+        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
+            await self.client.level_one_option_add(['ADBE  240614C00500000'])
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
@@ -1744,7 +1957,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             json.dumps(self.success_response(1, 'LEVELONE_OPTIONS', 'SUBS')),
             json.dumps(stream_item)]
         await self.client.level_one_option_subs(
-            ['GOOG_052920C620', 'MSFT_052920C145'])
+            ['GOOG  240517C00070000', 'MSFT  240517C00160000'])
 
         handler = Mock()
         async_handler = AsyncMock()
@@ -1890,7 +2103,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_futures_subs_success_all_fields(self, ws_connect):
+    async def test_level_one_futures_subs_and_add_success_all_fields(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
         socket.recv.side_effect = [json.dumps(self.success_response(
@@ -1909,7 +2122,30 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             'parameters': {
                 'keys': '/ES,/CL',
                 'fields': ('0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,' +
-                           '20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35')
+                           '20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40')
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_FUTURES', 'ADD'))]
+
+        await self.client.level_one_futures_add(['/NQ'])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_FUTURES',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': '/NQ',
+                'fields': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,' +
+                '17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,' +
+                '34,35,36,37,38,39,40'
             }
         })
 
@@ -1950,7 +2186,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
                         "keys": "/ES,/CL", 
                         "fields": "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,"+
                         "17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,"+
-                        "34,35"
+                        "34,35,36,37,38,39,40"
                     }
                 }]
             })),
@@ -1971,17 +2207,17 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_futures_subs_success_some_fields(self, ws_connect):
+    async def test_level_one_futures_subs_and_add_success_some_fields(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
         socket.recv.side_effect = [json.dumps(self.success_response(
             1, 'LEVELONE_FUTURES', 'SUBS'))]
 
         await self.client.level_one_futures_subs(['/ES', '/CL'], fields=[
-            StreamClient.LevelOneFuturesFields.FIELD_0,
-            StreamClient.LevelOneFuturesFields.FIELD_1,
-            StreamClient.LevelOneFuturesFields.FIELD_2,
-            StreamClient.LevelOneFuturesFields.FIELD_28,
+            StreamClient.LevelOneFuturesFields.SYMBOL,
+            StreamClient.LevelOneFuturesFields.BID_PRICE,
+            StreamClient.LevelOneFuturesFields.ASK_PRICE,
+            StreamClient.LevelOneFuturesFields.FUTURE_PRICE_FORMAT,
         ])
         socket.recv.assert_awaited_once()
         request = self.request_from_socket_mock(socket)
@@ -1998,9 +2234,35 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             }
         })
 
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_FUTURES', 'ADD'))]
+
+        await self.client.level_one_futures_add(['/NQ'], fields=[
+            StreamClient.LevelOneFuturesFields.SYMBOL,
+            StreamClient.LevelOneFuturesFields.BID_PRICE,
+            StreamClient.LevelOneFuturesFields.ASK_PRICE,
+            StreamClient.LevelOneFuturesFields.FUTURE_PRICE_FORMAT,
+        ])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_FUTURES',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': '/NQ',
+                'fields': '0,1,2,28'
+            }
+        })
+
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_futures_subs_success_some_fields_no_symbol(
+    async def test_level_one_futures_subs_and_add_success_some_fields_no_symbol(
             self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
@@ -2008,9 +2270,9 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             1, 'LEVELONE_FUTURES', 'SUBS'))]
 
         await self.client.level_one_futures_subs(['/ES', '/CL'], fields=[
-            StreamClient.LevelOneFuturesFields.FIELD_1,
-            StreamClient.LevelOneFuturesFields.FIELD_2,
-            StreamClient.LevelOneFuturesFields.FIELD_28,
+            StreamClient.LevelOneFuturesFields.BID_PRICE,
+            StreamClient.LevelOneFuturesFields.ASK_PRICE,
+            StreamClient.LevelOneFuturesFields.FUTURE_PRICE_FORMAT,
         ])
         socket.recv.assert_awaited_once()
         request = self.request_from_socket_mock(socket)
@@ -2023,6 +2285,31 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
             'parameters': {
                 'keys': '/ES,/CL',
+                'fields': '0,1,2,28'
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_FUTURES', 'ADD'))]
+
+        await self.client.level_one_futures_add(['/NQ'], fields=[
+            StreamClient.LevelOneFuturesFields.BID_PRICE,
+            StreamClient.LevelOneFuturesFields.ASK_PRICE,
+            StreamClient.LevelOneFuturesFields.FUTURE_PRICE_FORMAT,
+        ])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_FUTURES',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': '/NQ',
                 'fields': '0,1,2,28'
             }
         })
@@ -2053,93 +2340,114 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_level_one_futures_add_failure(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        response = self.success_response(1, 'LEVELONE_FUTURES', 'ADD')
+        response['response'][0]['content']['code'] = 21
+        socket.recv.side_effect = [json.dumps(response)]
+
+        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
+            await self.client.level_one_futures_add(['/NQ'])
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
     async def test_level_one_futures_handler(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
         stream_item = {
             'data': [{
                 'service': 'LEVELONE_FUTURES',
-                'timestamp': 1590598762176,
+                'timestamp': 1719002950099,
                 'command': 'SUBS',
                 'content': [{
-                    'key': '/ES',
-                    'delayed': False,
-                    '1': 2998.75,
-                    '2': 2999,
-                    '3': 2998.75,
-                    '4': 15,
-                    '5': 47,
-                    '6': '?',
-                    '7': '?',
-                    '8': 1489587,
-                    '9': 6,
-                    '10': 1590598761934,
-                    '11': 1590598761921,
-                    '12': 3035,
-                    '13': 2965.5,
-                    '14': 2994.5,
-                    '15': 'E',
-                    '16': 'E-mini S&P 500 Index Futures,Jun-2020,ETH',
-                    '17': '?',
-                    '18': 2994,
-                    '19': 4.25,
-                    '20': 0.0014,
-                    '21': 'XCME',
-                    '22': 'Unknown',
-                    '23': 3121588,
-                    '24': 2999.25,
-                    '25': 0.25,
-                    '26': 12.5,
-                    '27': '/ES',
-                    '28': 'D,D',
-                    '29': ('GLBX(de=1640;0=-1700151515301600;' +
-                           '1=r-17001515r15301600d-15551640;' +
-                           '7=d-16401555)'),
-                    '30': True,
-                    '31': 50,
-                    '32': True,
-                    '33': 2994.5,
-                    '34': '/ESM20',
-                    '35': 1592539200000
-                }, {
                     'key': '/CL',
                     'delayed': False,
-                    '1': 33.33,
-                    '2': 33.34,
-                    '3': 33.34,
-                    '4': 13,
-                    '5': 3,
+                    'assetMainType': 'FUTURE',
+                    '1': 80.61,
+                    '2': 80.62,
+                    '3': 80.6,
+                    '4': 2,
+                    '5': 14,
                     '6': '?',
                     '7': '?',
-                    '8': 325014,
-                    '9': 2,
-                    '10': 1590598761786,
-                    '11': 1590598761603,
-                    '12': 34.32,
-                    '13': 32.18,
-                    '14': 34.35,
-                    '15': 'E',
-                    '16': 'Light Sweet Crude Oil Futures,Jul-2020,ETH',
+                    '8': 270916,
+                    '9': 1,
+                    '10': 1719002948817,
+                    '11': 1719002944037,
+                    '12': 81.79,
+                    '13': 80.35,
+                    '14': 81.29,
+                    '15': '@',
+                    '16': 'Light Sweet Crude Oil Futures,Aug-2024,ETH',
                     '17': '?',
-                    '18': 34.14,
-                    '19': -1.01,
-                    '20': -0.0294,
+                    '18': 81.27,
+                    '19': -0.69,
+                    '20': -0.84881289,
                     '21': 'XNYM',
-                    '22': 'Unknown',
-                    '23': 270931,
-                    '24': 33.35,
+                    '22': 'Normal',
+                    '23': 352314,
+                    '24': 80.61,
                     '25': 0.01,
                     '26': 10,
                     '27': '/CL',
                     '28': 'D,D',
-                    '29': ('GLBX(de=1640;0=-17001600;' +
-                           '1=-17001600d-15551640;7=d-16401555)'),
-                    '30': True,
+                    '29': 'GLBX(de=1640;0=-17001600;1=-17001600d-15551640;7=d-16401555)',
+                    '30': False,
                     '31': 1000,
                     '32': True,
-                    '33': 34.35,
-                    '34': '/CLN20',
-                    '35': 1592798400000
+                    '33': 81.29,
+                    '34': '/CLQ24',
+                    '35': 1721620800000,
+                    '36': 'Unknown',
+                    '37': 1719002948347,
+                    '38': 1719002948817,
+                    '39': True,
+                    '40': 1718928000000
+                }, {
+                    'key': '/ES',
+                    'delayed': False,
+                    'assetMainType': 'FUTURE',
+                    '1': 5536.5,
+                    '2': 5537,
+                    '3': 5536.75,
+                    '4': 61,
+                    '5': 112,
+                    '6': '?',
+                    '7': '?',
+                    '8': 1250270,
+                    '9': 2,
+                    '10': 1719002947349,
+                    '11': 1719002945728,
+                    '12': 5550.75,
+                    '13': 5519,
+                    '14': 5544.5,
+                    '15': '@',
+                    '16': 'E-mini S&P 500 Index Futures,Sep-2024,ETH',
+                    '17': '?',
+                    '18': 5545,
+                    '19': -7.75,
+                    '20': -0.13977816,
+                    '21': 'XCME',
+                    '22': 'Normal',
+                    '23': 1976987,
+                    '24': 5536.75,
+                    '25': 0.25,
+                    '26': 12.5,
+                    '27': '/ES',
+                    '28': 'D,D',
+                    '29': 'GLBX(de=1640;0=-17001600;1=r-17001600d-15551640;7=d-16401555)',
+                    '30': False,
+                    '31': 50,
+                    '32': True,
+                    '33': 5544.5,
+                    '34': '/ESU24',
+                    '35': 1726804800000,
+                    '36': 'Unknown',
+                    '37': 1719002947349,
+                    '38': 1719002946189,
+                    '39': True,
+                    '40': 1718928000000
                 }]
             }]
         }
@@ -2157,90 +2465,100 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
         expected_item = {
             'service': 'LEVELONE_FUTURES',
-            'timestamp': 1590598762176,
+            'timestamp': 1719002950099,
             'command': 'SUBS',
-            'content': [{
-                'key': '/ES',
-                'delayed': False,
-                'FIELD_1': 2998.75,
-                'FIELD_2': 2999,
-                'FIELD_3': 2998.75,
-                'FIELD_4': 15,
-                'FIELD_5': 47,
-                'FIELD_6': '?',
-                'FIELD_7': '?',
-                'FIELD_8': 1489587,
-                'FIELD_9': 6,
-                'FIELD_10': 1590598761934,
-                'FIELD_11': 1590598761921,
-                'FIELD_12': 3035,
-                'FIELD_13': 2965.5,
-                'FIELD_14': 2994.5,
-                'FIELD_15': 'E',
-                'FIELD_16': 'E-mini S&P 500 Index Futures,Jun-2020,ETH',
-                'FIELD_17': '?',
-                'FIELD_18': 2994,
-                'FIELD_19': 4.25,
-                'FIELD_20': 0.0014,
-                'FIELD_21': 'XCME',
-                'FIELD_22': 'Unknown',
-                'FIELD_23': 3121588,
-                'FIELD_24': 2999.25,
-                'FIELD_25': 0.25,
-                'FIELD_26': 12.5,
-                'FIELD_27': '/ES',
-                'FIELD_28': 'D,D',
-                'FIELD_29': (
-                    'GLBX(de=1640;0=-1700151515301600;' +
-                    '1=r-17001515r15301600d-15551640;' +
-                    '7=d-16401555)'),
-                'FIELD_30': True,
-                'FIELD_31': 50,
-                'FIELD_32': True,
-                'FIELD_33': 2994.5,
-                'FIELD_34': '/ESM20',
-                'FIELD_35': 1592539200000
-            }, {
-                'key': '/CL',
-                'delayed': False,
-                'FIELD_1': 33.33,
-                'FIELD_2': 33.34,
-                'FIELD_3': 33.34,
-                'FIELD_4': 13,
-                'FIELD_5': 3,
-                'FIELD_6': '?',
-                'FIELD_7': '?',
-                'FIELD_8': 325014,
-                'FIELD_9': 2,
-                'FIELD_10': 1590598761786,
-                'FIELD_11': 1590598761603,
-                'FIELD_12': 34.32,
-                'FIELD_13': 32.18,
-                'FIELD_14': 34.35,
-                'FIELD_15': 'E',
-                'FIELD_16': 'Light Sweet Crude Oil Futures,Jul-2020,ETH',
-                'FIELD_17': '?',
-                'FIELD_18': 34.14,
-                'FIELD_19': -1.01,
-                'FIELD_20': -0.0294,
-                'FIELD_21': 'XNYM',
-                'FIELD_22': 'Unknown',
-                'FIELD_23': 270931,
-                'FIELD_24': 33.35,
-                'FIELD_25': 0.01,
-                'FIELD_26': 10,
-                'FIELD_27': '/CL',
-                'FIELD_28': 'D,D',
-                'FIELD_29': (
-                    'GLBX(de=1640;0=-17001600;' +
-                    '1=-17001600d-15551640;7=d-16401555)'),
-                'FIELD_30': True,
-                'FIELD_31': 1000,
-                'FIELD_32': True,
-                'FIELD_33': 34.35,
-                'FIELD_34': '/CLN20',
-                'FIELD_35': 1592798400000
-            }]
+            'content': [
+                {
+                    'key': '/CL',
+                    'delayed': False,
+                    'assetMainType': 'FUTURE',
+                    'BID_PRICE': 80.61,
+                    'ASK_PRICE': 80.62,
+                    'LAST_PRICE': 80.6,
+                    'BID_SIZE': 2,
+                    'ASK_SIZE': 14,
+                    'BID_ID': '?',
+                    'ASK_ID': '?',
+                    'TOTAL_VOLUME': 270916,
+                    'LAST_SIZE': 1,
+                    'QUOTE_TIME_MILLIS': 1719002948817,
+                    'TRADE_TIME_MILLIS': 1719002944037,
+                    'HIGH_PRICE': 81.79,
+                    'LOW_PRICE': 80.35,
+                    'CLOSE_PRICE': 81.29,
+                    'EXCHANGE_ID': '@',
+                    'DESCRIPTION': 'Light Sweet Crude Oil Futures,Aug-2024,ETH',
+                    'LAST_ID': '?',
+                    'OPEN_PRICE': 81.27,
+                    'NET_CHANGE': -0.69,
+                    'FUTURE_CHANGE_PERCENT': -0.84881289,
+                    'EXCHANGE_NAME': 'XNYM',
+                    'SECURITY_STATUS': 'Normal',
+                    'OPEN_INTEREST': 352314,
+                    'MARK': 80.61,
+                    'TICK': 0.01,
+                    'TICK_AMOUNT': 10,
+                    'PRODUCT': '/CL',
+                    'FUTURE_PRICE_FORMAT': 'D,D',
+                    'FUTURE_TRADING_HOURS': 'GLBX(de=1640;0=-17001600;1=-17001600d-15551640;7=d-16401555)',
+                    'FUTURE_IS_TRADABLE': False,
+                    'FUTURE_MULTIPLIER': 1000,
+                    'FUTURE_IS_ACTIVE': True,
+                    'FUTURE_SETTLEMENT_PRICE': 81.29,
+                    'FUTURE_ACTIVE_SYMBOL': '/CLQ24',
+                    'FUTURE_EXPIRATION_DATE': 1721620800000,
+                    'EXPIRATION_STYLE': 'Unknown',
+                    'ASK_TIME_MILLIS': 1719002948347,
+                    'BID_TIME_MILLIS': 1719002948817,
+                    'QUOTED_IN_SESSION': True,
+                    'SETTLEMENT_DATE': 1718928000000
+                },
+                {
+                    'key': '/ES',
+                    'delayed': False,
+                    'assetMainType': 'FUTURE',
+                    'BID_PRICE': 5536.5,
+                    'ASK_PRICE': 5537,
+                    'LAST_PRICE': 5536.75,
+                    'BID_SIZE': 61,
+                    'ASK_SIZE': 112,
+                    'BID_ID': '?',
+                    'ASK_ID': '?',
+                    'TOTAL_VOLUME': 1250270,
+                    'LAST_SIZE': 2,
+                    'QUOTE_TIME_MILLIS': 1719002947349,
+                    'TRADE_TIME_MILLIS': 1719002945728,
+                    'HIGH_PRICE': 5550.75,
+                    'LOW_PRICE': 5519,
+                    'CLOSE_PRICE': 5544.5,
+                    'EXCHANGE_ID': '@',
+                    'DESCRIPTION': 'E-mini S&P 500 Index Futures,Sep-2024,ETH',
+                    'LAST_ID': '?',
+                    'OPEN_PRICE': 5545,
+                    'NET_CHANGE': -7.75,
+                    'FUTURE_CHANGE_PERCENT': -0.13977816,
+                    'EXCHANGE_NAME': 'XCME',
+                    'SECURITY_STATUS': 'Normal',
+                    'OPEN_INTEREST': 1976987,
+                    'MARK': 5536.75,
+                    'TICK': 0.25,
+                    'TICK_AMOUNT': 12.5,
+                    'PRODUCT': '/ES',
+                    'FUTURE_PRICE_FORMAT': 'D,D',
+                    'FUTURE_TRADING_HOURS': 'GLBX(de=1640;0=-17001600;1=r-17001600d-15551640;7=d-16401555)',
+                    'FUTURE_IS_TRADABLE': False,
+                    'FUTURE_MULTIPLIER': 50,
+                    'FUTURE_IS_ACTIVE': True,
+                    'FUTURE_SETTLEMENT_PRICE': 5544.5,
+                    'FUTURE_ACTIVE_SYMBOL': '/ESU24',
+                    'FUTURE_EXPIRATION_DATE': 1726804800000,
+                    'EXPIRATION_STYLE': 'Unknown',
+                    'ASK_TIME_MILLIS': 1719002947349,
+                    'BID_TIME_MILLIS': 1719002946189,
+                    'QUOTED_IN_SESSION': True,
+                    'SETTLEMENT_DATE': 1718928000000
+                }
+            ]
         }
 
         self.assert_handler_called_once_with(handler, expected_item)
@@ -2252,7 +2570,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_forex_subs_success_all_fields(self, ws_connect):
+    async def test_level_one_forex_subs_and_add_success_all_fields(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
         socket.recv.side_effect = [json.dumps(self.success_response(
@@ -2270,6 +2588,28 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
             'parameters': {
                 'keys': 'EUR/USD,EUR/GBP',
+                'fields': ('0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,' +
+                           '20,21,22,23,24,25,26,27,28,29')
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_FOREX', 'ADD'))]
+
+        await self.client.level_one_forex_add(['JPY/USD'])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_FOREX',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': 'JPY/USD',
                 'fields': ('0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,' +
                            '20,21,22,23,24,25,26,27,28,29')
             }
@@ -2332,17 +2672,17 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_forex_subs_success_some_fields(self, ws_connect):
+    async def test_level_one_forex_subs_and_add_success_some_fields(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
         socket.recv.side_effect = [json.dumps(self.success_response(
             1, 'LEVELONE_FOREX', 'SUBS'))]
 
         await self.client.level_one_forex_subs(['EUR/USD', 'EUR/GBP'], fields=[
-            StreamClient.LevelOneForexFields.FIELD_0,
-            StreamClient.LevelOneForexFields.FIELD_10,
-            StreamClient.LevelOneForexFields.FIELD_11,
-            StreamClient.LevelOneForexFields.FIELD_26,
+            StreamClient.LevelOneForexFields.SYMBOL,
+            StreamClient.LevelOneForexFields.HIGH_PRICE,
+            StreamClient.LevelOneForexFields.LOW_PRICE,
+            StreamClient.LevelOneForexFields.MARKET_MAKER,
         ])
         socket.recv.assert_awaited_once()
         request = self.request_from_socket_mock(socket)
@@ -2359,9 +2699,35 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             }
         })
 
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_FOREX', 'ADD'))]
+
+        await self.client.level_one_forex_add(['JPY/USD'], fields=[
+            StreamClient.LevelOneForexFields.SYMBOL,
+            StreamClient.LevelOneForexFields.HIGH_PRICE,
+            StreamClient.LevelOneForexFields.LOW_PRICE,
+            StreamClient.LevelOneForexFields.MARKET_MAKER,
+        ])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_FOREX',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': 'JPY/USD',
+                'fields': '0,10,11,26'
+            }
+        })
+
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_forex_subs_success_some_fields_no_symbol(
+    async def test_level_one_forex_subs_and_add_success_some_fields_no_symbol(
             self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
@@ -2369,9 +2735,9 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             1, 'LEVELONE_FOREX', 'SUBS'))]
 
         await self.client.level_one_forex_subs(['EUR/USD', 'EUR/GBP'], fields=[
-            StreamClient.LevelOneForexFields.FIELD_10,
-            StreamClient.LevelOneForexFields.FIELD_11,
-            StreamClient.LevelOneForexFields.FIELD_26,
+            StreamClient.LevelOneForexFields.HIGH_PRICE,
+            StreamClient.LevelOneForexFields.LOW_PRICE,
+            StreamClient.LevelOneForexFields.MARKET_MAKER,
         ])
         socket.recv.assert_awaited_once()
         request = self.request_from_socket_mock(socket)
@@ -2384,6 +2750,31 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
             'parameters': {
                 'keys': 'EUR/USD,EUR/GBP',
+                'fields': '0,10,11,26'
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_FOREX', 'ADD'))]
+
+        await self.client.level_one_forex_add(['JPY/USD'], fields=[
+            StreamClient.LevelOneForexFields.HIGH_PRICE,
+            StreamClient.LevelOneForexFields.LOW_PRICE,
+            StreamClient.LevelOneForexFields.MARKET_MAKER,
+        ])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_FOREX',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': 'JPY/USD',
                 'fields': '0,10,11,26'
             }
         })
@@ -2414,6 +2805,18 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_level_one_forex_add_failure(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        response = self.success_response(1, 'LEVELONE_FOREX', 'ADD')
+        response['response'][0]['content']['code'] = 21
+        socket.recv.side_effect = [json.dumps(response)]
+
+        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
+            await self.client.level_one_forex_add(['JPY/USD'])
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
     async def test_level_one_forex_handler(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
@@ -2426,68 +2829,68 @@ class StreamClientTest(IsolatedAsyncioTestCase):
                     'key': 'EUR/GBP',
                     'delayed': False,
                     'assetMainType': 'FOREX',
-                    '1': 0.8967,
-                    '2': 0.8969,
-                    '3': 0.8968,
+                    '1': 0.84437,
+                    '2': 0.84451,
+                    '3': 0.84444,
                     '4': 1000000,
-                    '5': 1000000,
-                    '6': 19000000,
-                    '7': 370000,
-                    '8': 1590599267658,
-                    '9': 1590599267658,
-                    '10': 0.8994,
-                    '11': 0.8896,
-                    '12': 0.894,
-                    '13': 'T',
+                    '5': 3000000,
+                    '6': 310000,
+                    '7': 10000,
+                    '8': 1718811579076,
+                    '9': 1718811579076,
+                    '10': 0.84526,
+                    '11': 0.842995,
+                    '12': 0.844095,
+                    '13': '!',
                     '14': 'Euro/GBPound Spot',
-                    '15': 0.8901,
-                    '16': 0.0028,
-                    '17': '??',
+                    '15': 0.84526,
+                    '16': 0.000345,
+                    '17': 0,
                     '18': 'GFT',
                     '19': 2,
                     '20': 'Unknown',
-                    '21': 'UNUSED',
-                    '22': 'UNUSED',
-                    '23': 'UNUSED',
-                    '24': 'UNUSED',
-                    '25': 'UNUSED',
-                    '26': 'UNUSED',
-                    '27': 0.8994,
-                    '28': 0.8896,
-                    '29': 0.8968
+                    '21': 0,
+                    '22': 0,
+                    '23': '',
+                    '24': '',
+                    '25': False,
+                    '26': '',
+                    '27': 0.84526,
+                    '28': 0.842995,
+                    '29': 0.84444
                 }, {
                     'key': 'EUR/USD',
                     'delayed': False,
                     'assetMainType': 'FOREX',
-                    '1': 1.0976,
-                    '2': 1.0978,
-                    '3': 1.0977,
-                    '4': 1000000,
-                    '5': 2800000,
-                    '6': 633170000,
-                    '7': 10000,
-                    '8': 1590599267658,
-                    '9': 1590599267658,
-                    '10': 1.1031,
-                    '11': 1.0936,
-                    '12': 1.0893,
-                    '13': 'T',
+                    '1': 1.07435,
+                    '2': 1.07448,
+                    '3': 1.074415,
+                    '4': 3000000,
+                    '5': 1000000,
+                    '6': 14730000,
+                    '7': 20000,
+                    '8': 1718811581092,
+                    '9': 1718811581092,
+                    '10': 1.075305,
+                    '11': 1.07272,
+                    '12': 1.070485,
+                    '13': '!',
                     '14': 'Euro/USDollar Spot',
-                    '15': 1.0982,
-                    '16': 0.0084,
-                    '17': '???',
+                    '15': 1.07396,
+                    '16': 0.00393,
+                    '17': 0,
                     '18': 'GFT',
                     '19': 2,
                     '20': 'Unknown',
-                    '21': 'UNUSED',
-                    '22': 'UNUSED',
-                    '23': 'UNUSED',
-                    '24': 'UNUSED',
-                    '25': 'UNUSED',
-                    '26': 'UNUSED',
-                    '27': 1.1031,
-                    '28': 1.0936,
-                    '29': 1.0977
+                    '21': 0,
+                    '22': 0,
+                    '23': '',
+                    '24': '',
+                    '25': False,
+                    '26': '',
+                    '27': 1.075305,
+                    '28': 1.07272,
+                    '29': 1.074415
                 }]
             }]
         }
@@ -2511,68 +2914,68 @@ class StreamClientTest(IsolatedAsyncioTestCase):
                 'key': 'EUR/GBP',
                 'delayed': False,
                 'assetMainType': 'FOREX',
-                'FIELD_1': 0.8967,
-                'FIELD_2': 0.8969,
-                'FIELD_3': 0.8968,
-                'FIELD_4': 1000000,
-                'FIELD_5': 1000000,
-                'FIELD_6': 19000000,
-                'FIELD_7': 370000,
-                'FIELD_8': 1590599267658,
-                'FIELD_9': 1590599267658,
-                'FIELD_10': 0.8994,
-                'FIELD_11': 0.8896,
-                'FIELD_12': 0.894,
-                'FIELD_13': 'T',
-                'FIELD_14': 'Euro/GBPound Spot',
-                'FIELD_15': 0.8901,
-                'FIELD_16': 0.0028,
-                'FIELD_17': '??',
-                'FIELD_18': 'GFT',
-                'FIELD_19': 2,
-                'FIELD_20': 'Unknown',
-                'FIELD_21': 'UNUSED',
-                'FIELD_22': 'UNUSED',
-                'FIELD_23': 'UNUSED',
-                'FIELD_24': 'UNUSED',
-                'FIELD_25': 'UNUSED',
-                'FIELD_26': 'UNUSED',
-                'FIELD_27': 0.8994,
-                'FIELD_28': 0.8896,
-                'FIELD_29': 0.8968
+                'BID_PRICE': 0.84437,
+                'ASK_PRICE': 0.84451,
+                'LAST_PRICE': 0.84444,
+                'BID_SIZE': 1000000,
+                'ASK_SIZE': 3000000,
+                'TOTAL_VOLUME': 310000,
+                'LAST_SIZE': 10000,
+                'QUOTE_TIME_MILLIS': 1718811579076,
+                'TRADE_TIME_MILLIS': 1718811579076,
+                'HIGH_PRICE': 0.84526,
+                'LOW_PRICE': 0.842995,
+                'CLOSE_PRICE': 0.844095,
+                'EXCHANGE_ID': '!',
+                'DESCRIPTION': 'Euro/GBPound Spot',
+                'OPEN_PRICE': 0.84526,
+                'NET_CHANGE': 0.000345,
+                'CHANGE_PERCENT': 0,
+                'EXCHANGE_NAME': 'GFT',
+                'DIGITS': 2,
+                'SECURITY_STATUS': 'Unknown',
+                'TICK': 0,
+                'TICK_AMOUNT': 0,
+                'PRODUCT': '',
+                'TRADING_HOURS': '',
+                'IS_TRADABLE': False,
+                'MARKET_MAKER': '',
+                'HIGH_PRICE_52_WEEK': 0.84526,
+                'LOW_PRICE_52_WEEK': 0.842995,
+                'MARK': 0.84444
             }, {
                 'key': 'EUR/USD',
                 'delayed': False,
                 'assetMainType': 'FOREX',
-                'FIELD_1': 1.0976,
-                'FIELD_2': 1.0978,
-                'FIELD_3': 1.0977,
-                'FIELD_4': 1000000,
-                'FIELD_5': 2800000,
-                'FIELD_6': 633170000,
-                'FIELD_7': 10000,
-                'FIELD_8': 1590599267658,
-                'FIELD_9': 1590599267658,
-                'FIELD_10': 1.1031,
-                'FIELD_11': 1.0936,
-                'FIELD_12': 1.0893,
-                'FIELD_13': 'T',
-                'FIELD_14': 'Euro/USDollar Spot',
-                'FIELD_15': 1.0982,
-                'FIELD_16': 0.0084,
-                'FIELD_17': '???',
-                'FIELD_18': 'GFT',
-                'FIELD_19': 2,
-                'FIELD_20': 'Unknown',
-                'FIELD_21': 'UNUSED',
-                'FIELD_22': 'UNUSED',
-                'FIELD_23': 'UNUSED',
-                'FIELD_24': 'UNUSED',
-                'FIELD_25': 'UNUSED',
-                'FIELD_26': 'UNUSED',
-                'FIELD_27': 1.1031,
-                'FIELD_28': 1.0936,
-                'FIELD_29': 1.0977
+                'BID_PRICE': 1.07435,
+                'ASK_PRICE': 1.07448,
+                'LAST_PRICE': 1.074415,
+                'BID_SIZE': 3000000,
+                'ASK_SIZE': 1000000,
+                'TOTAL_VOLUME': 14730000,
+                'LAST_SIZE': 20000,
+                'QUOTE_TIME_MILLIS': 1718811581092,
+                'TRADE_TIME_MILLIS': 1718811581092,
+                'HIGH_PRICE': 1.075305,
+                'LOW_PRICE': 1.07272,
+                'CLOSE_PRICE': 1.070485,
+                'EXCHANGE_ID': '!',
+                'DESCRIPTION': 'Euro/USDollar Spot',
+                'OPEN_PRICE': 1.07396,
+                'NET_CHANGE': 0.00393,
+                'CHANGE_PERCENT': 0,
+                'EXCHANGE_NAME': 'GFT',
+                'DIGITS': 2,
+                'SECURITY_STATUS': 'Unknown',
+                'TICK': 0,
+                'TICK_AMOUNT': 0,
+                'PRODUCT': '',
+                'TRADING_HOURS': '',
+                'IS_TRADABLE': False,
+                'MARKET_MAKER': '',
+                'HIGH_PRICE_52_WEEK': 1.075305,
+                'LOW_PRICE_52_WEEK': 1.07272,
+                'MARK': 1.074415
             }]
         }
 
@@ -2585,7 +2988,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_futures_options_subs_success_all_fields(
+    async def test_level_one_futures_options_subs_and_add_success_all_fields(
             self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
@@ -2593,7 +2996,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             1, 'LEVELONE_FUTURES_OPTIONS', 'SUBS'))]
 
         await self.client.level_one_futures_options_subs(
-            ['NQU20_C6500', 'NQU20_P6500'])
+            ['./E3DM24P5490', './Q3DM24C19960'])
         socket.recv.assert_awaited_once()
         request = self.request_from_socket_mock(socket)
 
@@ -2604,9 +3007,31 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
             "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
             'parameters': {
-                'keys': 'NQU20_C6500,NQU20_P6500',
+                'keys': './E3DM24P5490,./Q3DM24C19960',
                 'fields': ('0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,' +
-                           '19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35')
+                           '19,20,21,22,23,24,25,26,27,28,29,30,31')
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_FUTURES_OPTIONS', 'ADD'))]
+
+        await self.client.level_one_futures_options_add(['./OYMM24P38550'])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_FUTURES_OPTIONS',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': './OYMM24P38550',
+                'fields': ('0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,' +
+                           '19,20,21,22,23,24,25,26,27,28,29,30,31')
             }
         })
 
@@ -2629,10 +3054,10 @@ class StreamClientTest(IsolatedAsyncioTestCase):
         self.client.add_level_one_futures_options_handler(async_handler)
 
         await self.client.level_one_futures_options_subs(
-            ['NQU20_C6500', 'NQU20_P6500'])
+            ['./E3DM24P5490', './Q3DM24C19960'])
         await self.client.handle_message()
         await self.client.level_one_futures_options_unsubs(
-            ['NQU20_C6500', 'NQU20_P6500'])
+            ['./E3DM24P5490', './Q3DM24C19960'])
 
         self.assert_handler_called_once_with(
                 handler, {'service': 'LEVELONE_FUTURES_OPTIONS',
@@ -2651,10 +3076,9 @@ class StreamClientTest(IsolatedAsyncioTestCase):
                     "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
                     "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
                     "parameters": {
-                        "keys": "NQU20_C6500,NQU20_P6500", 
+                        "keys": "./E3DM24P5490,./Q3DM24C19960",
                         "fields": "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,"+
-                        "17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,"+
-                        "34,35"
+                        "17,18,19,20,21,22,23,24,25,26,27,28,29,30,31"
                     }
                 }]
             })),
@@ -2666,7 +3090,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
                     "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
                     "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
                     "parameters": {
-                        "keys": "NQU20_C6500,NQU20_P6500"
+                        "keys": "./E3DM24P5490,./Q3DM24C19960"
                     }
                 }]
             })),
@@ -2675,7 +3099,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_futures_options_subs_success_some_fields(
+    async def test_level_one_futures_options_subs_and_add_success_some_fields(
             self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
@@ -2683,11 +3107,11 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             1, 'LEVELONE_FUTURES_OPTIONS', 'SUBS'))]
 
         await self.client.level_one_futures_options_subs(
-            ['NQU20_C6500', 'NQU20_P6500'], fields=[
-                StreamClient.LevelOneFuturesOptionsFields.FIELD_0,
-                StreamClient.LevelOneFuturesOptionsFields.FIELD_4,
-                StreamClient.LevelOneFuturesOptionsFields.FIELD_5,
-                StreamClient.LevelOneFuturesOptionsFields.FIELD_28,
+            ['./E3DM24P5490', './Q3DM24C19960'], fields=[
+                StreamClient.LevelOneFuturesOptionsFields.SYMBOL,
+                StreamClient.LevelOneFuturesOptionsFields.BID_SIZE,
+                StreamClient.LevelOneFuturesOptionsFields.ASK_SIZE,
+                StreamClient.LevelOneFuturesOptionsFields.CONTRACT_TYPE,
             ])
         socket.recv.assert_awaited_once()
         request = self.request_from_socket_mock(socket)
@@ -2699,14 +3123,41 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
             "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
             'parameters': {
-                'keys': 'NQU20_C6500,NQU20_P6500',
+                'keys': './E3DM24P5490,./Q3DM24C19960',
+                'fields': '0,4,5,28'
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_FUTURES_OPTIONS', 'ADD'))]
+
+        await self.client.level_one_futures_options_add(
+            ['./OYMM24P38550'], fields=[
+                StreamClient.LevelOneFuturesOptionsFields.SYMBOL,
+                StreamClient.LevelOneFuturesOptionsFields.BID_SIZE,
+                StreamClient.LevelOneFuturesOptionsFields.ASK_SIZE,
+                StreamClient.LevelOneFuturesOptionsFields.CONTRACT_TYPE,
+            ])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_FUTURES_OPTIONS',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': './OYMM24P38550',
                 'fields': '0,4,5,28'
             }
         })
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_level_one_futures_options_subs_success_some_fields_no_symol(
+    async def test_level_one_futures_options_subs_and_add_success_some_fields_no_symbol(
             self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
@@ -2714,10 +3165,10 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             1, 'LEVELONE_FUTURES_OPTIONS', 'SUBS'))]
 
         await self.client.level_one_futures_options_subs(
-            ['NQU20_C6500', 'NQU20_P6500'], fields=[
-                StreamClient.LevelOneFuturesOptionsFields.FIELD_4,
-                StreamClient.LevelOneFuturesOptionsFields.FIELD_5,
-                StreamClient.LevelOneFuturesOptionsFields.FIELD_28,
+            ['./E3DM24P5490', './Q3DM24C19960'], fields=[
+                StreamClient.LevelOneFuturesOptionsFields.BID_SIZE,
+                StreamClient.LevelOneFuturesOptionsFields.ASK_SIZE,
+                StreamClient.LevelOneFuturesOptionsFields.CONTRACT_TYPE,
             ])
         socket.recv.assert_awaited_once()
         request = self.request_from_socket_mock(socket)
@@ -2729,7 +3180,33 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
             "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
             'parameters': {
-                'keys': 'NQU20_C6500,NQU20_P6500',
+                'keys': './E3DM24P5490,./Q3DM24C19960',
+                'fields': '0,4,5,28'
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'LEVELONE_FUTURES_OPTIONS', 'ADD'))]
+
+        await self.client.level_one_futures_options_add(
+            ['./OYMM24P38550'], fields=[
+                StreamClient.LevelOneFuturesOptionsFields.BID_SIZE,
+                StreamClient.LevelOneFuturesOptionsFields.ASK_SIZE,
+                StreamClient.LevelOneFuturesOptionsFields.CONTRACT_TYPE,
+            ])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_FUTURES_OPTIONS',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': './OYMM24P38550',
                 'fields': '0,4,5,28'
             }
         })
@@ -2745,7 +3222,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
         with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
             await self.client.level_one_futures_options_subs(
-                ['NQU20_C6500', 'NQU20_P6500'])
+                ['./E3DM24P5490', './Q3DM24C19960'])
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
@@ -2758,10 +3235,21 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
         with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
             await self.client.level_one_futures_options_unsubs(
-                ['NQU20_C6500', 'NQU20_P6500'])
+                ['./E3DM24P5490', './Q3DM24C19960'])
 
     @no_duplicates
-    # TODO: Replace this with real messages
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_level_one_futures_options_add_failure(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        response = self.success_response(1, 'LEVELONE_FUTURES_OPTIONS', 'ADD')
+        response['response'][0]['content']['code'] = 21
+        socket.recv.side_effect = [json.dumps(response)]
+
+        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
+            await self.client.level_one_futures_options_add(['./OYMM24P38550'])
+
+    @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
     async def test_level_one_futures_options_handler(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
@@ -2769,90 +3257,78 @@ class StreamClientTest(IsolatedAsyncioTestCase):
         stream_item = {
             'data': [{
                 'service': 'LEVELONE_FUTURES_OPTIONS',
-                'timestamp': 1590245129396,
+                'timestamp': 1718814961845,
                 'command': 'SUBS',
                 'content': [{
-                    'key': 'NQU20_C6500',
+                    'key': './E3DM24P5490',
                     'delayed': False,
-                    'assetMainType': 'FUTURES_OPTION',
-                    '1': 2956,
-                    '2': 2956.5,
-                    '3': 2956.4,
-                    '4': 3,
-                    '5': 2,
-                    '6': 'E',
-                    '7': 'T',
-                    '8': 1293,
-                    '9': 6,
-                    '10': 1590181200064,
-                    '11': 1590181199726,
-                    '12': 2956.6,
-                    '13': 2956.3,
-                    '14': 2956.25,
-                    '15': '?',
-                    '16': 'NASDAQ Call',
-                    '17': '?',
-                    '18': 2956.0,
-                    '19': 0.1,
-                    '20': 1.2,
-                    '21': 'EXCH',
-                    '22': 'Unknown',
-                    '23': 19,
-                    '24': 2955.9,
-                    '25': 0.1,
-                    '26': 100,
-                    '27': 'NQU',
-                    '28': '0.01',
-                    '29': ('GLBX(de=1640;0=-1700151515301596;' +
-                           '1=r-17001515r15301600d-15551640;' +
-                           '7=d-16401555)'),
-                    '30': True,
-                    '31': 100,
-                    '32': True,
-                    '33': 17.9,
-                    '34': 'NQU',
-                    '35': '2020-03-01'
+                    'assetMainType': 'FUTURE_OPTION',
+                    '1': 9.6,
+                    '2': 9.7,
+                    '3': 9.7,
+                    '4': 19,
+                    '5': 19,
+                    '6': 63,
+                    '7': 63,
+                    '8': 959,
+                    '9': 22,
+                    '10': 1718814960408,
+                    '11': 1718814929433,
+                    '12': 11,
+                    '13': 7.8,
+                    '14': 11,
+                    '15': 63,
+                    '16': 'E-mini S&P 500 Options',
+                    '17': 10,
+                    '18': 524,
+                    '19': 9.65,
+                    '20': 0.05,
+                    '21': 2.5,
+                    '22': 50,
+                    '23': 11,
+                    '24': '/ESM24',
+                    '25': 5490,
+                    '26': 1718856000000,
+                    '27': 'Weeklys',
+                    '28': 'P',
+                    '29': 'Normal',
+                    '30': '@',
+                    '31': 'XCME'
                 }, {
-                    'key': 'NQU20_C6500',
+                    'key': './Q3DM24C19960',
                     'delayed': False,
-                    'assetMainType': 'FUTURES_OPTION',
-                    '1': 2957,
-                    '2': 2958.5,
-                    '3': 2957.4,
-                    '4': 4,
-                    '5': 3,
-                    '6': 'Q',
-                    '7': 'V',
-                    '8': 1294,
-                    '9': 7,
-                    '10': 1590181200065,
-                    '11': 1590181199727,
-                    '12': 2956.7,
-                    '13': 2956.4,
-                    '14': 2956.26,
-                    '15': '?',
-                    '16': 'NASDAQ Put',
-                    '17': '?',
-                    '18': 2956.1,
-                    '19': 0.2,
-                    '20': 1.3,
-                    '21': 'EXCH',
-                    '22': 'Unknown',
-                    '23': 20,
-                    '24': 2956.9,
-                    '25': 0.2,
-                    '26': 101,
-                    '27': 'NQU',
-                    '28': '0.02',
-                    '29': ('GLBX(de=1641;0=-1700151515301596;' +
-                           '1=r-17001515r15301600d-15551640;' +
-                           '7=d-16401555)'),
-                    '30': True,
-                    '31': 101,
-                    '32': True,
-                    '33': 17.10,
-                    '34': 'NQU',
-                    '35': '2021-03-01'
+                    'assetMainType': 'FUTURE_OPTION',
+                    '1': 54.25,
+                    '2': 56.5,
+                    '3': 55.5,
+                    '4': 15,
+                    '5': 16,
+                    '6': 63,
+                    '7': 63,
+                    '8': 15,
+                    '9': 1,
+                    '10': 1718814960411,
+                    '11': 1718813651721,
+                    '12': 61,
+                    '13': 54.5,
+                    '14': 41.25,
+                    '15': 63,
+                    '16': 'E-mini NASDAQ-100 Options',
+                    '17': 55,
+                    '18': 2,
+                    '19': 55.75,
+                    '20': 0.05,
+                    '21': 1,
+                    '22': 20,
+                    '23': 41.25,
+                    '24': '/NQM24',
+                    '25': 19960,
+                    '26': 1718856000000,
+                    '27': 'Weeklys',
+                    '28': 'C',
+                    '29': 'Normal',
+                    '30': '@',
+                    '31': 'XCME'
                 }]
             }]
         }
@@ -2862,7 +3338,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
                 1, 'LEVELONE_FUTURES_OPTIONS', 'SUBS')),
             json.dumps(stream_item)]
         await self.client.level_one_futures_options_subs(
-            ['NQU20_C6500', 'NQU20_P6500'])
+            ['./E3DM24P5490', './Q3DM24C19960'])
 
         handler = Mock()
         async_handler = AsyncMock()
@@ -2872,90 +3348,78 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
         expected_item = {
             'service': 'LEVELONE_FUTURES_OPTIONS',
-            'timestamp': 1590245129396,
+            'timestamp': 1718814961845,
             'command': 'SUBS',
             'content': [{
-                'key': 'NQU20_C6500',
+                'key': './E3DM24P5490',
                 'delayed': False,
-                'assetMainType': 'FUTURES_OPTION',
-                'FIELD_1': 2956,
-                'FIELD_2': 2956.5,
-                'FIELD_3': 2956.4,
-                'FIELD_4': 3,
-                'FIELD_5': 2,
-                'FIELD_6': 'E',
-                'FIELD_7': 'T',
-                'FIELD_8': 1293,
-                'FIELD_9': 6,
-                'FIELD_10': 1590181200064,
-                'FIELD_11': 1590181199726,
-                'FIELD_12': 2956.6,
-                'FIELD_13': 2956.3,
-                'FIELD_14': 2956.25,
-                'FIELD_15': '?',
-                'FIELD_16': 'NASDAQ Call',
-                'FIELD_17': '?',
-                'FIELD_18': 2956.0,
-                'FIELD_19': 0.1,
-                'FIELD_20': 1.2,
-                'FIELD_21': 'EXCH',
-                'FIELD_22': 'Unknown',
-                'FIELD_23': 19,
-                'FIELD_24': 2955.9,
-                'FIELD_25': 0.1,
-                'FIELD_26': 100,
-                'FIELD_27': 'NQU',
-                'FIELD_28': '0.01',
-                'FIELD_29': ('GLBX(de=1640;0=-1700151515301596;' +
-                                         '1=r-17001515r15301600d-15551640;' +
-                                         '7=d-16401555)'),
-                'FIELD_30': True,
-                'FIELD_31': 100,
-                'FIELD_32': True,
-                'FIELD_33': 17.9,
-                'FIELD_34': 'NQU',
-                'FIELD_35': '2020-03-01'
+                'assetMainType': 'FUTURE_OPTION',
+                'BID_PRICE': 9.6,
+                'ASK_PRICE': 9.7,
+                'LAST_PRICE': 9.7,
+                'BID_SIZE': 19,
+                'ASK_SIZE': 19,
+                'BID_ID': 63,
+                'ASK_ID': 63,
+                'TOTAL_VOLUME': 959,
+                'LAST_SIZE': 22,
+                'QUOTE_TIME_MILLIS': 1718814960408,
+                'TRADE_TIME_MILLIS': 1718814929433,
+                'HIGH_PRICE': 11,
+                'LOW_PRICE': 7.8,
+                'CLOSE_PRICE': 11,
+                'LAST_ID': 63,
+                'DESCRIPTION': 'E-mini S&P 500 Options',
+                'OPEN_PRICE': 10,
+                'OPEN_INTEREST': 524,
+                'MARK': 9.65,
+                'TICK': 0.05,
+                'TICK_AMOUNT': 2.5,
+                'FUTURE_MULTIPLIER': 50,
+                'FUTURE_SETTLEMENT_PRICE': 11,
+                'UNDERLYING_SYMBOL': '/ESM24',
+                'STRIKE_PRICE': 5490,
+                'FUTURE_EXPIRATION_DATE': 1718856000000,
+                'EXPIRATION_STYLE': 'Weeklys',
+                'CONTRACT_TYPE': 'P',
+                'SECURITY_STATUS': 'Normal',
+                'EXCHANGE_ID': '@',
+                'EXCHANGE_NAME': 'XCME'
             }, {
-                'key': 'NQU20_C6500',
+                'key': './Q3DM24C19960',
                 'delayed': False,
-                'assetMainType': 'FUTURES_OPTION',
-                'FIELD_1': 2957,
-                'FIELD_2': 2958.5,
-                'FIELD_3': 2957.4,
-                'FIELD_4': 4,
-                'FIELD_5': 3,
-                'FIELD_6': 'Q',
-                'FIELD_7': 'V',
-                'FIELD_8': 1294,
-                'FIELD_9': 7,
-                'FIELD_10': 1590181200065,
-                'FIELD_11': 1590181199727,
-                'FIELD_12': 2956.7,
-                'FIELD_13': 2956.4,
-                'FIELD_14': 2956.26,
-                'FIELD_15': '?',
-                'FIELD_16': 'NASDAQ Put',
-                'FIELD_17': '?',
-                'FIELD_18': 2956.1,
-                'FIELD_19': 0.2,
-                'FIELD_20': 1.3,
-                'FIELD_21': 'EXCH',
-                'FIELD_22': 'Unknown',
-                'FIELD_23': 20,
-                'FIELD_24': 2956.9,
-                'FIELD_25': 0.2,
-                'FIELD_26': 101,
-                'FIELD_27': 'NQU',
-                'FIELD_28': '0.02',
-                'FIELD_29': ('GLBX(de=1641;0=-1700151515301596;' +
-                                         '1=r-17001515r15301600d-15551640;' +
-                                         '7=d-16401555)'),
-                'FIELD_30': True,
-                'FIELD_31': 101,
-                'FIELD_32': True,
-                'FIELD_33': 17.10,
-                'FIELD_34': 'NQU',
-                'FIELD_35': '2021-03-01'
+                'assetMainType': 'FUTURE_OPTION',
+                'BID_PRICE': 54.25,
+                'ASK_PRICE': 56.5,
+                'LAST_PRICE': 55.5,
+                'BID_SIZE': 15,
+                'ASK_SIZE': 16,
+                'BID_ID': 63,
+                'ASK_ID': 63,
+                'TOTAL_VOLUME': 15,
+                'LAST_SIZE': 1,
+                'QUOTE_TIME_MILLIS': 1718814960411,
+                'TRADE_TIME_MILLIS': 1718813651721,
+                'HIGH_PRICE': 61,
+                'LOW_PRICE': 54.5,
+                'CLOSE_PRICE': 41.25,
+                'LAST_ID': 63,
+                'DESCRIPTION': 'E-mini NASDAQ-100 Options',
+                'OPEN_PRICE': 55,
+                'OPEN_INTEREST': 2,
+                'MARK': 55.75,
+                'TICK': 0.05,
+                'TICK_AMOUNT': 1,
+                'FUTURE_MULTIPLIER': 20,
+                'FUTURE_SETTLEMENT_PRICE': 41.25,
+                'UNDERLYING_SYMBOL': '/NQM24',
+                'STRIKE_PRICE': 19960,
+                'FUTURE_EXPIRATION_DATE': 1718856000000,
+                'EXPIRATION_STYLE': 'Weeklys',
+                'CONTRACT_TYPE': 'C',
+                'SECURITY_STATUS': 'Normal',
+                'EXCHANGE_ID': '@',
+                'EXCHANGE_NAME': 'XCME'
             }]
         }
 
@@ -2963,752 +3427,88 @@ class StreamClientTest(IsolatedAsyncioTestCase):
         self.assert_handler_called_once_with(async_handler, expected_item)
 
     ##########################################################################
-    # TIMESALE_EQUITY
+    # NYSE_BOOK
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_timesale_equity_subs_success_all_fields(self, ws_connect):
+    async def test_nyse_book_subs_success_and_add_all_fields(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
         socket.recv.side_effect = [json.dumps(self.success_response(
-            1, 'TIMESALE_EQUITY', 'SUBS'))]
+            1, 'NYSE_BOOK', 'SUBS'))]
 
-        await self.client.timesale_equity_subs(['GOOG', 'MSFT'])
+        await self.client.nyse_book_subs(['GOOG', 'MSFT'])
         socket.recv.assert_awaited_once()
         request = self.request_from_socket_mock(socket)
 
         self.assertEqual(request, {
-            'service': 'TIMESALE_EQUITY',
+            'service': 'NYSE_BOOK',
             'command': 'SUBS',
             'requestid': '1',
             "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
             "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
             'parameters': {
                 'keys': 'GOOG,MSFT',
-                'fields': ('0,1,2,3,4')
+                'fields': '0,1,2,3'
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'NYSE_BOOK', 'ADD'))]
+
+        await self.client.nyse_book_add(['INTC'])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'NYSE_BOOK',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': 'INTC',
+                'fields': '0,1,2,3'
             }
         })
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_timesale_equity_unsubs_success_all_fields(self, ws_connect):
+    async def test_nyse_book_unsubs_success_all_fields(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
-        stream_item = self.streaming_entry('TIMESALE_EQUITY', 'SUBS')
+        stream_item = {'data': [{'service': 'NYSE_BOOK', 'command': 'SUBS', 'timestamp': REQUEST_TIMESTAMP, 'content': {}}]}
 
         socket.recv.side_effect = [
-            json.dumps(self.success_response(1, 'TIMESALE_EQUITY', 'SUBS')),
+            json.dumps(self.success_response(1, 'NYSE_BOOK', 'SUBS')),
             json.dumps(stream_item),
-            json.dumps(self.success_response(2, 'TIMESALE_EQUITY', 'UNSUBS')),
+            json.dumps(self.success_response(2, 'NYSE_BOOK', 'UNSUBS'))
         ]
         handler = Mock()
         async_handler = AsyncMock()
-        self.client.add_timesale_equity_handler(handler)
-        self.client.add_timesale_equity_handler(async_handler)
+        self.client.add_nyse_book_handler(handler)
+        self.client.add_nyse_book_handler(async_handler)
 
-        await self.client.timesale_equity_subs(['GOOG', 'MSFT'])
+        await self.client.nyse_book_subs(['GOOG', 'MSFT'])
         await self.client.handle_message()
-        await self.client.timesale_equity_unsubs(['GOOG', 'MSFT'])
-
-        self.assert_handler_called_once_with(handler, {'service': 'TIMESALE_EQUITY', 'command': 'SUBS',
-                                                       'timestamp': REQUEST_TIMESTAMP})
-        self.assert_handler_called_once_with(async_handler, {'service': 'TIMESALE_EQUITY', 'command': 'SUBS',
-                                                             'timestamp': REQUEST_TIMESTAMP})
-        send_awaited = [
-            call(StringMatchesJson({
-                "requests": [{
-                    "service": "TIMESALE_EQUITY",
-                    "requestid": "1",
-                    "command": "SUBS",
-                    "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
-                    "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
-                    "parameters": {
-                        "keys": "GOOG,MSFT",
-                        "fields": "0,1,2,3,4"
-                    }
-                }]
-            })),
-            call(StringMatchesJson({
-                "requests": [{
-                    "service": "TIMESALE_EQUITY",
-                    "requestid": "2",
-                    "command": "UNSUBS",
-                    "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
-                    "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
-                    "parameters": {
-                        "keys": "GOOG,MSFT"
-                    }
-                }]
-            }))
-        ]
-        socket.send.assert_has_awaits(send_awaited, any_order=False)
-
-    @no_duplicates
-    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_timesale_equity_subs_success_some_fields(self, ws_connect):
-        socket = await self.login_and_get_socket(ws_connect)
-
-        socket.recv.side_effect = [json.dumps(self.success_response(
-            1, 'TIMESALE_EQUITY', 'SUBS'))]
-
-        await self.client.timesale_equity_subs(['GOOG', 'MSFT'], fields=[
-            StreamClient.TimesaleFields.FIELD_0,
-            StreamClient.TimesaleFields.FIELD_1,
-            StreamClient.TimesaleFields.FIELD_3,
-        ])
-        socket.recv.assert_awaited_once()
-        request = self.request_from_socket_mock(socket)
-
-        self.assertEqual(request, {
-            'service': 'TIMESALE_EQUITY',
-            'command': 'SUBS',
-            'requestid': '1',
-            "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
-            "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
-            'parameters': {
-                'keys': 'GOOG,MSFT',
-                'fields': '0,1,3'
-            }
-        })
-
-    @no_duplicates
-    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_timesale_equity_subs_success_some_fields_no_symbol(
-            self, ws_connect):
-        socket = await self.login_and_get_socket(ws_connect)
-
-        socket.recv.side_effect = [json.dumps(self.success_response(
-            1, 'TIMESALE_EQUITY', 'SUBS'))]
-
-        await self.client.timesale_equity_subs(['GOOG', 'MSFT'], fields=[
-            StreamClient.TimesaleFields.FIELD_1,
-            StreamClient.TimesaleFields.FIELD_3,
-        ])
-        socket.recv.assert_awaited_once()
-        request = self.request_from_socket_mock(socket)
-
-        self.assertEqual(request, {
-            'service': 'TIMESALE_EQUITY',
-            'command': 'SUBS',
-            'requestid': '1',
-            "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
-            "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
-            'parameters': {
-                'keys': 'GOOG,MSFT',
-                'fields': '0,1,3'
-            }
-        })
-
-    @no_duplicates
-    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_timesale_equity_subs_failure(self, ws_connect):
-        socket = await self.login_and_get_socket(ws_connect)
-
-        response = self.success_response(1, 'TIMESALE_EQUITY', 'SUBS')
-        response['response'][0]['content']['code'] = 21
-        socket.recv.side_effect = [json.dumps(response)]
-
-        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
-            await self.client.timesale_equity_subs(['GOOG', 'MSFT'])
-
-    @no_duplicates
-    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_timesale_equity_unsubs_failure(self, ws_connect):
-        socket = await self.login_and_get_socket(ws_connect)
-
-        response = self.success_response(1, 'TIMESALE_EQUITY', 'UNSUBS')
-        response['response'][0]['content']['code'] = 21
-        socket.recv.side_effect = [json.dumps(response)]
-
-        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
-            await self.client.timesale_equity_unsubs(['GOOG', 'MSFT'])
-
-    @no_duplicates
-    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_timesale_equity_handler(self, ws_connect):
-        socket = await self.login_and_get_socket(ws_connect)
-
-        stream_item = {
-            'data': [{
-                'service': 'TIMESALE_EQUITY',
-                'timestamp': 1590599684016,
-                'command': 'SUBS',
-                'content': [{
-                    'seq': 43,
-                    'key': 'MSFT',
-                    '1': 1590599683785,
-                    '2': 179.64,
-                    '3': 100.0,
-                    '4': 111626
-                }, {
-                    'seq': 0,
-                    'key': 'GOOG',
-                    '1': 1590599678467,
-                    '2': 1406.91,
-                    '3': 100.0,
-                    '4': 8620
-                }]
-            }]
-        }
-
-        socket.recv.side_effect = [
-            json.dumps(self.success_response(1, 'TIMESALE_EQUITY', 'SUBS')),
-            json.dumps(stream_item)]
-        await self.client.timesale_equity_subs(['GOOG', 'MSFT'])
-
-        handler = Mock()
-        async_handler = AsyncMock()
-        self.client.add_timesale_equity_handler(handler)
-        self.client.add_timesale_equity_handler(async_handler)
-        await self.client.handle_message()
-
-        expected_item = {
-            'service': 'TIMESALE_EQUITY',
-            'timestamp': 1590599684016,
-            'command': 'SUBS',
-            'content': [{
-                'seq': 43,
-                'key': 'MSFT',
-                'FIELD_1': 1590599683785,
-                'FIELD_2': 179.64,
-                'FIELD_3': 100.0,
-                'FIELD_4': 111626
-            }, {
-                'seq': 0,
-                'key': 'GOOG',
-                'FIELD_1': 1590599678467,
-                'FIELD_2': 1406.91,
-                'FIELD_3': 100.0,
-                'FIELD_4': 8620
-            }]
-        }
-
-        self.assert_handler_called_once_with(handler, expected_item)
-        self.assert_handler_called_once_with(async_handler, expected_item)
-
-    ##########################################################################
-    # TIMESALE_FUTURES
-
-    @no_duplicates
-    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_timesale_futures_subs_success_all_fields(self, ws_connect):
-        socket = await self.login_and_get_socket(ws_connect)
-
-        socket.recv.side_effect = [json.dumps(self.success_response(
-            1, 'TIMESALE_FUTURES', 'SUBS'))]
-
-        await self.client.timesale_futures_subs(['/ES', '/CL'])
-        socket.recv.assert_awaited_once()
-        request = self.request_from_socket_mock(socket)
-
-        self.assertEqual(request, {
-            'service': 'TIMESALE_FUTURES',
-            'command': 'SUBS',
-            'requestid': '1',
-            "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
-            "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
-            'parameters': {
-                'keys': '/ES,/CL',
-                'fields': ('0,1,2,3,4')
-            }
-        })
-
-    @no_duplicates
-    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_timesale_futures_unsubs_success_all_fields(self, ws_connect):
-        socket = await self.login_and_get_socket(ws_connect)
-
-        stream_item = self.streaming_entry('TIMESALE_FUTURES', 'SUBS')
-
-        socket.recv.side_effect = [
-            json.dumps(self.success_response(1, 'TIMESALE_FUTURES', 'SUBS')),
-            json.dumps(stream_item),
-            json.dumps(self.success_response(2, 'TIMESALE_FUTURES', 'UNSUBS'))
-        ]
-        handler = Mock()
-        async_handler = AsyncMock()
-        self.client.add_timesale_futures_handler(handler)
-        self.client.add_timesale_futures_handler(async_handler)
-
-        await self.client.timesale_futures_subs(['/ES', '/CL'])
-        await self.client.handle_message()
-        await self.client.timesale_futures_unsubs(['/ES', '/CL'])
+        await self.client.nyse_book_unsubs(['GOOG', 'MSFT'])
 
         self.assert_handler_called_once_with(
-                handler, {'service': 'TIMESALE_FUTURES',
-                          'command': 'SUBS',
-                          'timestamp': REQUEST_TIMESTAMP})
-        self.assert_handler_called_once_with(
-                async_handler, {'service': 'TIMESALE_FUTURES',
-                                'command': 'SUBS',
-                                'timestamp': REQUEST_TIMESTAMP})
-        send_awaited = [
-            call(StringMatchesJson({
-                "requests": [{
-                    "service": "TIMESALE_FUTURES",
-                    "requestid": "1",
-                    "command": "SUBS",
-                    "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
-                    "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
-                    "parameters": {
-                        "keys": "/ES,/CL",
-                        "fields": "0,1,2,3,4"
-                    }
-                }]
-            })),
-            call(StringMatchesJson({
-                "requests": [{
-                    "service": "TIMESALE_FUTURES",
-                    "requestid": "2",
-                    "command": "UNSUBS",
-                    "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
-                    "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
-                    "parameters": {
-                        "keys": "/ES,/CL"
-                    }
-                }]
-            }))
-        ]
-        socket.send.assert_has_awaits(send_awaited, any_order=False)
-
-    @no_duplicates
-    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_timesale_futures_subs_success_some_fields(self, ws_connect):
-        socket = await self.login_and_get_socket(ws_connect)
-
-        socket.recv.side_effect = [json.dumps(self.success_response(
-            1, 'TIMESALE_FUTURES', 'SUBS'))]
-
-        await self.client.timesale_futures_subs(['/ES', '/CL'], fields=[
-            StreamClient.TimesaleFields.FIELD_0,
-            StreamClient.TimesaleFields.FIELD_1,
-            StreamClient.TimesaleFields.FIELD_3,
-        ])
-        socket.recv.assert_awaited_once()
-        request = self.request_from_socket_mock(socket)
-
-        self.assertEqual(request, {
-            'service': 'TIMESALE_FUTURES',
-            'command': 'SUBS',
-            'requestid': '1',
-            "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
-            "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
-            'parameters': {
-                'keys': '/ES,/CL',
-                'fields': '0,1,3'
-            }
-        })
-
-    @no_duplicates
-    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_timesale_futures_subs_success_some_fields_no_symbol(
-            self, ws_connect):
-        socket = await self.login_and_get_socket(ws_connect)
-
-        socket.recv.side_effect = [json.dumps(self.success_response(
-            1, 'TIMESALE_FUTURES', 'SUBS'))]
-
-        await self.client.timesale_futures_subs(['/ES', '/CL'], fields=[
-            StreamClient.TimesaleFields.FIELD_1,
-            StreamClient.TimesaleFields.FIELD_3,
-        ])
-        socket.recv.assert_awaited_once()
-        request = self.request_from_socket_mock(socket)
-
-        self.assertEqual(request, {
-            'service': 'TIMESALE_FUTURES',
-            'command': 'SUBS',
-            'requestid': '1',
-            "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
-            "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
-            'parameters': {
-                'keys': '/ES,/CL',
-                'fields': '0,1,3'
-            }
-        })
-
-    @no_duplicates
-    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_timesale_futures_subs_failure(self, ws_connect):
-        socket = await self.login_and_get_socket(ws_connect)
-
-        response = self.success_response(1, 'TIMESALE_FUTURES', 'SUBS')
-        response['response'][0]['content']['code'] = 21
-        socket.recv.side_effect = [json.dumps(response)]
-
-        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
-            await self.client.timesale_futures_subs(['/ES', '/CL'])
-
-    @no_duplicates
-    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_timesale_futures_unsubs_failure(self, ws_connect):
-        socket = await self.login_and_get_socket(ws_connect)
-
-        response = self.success_response(1, 'TIMESALE_FUTURES', 'UNSUBS')
-        response['response'][0]['content']['code'] = 21
-        socket.recv.side_effect = [json.dumps(response)]
-
-        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
-            await self.client.timesale_futures_unsubs(['/ES', '/CL'])
-
-    @no_duplicates
-    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_timesale_futures_handler(self, ws_connect):
-        socket = await self.login_and_get_socket(ws_connect)
-
-        stream_item = {
-            'data': [{
-                'service': 'TIMESALE_FUTURES',
-                'timestamp': 1590600568685,
-                'command': 'SUBS',
-                'content': [{
-                    'seq': 0,
-                    'key': '/ES',
-                    '1': 1590600568524,
-                    '2': 2998.0,
-                    '3': 1.0,
-                    '4': 9236856
-                }, {
-                    'seq': 0,
-                    'key': '/CL',
-                    '1': 1590600568328,
-                    '2': 33.08,
-                    '3': 1.0,
-                    '4': 68989244
-                }]
-            }]
-        }
-
-        socket.recv.side_effect = [
-            json.dumps(self.success_response(1, 'TIMESALE_FUTURES', 'SUBS')),
-            json.dumps(stream_item)]
-        await self.client.timesale_futures_subs(['/ES', '/CL'])
-
-        handler = Mock()
-        async_handler = AsyncMock()
-        self.client.add_timesale_futures_handler(handler)
-        self.client.add_timesale_futures_handler(async_handler)
-        await self.client.handle_message()
-
-        expected_item = {
-            'service': 'TIMESALE_FUTURES',
-            'timestamp': 1590600568685,
-            'command': 'SUBS',
-            'content': [{
-                'seq': 0,
-                'key': '/ES',
-                'FIELD_1': 1590600568524,
-                'FIELD_2': 2998.0,
-                'FIELD_3': 1.0,
-                'FIELD_4': 9236856
-            }, {
-                'seq': 0,
-                'key': '/CL',
-                'FIELD_1': 1590600568328,
-                'FIELD_2': 33.08,
-                'FIELD_3': 1.0,
-                'FIELD_4': 68989244
-            }]
-        }
-        self.assert_handler_called_once_with(handler, expected_item)
-        self.assert_handler_called_once_with(async_handler, expected_item)
-
-    ##########################################################################
-    # TIMESALE_OPTIONS
-
-    @no_duplicates
-    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_timesale_options_subs_success_all_fields(self, ws_connect):
-        socket = await self.login_and_get_socket(ws_connect)
-
-        socket.recv.side_effect = [json.dumps(self.success_response(
-            1, 'TIMESALE_OPTIONS', 'SUBS'))]
-
-        await self.client.timesale_options_subs(['/ES', '/CL'])
-        socket.recv.assert_awaited_once()
-        request = self.request_from_socket_mock(socket)
-
-        self.assertEqual(request, {
-            'service': 'TIMESALE_OPTIONS',
-            'command': 'SUBS',
-            'requestid': '1',
-            "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
-            "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
-            'parameters': {
-                'keys': '/ES,/CL',
-                'fields': ('0,1,2,3,4')
-            }
-        })
-
-    @no_duplicates
-    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_timesale_options_unsubs_success_all_fields(self, ws_connect):
-        socket = await self.login_and_get_socket(ws_connect)
-
-        stream_item = self.streaming_entry('TIMESALE_OPTIONS', 'SUBS')
-
-        socket.recv.side_effect = [
-            json.dumps(self.success_response(1, 'TIMESALE_OPTIONS', 'SUBS')),
-            json.dumps(stream_item),
-            json.dumps(self.success_response(2, 'TIMESALE_OPTIONS', 'UNSUBS'))
-        ]
-        handler = Mock()
-        async_handler = AsyncMock()
-        self.client.add_timesale_options_handler(handler)
-        self.client.add_timesale_options_handler(async_handler)
-
-        await self.client.timesale_options_subs(['GOOG_052920C620', 'MSFT_052920C145'])
-        await self.client.handle_message()
-        await self.client.timesale_options_unsubs(['GOOG_052920C620', 'MSFT_052920C145'])
-
-        self.assert_handler_called_once_with(
-                handler, {'service': 'TIMESALE_OPTIONS',
-                          'command': 'SUBS',
-                          'timestamp': REQUEST_TIMESTAMP})
-        self.assert_handler_called_once_with(
-                async_handler, {'service': 'TIMESALE_OPTIONS',
-                                'command': 'SUBS',
-                                'timestamp': REQUEST_TIMESTAMP})
-        send_awaited = [
-            call(StringMatchesJson({
-                "requests": [{
-                    "service": "TIMESALE_OPTIONS",
-                    "requestid": "1",
-                    "command": "SUBS",
-                    "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
-                    "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
-                    "parameters": {
-                        "keys": "GOOG_052920C620,MSFT_052920C145",
-                        "fields": "0,1,2,3,4"
-                    }
-                }]
-            })),
-            call(StringMatchesJson({
-                "requests": [{
-                    "service": "TIMESALE_OPTIONS",
-                    "requestid": "2",
-                    "command": "UNSUBS",
-                    "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
-                    "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
-                    "parameters": {
-                        "keys": "GOOG_052920C620,MSFT_052920C145"
-                    }
-                }]
-            })),
-        ]
-        socket.send.assert_has_awaits(send_awaited, any_order=False)
-
-    @no_duplicates
-    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_timesale_options_subs_success_some_fields(self, ws_connect):
-        socket = await self.login_and_get_socket(ws_connect)
-
-        socket.recv.side_effect = [json.dumps(self.success_response(
-            1, 'TIMESALE_OPTIONS', 'SUBS'))]
-
-        await self.client.timesale_options_subs(
-            ['GOOG_052920C620', 'MSFT_052920C145'], fields=[
-                StreamClient.TimesaleFields.FIELD_0,
-                StreamClient.TimesaleFields.FIELD_1,
-                StreamClient.TimesaleFields.FIELD_3,
-            ])
-        socket.recv.assert_awaited_once()
-        request = self.request_from_socket_mock(socket)
-
-        self.assertEqual(request, {
-            'service': 'TIMESALE_OPTIONS',
-            'command': 'SUBS',
-            'requestid': '1',
-            "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
-            "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
-            'parameters': {
-                'keys': 'GOOG_052920C620,MSFT_052920C145',
-                'fields': '0,1,3'
-            }
-        })
-
-    @no_duplicates
-    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_timesale_options_subs_success_some_fields_no_symbol(self, ws_connect):
-        socket = await self.login_and_get_socket(ws_connect)
-
-        socket.recv.side_effect = [json.dumps(self.success_response(
-            1, 'TIMESALE_OPTIONS', 'SUBS'))]
-
-        await self.client.timesale_options_subs(
-            ['GOOG_052920C620', 'MSFT_052920C145'], fields=[
-                StreamClient.TimesaleFields.FIELD_1,
-                StreamClient.TimesaleFields.FIELD_3,
-            ])
-        socket.recv.assert_awaited_once()
-        request = self.request_from_socket_mock(socket)
-
-        self.assertEqual(request, {
-            'service': 'TIMESALE_OPTIONS',
-            'command': 'SUBS',
-            'requestid': '1',
-            "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
-            "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
-            'parameters': {
-                'keys': 'GOOG_052920C620,MSFT_052920C145',
-                'fields': '0,1,3'
-            }
-        })
-
-    @no_duplicates
-    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_timesale_options_subs_failure(self, ws_connect):
-        socket = await self.login_and_get_socket(ws_connect)
-
-        response = self.success_response(1, 'TIMESALE_OPTIONS', 'SUBS')
-        response['response'][0]['content']['code'] = 21
-        socket.recv.side_effect = [json.dumps(response)]
-
-        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
-            await self.client.timesale_options_subs(
-                ['GOOG_052920C620', 'MSFT_052920C145'])
-
-    @no_duplicates
-    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_timesale_options_unsubs_failure(self, ws_connect):
-        socket = await self.login_and_get_socket(ws_connect)
-
-        response = self.success_response(1, 'TIMESALE_OPTIONS', 'UNSUBS')
-        response['response'][0]['content']['code'] = 21
-        socket.recv.side_effect = [json.dumps(response)]
-
-        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
-            await self.client.timesale_options_unsubs(
-                ['GOOG_052920C620', 'MSFT_052920C145'])
-
-    @no_duplicates
-    # TODO: Replace this with real messages
-    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_timesale_options_handler(self, ws_connect):
-        socket = await self.login_and_get_socket(ws_connect)
-
-        stream_item = {
-            'data': [{
-                'service': 'TIMESALE_OPTIONS',
-                'timestamp': 1590245129396,
-                'command': 'SUBS',
-                'content': [{
-                    'key': 'GOOG_052920C620',
-                    'delayed': False,
-                    '1': 1590181199726,
-                    '2': 1000,
-                    '3': 100,
-                    '4': 9990
-                }, {
-                    'key': 'MSFT_052920C145',
-                    'delayed': False,
-                    '1': 1590181199727,
-                    '2': 1100,
-                    '3': 110,
-                    '4': 9991
-                }]
-            }]
-        }
-
-        socket.recv.side_effect = [
-            json.dumps(self.success_response(1, 'TIMESALE_OPTIONS', 'SUBS')),
-            json.dumps(stream_item)]
-        await self.client.timesale_options_subs(
-            ['GOOG_052920C620', 'MSFT_052920C145'])
-
-        handler = Mock()
-        async_handler = AsyncMock()
-        self.client.add_timesale_options_handler(handler)
-        self.client.add_timesale_options_handler(async_handler)
-        await self.client.handle_message()
-
-        expected_item = {
-            'service': 'TIMESALE_OPTIONS',
-            'timestamp': 1590245129396,
-            'command': 'SUBS',
-            'content': [{
-                'key': 'GOOG_052920C620',
-                'delayed': False,
-                'FIELD_1': 1590181199726,
-                'FIELD_2': 1000,
-                'FIELD_3': 100,
-                'FIELD_4': 9990
-            }, {
-                'key': 'MSFT_052920C145',
-                'delayed': False,
-                'FIELD_1': 1590181199727,
-                'FIELD_2': 1100,
-                'FIELD_3': 110,
-                'FIELD_4': 9991
-            }]
-        }
-
-        self.assert_handler_called_once_with(handler, expected_item)
-        self.assert_handler_called_once_with(async_handler, expected_item)
-
-
-    ##########################################################################
-    # LISTED_BOOK
-
-    @no_duplicates
-    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_listed_book_subs_success_all_fields(self, ws_connect):
-        socket = await self.login_and_get_socket(ws_connect)
-
-        socket.recv.side_effect = [json.dumps(self.success_response(
-            1, 'LISTED_BOOK', 'SUBS'))]
-
-        await self.client.listed_book_subs(['GOOG', 'MSFT'])
-        socket.recv.assert_awaited_once()
-        request = self.request_from_socket_mock(socket)
-
-        self.assertEqual(request, {
-            'service': 'LISTED_BOOK',
-            'command': 'SUBS',
-            'requestid': '1',
-            "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
-            "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
-            'parameters': {
-                'keys': 'GOOG,MSFT',
-                'fields': ('0,1,2,3')
-            }
-        })
-
-    @no_duplicates
-    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_listed_book_unsubs_success_all_fields(self, ws_connect):
-        socket = await self.login_and_get_socket(ws_connect)
-
-        stream_item = {'data': [{'service': 'LISTED_BOOK', 'command': 'SUBS', 'timestamp': REQUEST_TIMESTAMP, 'content': {}}]}
-
-        socket.recv.side_effect = [
-            json.dumps(self.success_response(1, 'LISTED_BOOK', 'SUBS')),
-            json.dumps(stream_item),
-            json.dumps(self.success_response(2, 'LISTED_BOOK', 'UNSUBS'))
-        ]
-        handler = Mock()
-        async_handler = AsyncMock()
-        self.client.add_listed_book_handler(handler)
-        self.client.add_listed_book_handler(async_handler)
-
-        await self.client.listed_book_subs(['GOOG', 'MSFT'])
-        await self.client.handle_message()
-        await self.client.listed_book_unsubs(['GOOG', 'MSFT'])
-
-        self.assert_handler_called_once_with(
-                handler, {'service': 'LISTED_BOOK',
+                handler, {'service': 'NYSE_BOOK',
                           'command': 'SUBS',
                           'timestamp': REQUEST_TIMESTAMP,
                           'content': {}})
         self.assert_handler_called_once_with(
-                async_handler, {'service': 'LISTED_BOOK',
+                async_handler, {'service': 'NYSE_BOOK',
                                 'command': 'SUBS',
                                 'timestamp': REQUEST_TIMESTAMP,
                                 'content': {}})
         send_awaited = [
             call(StringMatchesJson({
                 "requests": [{
-                    "service": "LISTED_BOOK",
+                    "service": "NYSE_BOOK",
                     "requestid": "1",
                     "command": "SUBS",
                     "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
@@ -3721,7 +3521,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             })),
             call(StringMatchesJson({
                 "requests": [{
-                    "service": "LISTED_BOOK",
+                    "service": "NYSE_BOOK",
                     "requestid": "2",
                     "command": "UNSUBS",
                     "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
@@ -3736,34 +3536,46 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_listed_book_subs_failure(self, ws_connect):
+    async def test_nyse_book_subs_failure(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
-        response = self.success_response(1, 'LISTED_BOOK', 'SUBS')
+        response = self.success_response(1, 'NYSE_BOOK', 'SUBS')
         response['response'][0]['content']['code'] = 21
         socket.recv.side_effect = [json.dumps(response)]
 
         with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
-            await self.client.listed_book_subs(['GOOG', 'MSFT'])
+            await self.client.nyse_book_subs(['GOOG', 'MSFT'])
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_listed_book_unsubs_failure(self, ws_connect):
+    async def test_nyse_book_unsubs_failure(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
-        response = self.success_response(1, 'LISTED_BOOK', 'UNSUBS')
+        response = self.success_response(1, 'NYSE_BOOK', 'UNSUBS')
         response['response'][0]['content']['code'] = 21
         socket.recv.side_effect = [json.dumps(response)]
 
         with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
-            await self.client.listed_book_unsubs(['GOOG', 'MSFT'])
+            await self.client.nyse_book_unsubs(['GOOG', 'MSFT'])
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_nyse_book_add_failure(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        response = self.success_response(1, 'NYSE_BOOK', 'ADD')
+        response['response'][0]['content']['code'] = 21
+        socket.recv.side_effect = [json.dumps(response)]
+
+        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
+            await self.client.nyse_book_add(['INTC'])
 
     ##########################################################################
     # NASDAQ_BOOK
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_nasdaq_book_subs_success_all_fields(self, ws_connect):
+    async def test_nasdaq_book_subs_success_and_add_all_fields(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
         socket.recv.side_effect = [json.dumps(self.success_response(
@@ -3782,6 +3594,27 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             'parameters': {
                 'keys': 'GOOG,MSFT',
                 'fields': ('0,1,2,3')
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'NASDAQ_BOOK', 'ADD'))]
+
+        await self.client.nasdaq_book_add(['INTC'])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'NASDAQ_BOOK',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': 'INTC',
+                'fields': '0,1,2,3'
             }
         })
 
@@ -3869,19 +3702,31 @@ class StreamClientTest(IsolatedAsyncioTestCase):
         with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
             await self.client.nasdaq_book_unsubs(['GOOG', 'MSFT'])
 
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_nasdaq_book_add_failure(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        response = self.success_response(1, 'NASDAQ_BOOK', 'ADD')
+        response['response'][0]['content']['code'] = 21
+        socket.recv.side_effect = [json.dumps(response)]
+
+        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
+            await self.client.nasdaq_book_add(['INTC'])
+
     ##########################################################################
     # OPTIONS_BOOK
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_options_book_subs_success_all_fields(self, ws_connect):
+    async def test_options_book_subs_and_add_success_all_fields(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
         socket.recv.side_effect = [json.dumps(self.success_response(
             1, 'OPTIONS_BOOK', 'SUBS'))]
 
         await self.client.options_book_subs(
-            ['GOOG_052920C620', 'MSFT_052920C145'])
+            ['GOOG  240517C00070000', 'MSFT  240517C00160000'])
         socket.recv.assert_awaited_once()
         request = self.request_from_socket_mock(socket)
 
@@ -3892,8 +3737,29 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
             "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
             'parameters': {
-                'keys': 'GOOG_052920C620,MSFT_052920C145',
-                'fields': ('0,1,2,3')
+                'keys': 'GOOG  240517C00070000,MSFT  240517C00160000',
+                'fields': '0,1,2,3'
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'OPTIONS_BOOK', 'ADD'))]
+
+        await self.client.options_book_add(['ADBE  240614C00500000'])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'OPTIONS_BOOK',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+            'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': 'ADBE  240614C00500000',
+                'fields': '0,1,2,3'
             }
         })
 
@@ -3915,10 +3781,10 @@ class StreamClientTest(IsolatedAsyncioTestCase):
         self.client.add_options_book_handler(async_handler)
 
         await self.client.options_book_subs(
-            ['GOOG_052920C620', 'MSFT_052920C145'])
+            ['GOOG  240517C00070000', 'MSFT  240517C00160000'])
         await self.client.handle_message()
         await self.client.options_book_unsubs(
-            ['GOOG_052920C620', 'MSFT_052920C145'])
+            ['GOOG  240517C00070000', 'MSFT  240517C00160000'])
 
         self.assert_handler_called_once_with(
                 handler, {"service": "OPTIONS_BOOK",
@@ -3939,7 +3805,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
                     "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
                     "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
                     "parameters": {
-                        "keys": "GOOG_052920C620,MSFT_052920C145",
+                        "keys": "GOOG  240517C00070000,MSFT  240517C00160000",
                         "fields": "0,1,2,3"
                     }
                 }]
@@ -3952,7 +3818,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
                     "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
                     "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
                     "parameters": {
-                        "keys": "GOOG_052920C620,MSFT_052920C145"
+                        "keys": "GOOG  240517C00070000,MSFT  240517C00160000"
                     }
                 }]
             })),
@@ -3970,7 +3836,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
         with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
             await self.client.options_book_subs(
-                ['GOOG_052920C620', 'MSFT_052920C145'])
+                ['GOOG  240517C00070000', 'MSFT  240517C00160000'])
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
@@ -3983,26 +3849,38 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
         with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
             await self.client.options_book_unsubs(
-                ['GOOG_052920C620', 'MSFT_052920C145'])
+                ['GOOG  240517C00070000', 'MSFT  240517C00160000'])
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_options_book_add_failure(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        response = self.success_response(1, 'OPTIONS_BOOK', 'ADD')
+        response['response'][0]['content']['code'] = 21
+        socket.recv.side_effect = [json.dumps(response)]
+
+        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
+            await self.client.options_book_add(['ADBE  240614C00500000'])
 
     ##########################################################################
     # Common book handler functionality
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_listed_book_handler(self, ws_connect):
+    async def test_nyse_book_handler(self, ws_connect):
         async def subs():
-            await self.client.listed_book_subs(['GOOG', 'MSFT'])
+            await self.client.nyse_book_subs(['GOOG', 'MSFT'])
 
         def register_handler():
             handler = Mock()
             async_handler = AsyncMock()
-            self.client.add_listed_book_handler(handler)
-            self.client.add_listed_book_handler(async_handler)
+            self.client.add_nyse_book_handler(handler)
+            self.client.add_nyse_book_handler(async_handler)
             return handler, async_handler
 
         return await self.__test_book_handler(
-            ws_connect, 'LISTED_BOOK', subs, register_handler)
+            ws_connect, 'NYSE_BOOK', subs, register_handler)
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
@@ -4437,86 +4315,108 @@ class StreamClientTest(IsolatedAsyncioTestCase):
         self.assert_handler_called_once_with(async_handler, expected_item)
 
     ##########################################################################
-    # NEWS_HEADLINE
+    # SCREENER_EQUITY
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_news_headline_subs_success(self, ws_connect):
+    async def test_screener_equity_subs_and_add_success_all_fields(
+            self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
         socket.recv.side_effect = [json.dumps(self.success_response(
-            1, 'NEWS_HEADLINE', 'SUBS'))]
+            1, 'SCREENER_EQUITY', 'SUBS'))]
 
-        await self.client.news_headline_subs(['GOOG', 'MSFT'])
+        await self.client.screener_equity_subs(['NYSE_VOLUME_5', 'NASDAQ_VOLUME_5'])
         socket.recv.assert_awaited_once()
         request = self.request_from_socket_mock(socket)
 
         self.assertEqual(request, {
-            'service': 'NEWS_HEADLINE',
+            'service': 'SCREENER_EQUITY',
             'command': 'SUBS',
             'requestid': '1',
-            "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
-            "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
+            'SchwabClientCustomerId': self.pref_customer_id,
+            'SchwabClientCorrelId': self.pref_correl_id,
             'parameters': {
-                'keys': 'GOOG,MSFT',
-                'fields': ('0,1,2,3,4,5,6,7,8,9,10')
+                'keys': 'NYSE_VOLUME_5,NASDAQ_VOLUME_5',
+                'fields': '0,1,2,3,4'
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'SCREENER_EQUITY', 'ADD'))]
+
+        await self.client.screener_equity_add(['$DJI_TRADES_10'])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'SCREENER_EQUITY',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': self.pref_customer_id,
+            'SchwabClientCorrelId': self.pref_correl_id,
+            'parameters': {
+                'keys': '$DJI_TRADES_10',
+                'fields': '0,1,2,3,4'
             }
         })
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_news_headline_unsubs_success(self, ws_connect):
+    async def test_screener_equity_unsubs_success_all_fields(
+            self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
-        stream_item = {"data": [{"service": "NEWS_HEADLINE", "command": "SUBS", "timestamp": REQUEST_TIMESTAMP, 'content': {}}]}
+        stream_item = self.streaming_entry('SCREENER_EQUITY', 'SUBS')
 
         socket.recv.side_effect = [
-            json.dumps(self.success_response(1, 'NEWS_HEADLINE', 'SUBS')),
+            json.dumps(self.success_response(1, 'SCREENER_EQUITY', 'SUBS')),
             json.dumps(stream_item),
-            json.dumps(self.success_response(2, 'NEWS_HEADLINE', 'UNSUBS'))
+            json.dumps(self.success_response(2, 'SCREENER_EQUITY', 'UNSUBS', 'UNSUBS command succeeded'))
         ]
         handler = Mock()
         async_handler = AsyncMock()
-        self.client.add_news_headline_handler(handler)
-        self.client.add_news_headline_handler(async_handler)
+        self.client.add_screener_equity_handler(handler)
+        self.client.add_screener_equity_handler(async_handler)
 
-        await self.client.news_headline_subs(['GOOG', 'MSFT'])
+        await self.client.screener_equity_subs(['NYSE_VOLUME_5', 'NASDAQ_VOLUME_5'])
         await self.client.handle_message()
-        await self.client.news_headline_unsubs(['GOOG', 'MSFT'])
+        await self.client.screener_equity_unsubs(['NYSE_VOLUME_5', 'NASDAQ_VOLUME_5'])
 
         self.assert_handler_called_once_with(
-                handler, {"service": "NEWS_HEADLINE",
-                          "command": "SUBS",
-                          "timestamp": REQUEST_TIMESTAMP,
-                          'content': {}})
+                handler, {'service': 'SCREENER_EQUITY',
+                          'command': 'SUBS',
+                          'timestamp': REQUEST_TIMESTAMP})
         self.assert_handler_called_once_with(
-                async_handler, {"service": "NEWS_HEADLINE",
-                                "command": "SUBS",
-                                "timestamp": REQUEST_TIMESTAMP,
-                                'content': {}})
+                async_handler, {'service': 'SCREENER_EQUITY',
+                                'command': 'SUBS',
+                                'timestamp': REQUEST_TIMESTAMP})
+
         send_awaited = [
             call(StringMatchesJson({
-                "requests": [{
-                    "service": "NEWS_HEADLINE",
-                    "requestid": "1",
-                    "command": "SUBS",
-                    "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
-                    "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
-                    "parameters": {
-                        "keys": "GOOG,MSFT",
-                        "fields": "0,1,2,3,4,5,6,7,8,9,10"
+                'requests': [{
+                    'service': 'SCREENER_EQUITY',
+                    'requestid': '1',
+                    'command': 'SUBS',
+                    'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+                    'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+                    'parameters': {
+                        'keys': 'NYSE_VOLUME_5,NASDAQ_VOLUME_5',
+                        'fields': '0,1,2,3,4'
                     }
                 }]
             })),
             call(StringMatchesJson({
-                "requests": [{
-                    "service": "NEWS_HEADLINE",
-                    "requestid": "2",
-                    "command": "UNSUBS",
-                    "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
-                    "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
-                    "parameters": {
-                        "keys": "GOOG,MSFT"
+                'requests': [{
+                    'service': 'SCREENER_EQUITY',
+                    'requestid': '2',
+                    'command': 'UNSUBS',
+                    'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+                    'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+                    'parameters': {
+                        'keys': 'NYSE_VOLUME_5,NASDAQ_VOLUME_5'
                     }
                 }]
             })),
@@ -4525,152 +4425,1109 @@ class StreamClientTest(IsolatedAsyncioTestCase):
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_news_headline_subs_failure(self, ws_connect):
+    async def test_screener_equity_subs_failure(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
-        response = self.success_response(1, 'NEWS_HEADLINE', 'SUBS')
+        response = self.success_response(1, 'SCREENER_EQUITY', 'SUBS')
         response['response'][0]['content']['code'] = 21
         socket.recv.side_effect = [json.dumps(response)]
 
         with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
-            await self.client.news_headline_subs(['GOOG', 'MSFT'])
+            await self.client.screener_equity_subs(['NYSE_VOLUME_5', 'NASDAQ_VOLUME_5'])
 
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_news_headline_unsubs_failure(self, ws_connect):
+    async def test_screener_equity_unsubs_failure(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
-        response = self.success_response(1, 'NEWS_HEADLINE', 'UNSUBS')
+        response = self.success_response(1, 'SCREENER_EQUITY', 'UNSUBS')
         response['response'][0]['content']['code'] = 21
         socket.recv.side_effect = [json.dumps(response)]
 
         with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
-            await self.client.news_headline_unsubs(['GOOG', 'MSFT'])
+            await self.client.screener_equity_unsubs(['NYSE_VOLUME_5', 'NASDAQ_VOLUME_5'])
 
     @no_duplicates
-    # TODO: Replace this with real messages.
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_news_headline_handler(self, ws_connect):
+    async def test_screener_equity_add_failure(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        response = self.success_response(1, 'SCREENER_EQUITY', 'ADD')
+        response['response'][0]['content']['code'] = 21
+        socket.recv.side_effect = [json.dumps(response)]
+
+        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
+            await self.client.screener_equity_add(['$DJI_TRADES_10'])
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_screener_equity_handler(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
         stream_item = {
             'data': [{
-                'service': 'NEWS_HEADLINE',
-                'timestamp': 1590245129396,
+                'service': 'SCREENER_EQUITY',
+                'timestamp': 1718996308740,
                 'command': 'SUBS',
                 'content': [{
-                    'key': 'GOOG',
-                    'delayed': False,
-                    '1': 0,
-                    '2': 1590181199727,
-                    '3': '0S21111333342',
-                    '4': 'Active',
-                    '5': 'Google Does Something',
-                    '6': '0S1113435443',
-                    '7': '1',
-                    '8': 'GOOG',
-                    '9': False,
-                    '10': 'Bloomberg',
+                    'key': 'NYSE_VOLUME_5',
+                    '1': 1718996308700,
+                    '2': 'VOLUME',
+                    '3': 5,
+                    '4': [{
+                        'symbol': 'XLF',
+                        'description': 'SELECT STR FINANCIAL SELECT SPDR ETF',
+                        'lastPrice': 41.305,
+                        'netChange': 41.305,
+                        'netPercentChange': 1,
+                        'marketShare': 3.40228332,
+                        'totalVolume': 51730877,
+                        'volume': 1760031,
+                        'trades': 644
+                    }, {
+                        'symbol': 'HYG',
+                        'description': 'ISHARES IBOXX HIGH YIELD BOND ETF',
+                        'lastPrice': 77.34,
+                        'netChange': 77.34,
+                        'netPercentChange': 1,
+                        'marketShare': 2.10192454,
+                        'totalVolume': 51730877,
+                        'volume': 1087344,
+                        'trades': 354
+                    }, {
+                        'symbol': 'CX',
+                        'description': 'Cemex Sab De C V ADR',
+                        'lastPrice': 6.26,
+                        'netChange': 6.26,
+                        'netPercentChange': 1,
+                        'marketShare': 1.93456028,
+                        'totalVolume': 51730877,
+                        'volume': 1000765,
+                        'trades': 825
+                    }, {
+                        'symbol': 'ABEV',
+                        'description': 'Ambev S A ADR',
+                        'lastPrice': 2.05,
+                        'netChange': 2.05,
+                        'netPercentChange': 1,
+                        'marketShare': 1.84930559,
+                        'totalVolume': 51730877,
+                        'volume': 956662,
+                        'trades': 1598
+                    }, {
+                        'symbol': 'CHPT',
+                        'description': 'Chargepoint Holdings A',
+                        'lastPrice': 1.365,
+                        'netChange': 1.365,
+                        'netPercentChange': 1,
+                        'marketShare': 1.73645809,
+                        'totalVolume': 51730877,
+                        'volume': 898285,
+                        'trades': 1024
+                    }, {
+                        'symbol': 'GME',
+                        'description': 'Gamestop Corp A',
+                        'lastPrice': 23.78,
+                        'netChange': 23.78,
+                        'netPercentChange': 1,
+                        'marketShare': 1.28934021,
+                        'totalVolume': 51730877,
+                        'volume': 666987,
+                        'trades': 5590
+                    }, {
+                        'symbol': 'DNA',
+                        'description': 'GINKGO BIOWORKS HLDG A',
+                        'lastPrice': 0.4151,
+                        'netChange': 0.4151,
+                        'netPercentChange': 1,
+                        'marketShare': 0.93249917,
+                        'totalVolume': 51730877,
+                        'volume': 482390,
+                        'trades': 880
+                    }, {
+                        'symbol': 'TELL',
+                        'description': 'Tellurian Investment',
+                        'lastPrice': 0.6347,
+                        'netChange': 0.6347,
+                        'netPercentChange': 1,
+                        'marketShare': 0.84341311,
+                        'totalVolume': 51730877,
+                        'volume': 436305,
+                        'trades': 378
+                    }, {
+                        'symbol': 'KVUE',
+                        'description': 'KENVUE Inc',
+                        'lastPrice': 18.775,
+                        'netChange': 18.775,
+                        'netPercentChange': 1,
+                        'marketShare': 0.82902519,
+                        'totalVolume': 51730877,
+                        'volume': 428862,
+                        'trades': 1654
+                    }, {
+                        'symbol': 'DNN',
+                        'description': 'DENISON MINES CORP',
+                        'lastPrice': 2.02,
+                        'netChange': 2.02,
+                        'netPercentChange': 1,
+                        'marketShare': 0.82405717,
+                        'totalVolume': 51730877,
+                        'volume': 426292,
+                        'trades': 270
+                    }]
                 }, {
-                    'key': 'MSFT',
-                    'delayed': False,
-                    '1': 0,
-                    '2': 1590181199728,
-                    '3': '0S21111333343',
-                    '4': 'Active',
-                    '5': 'Microsoft Does Something',
-                    '6': '0S1113435444',
-                    '7': '2',
-                    '8': 'MSFT',
-                    '9': False,
-                    '10': 'WSJ',
+                    'key': 'NASDAQ_VOLUME_5',
+                    '1': 1718996308714,
+                    '2': 'VOLUME',
+                    '3': 5,
+                    '4': [{
+                        'symbol': 'NVDA',
+                        'description': 'Nvidia Corp',
+                        'lastPrice': 126.5299,
+                        'netChange': 126.5299,
+                        'netPercentChange': 1,
+                        'marketShare': 5.84329551,
+                        'totalVolume': 41090169,
+                        'volume': 2401020,
+                        'trades': 18452
+                    },
+                    {
+                        'symbol': 'AREB',
+                        'description': 'AMERICAN REBEL HLDGS',
+                        'lastPrice': 0.7776,
+                        'netChange': 0.7776,
+                        'netPercentChange': 1,
+                        'marketShare': 4.2931729,
+                        'totalVolume': 41090169,
+                        'volume': 1764072,
+                        'trades': 2192
+                    },
+                    {
+                        'symbol': 'KTRA',
+                        'description': 'KINTARA THERAPEUTICS',
+                        'lastPrice': 0.25335,
+                        'netChange': 0.25335,
+                        'netPercentChange': 1,
+                        'marketShare': 2.12389976,
+                        'totalVolume': 41090169,
+                        'volume': 872714,
+                        'trades': 333
+                    },
+                    {
+                        'symbol': 'AAPL',
+                        'description': 'Apple Inc',
+                        'lastPrice': 210.2967,
+                        'netChange': 210.2967,
+                        'netPercentChange': 1,
+                        'marketShare': 1.71872012,
+                        'totalVolume': 41090169,
+                        'volume': 706225,
+                        'trades': 7024
+                    },
+                    {
+                        'symbol': 'NKLA',
+                        'description': 'NIKOLA CORP',
+                        'lastPrice': 0.359,
+                        'netChange': 0.359,
+                        'netPercentChange': 1,
+                        'marketShare': 1.64388226,
+                        'totalVolume': 41090169,
+                        'volume': 675474,
+                        'trades': 1016
+                    },
+                    {
+                        'symbol': 'SHCR',
+                        'description': 'SHARECARE INC A',
+                        'lastPrice': 1.365,
+                        'netChange': 1.365,
+                        'netPercentChange': 1,
+                        'marketShare': 1.6360288,
+                        'totalVolume': 41090169,
+                        'volume': 672247,
+                        'trades': 265
+                    },
+                    {
+                        'symbol': 'SIRI',
+                        'description': 'Sirius Xm Hldgs Inc',
+                        'lastPrice': 2.995,
+                        'netChange': 2.995,
+                        'netPercentChange': 1,
+                        'marketShare': 1.63058224,
+                        'totalVolume': 41090169,
+                        'volume': 670009,
+                        'trades': 983
+                    },
+                    {
+                        'symbol': 'CRKN',
+                        'description': 'Crown Electrokinetic',
+                        'lastPrice': 0.0401,
+                        'netChange': 0.0401,
+                        'netPercentChange': 1,
+                        'marketShare': 1.34467201,
+                        'totalVolume': 41090169,
+                        'volume': 552528,
+                        'trades': 885
+                    },
+                    {
+                        'symbol': 'TSLA',
+                        'description': 'Tesla Inc',
+                        'lastPrice': 181.4049,
+                        'netChange': 181.4049,
+                        'netPercentChange': 1,
+                        'marketShare': 1.0218454,
+                        'totalVolume': 41090169,
+                        'volume': 419878,
+                        'trades': 4613
+                    },
+                    {
+                        'symbol': 'WBD',
+                        'description': 'Warner Brothers Disc',
+                        'lastPrice': 7.125,
+                        'netChange': 7.125,
+                        'netPercentChange': 1,
+                        'marketShare': 0.89736793,
+                        'totalVolume': 41090169,
+                        'volume': 368730,
+                        'trades': 1249
+                    }]
                 }]
             }]
         }
 
         socket.recv.side_effect = [
-            json.dumps(self.success_response(1, 'NEWS_HEADLINE', 'SUBS')),
+            json.dumps(self.success_response(
+                1, 'SCREENER_EQUITY', 'SUBS')),
             json.dumps(stream_item)]
-        await self.client.news_headline_subs(['GOOG', 'MSFT'])
+        await self.client.screener_equity_subs(['NYSE_VOLUME_5', 'NASDAQ_VOLUME_5'])
 
         handler = Mock()
         async_handler = AsyncMock()
-        self.client.add_news_headline_handler(handler)
-        self.client.add_news_headline_handler(async_handler)
+        self.client.add_screener_equity_handler(handler)
+        self.client.add_screener_equity_handler(async_handler)
         await self.client.handle_message()
 
         expected_item = {
-            'service': 'NEWS_HEADLINE',
-            'timestamp': 1590245129396,
+            'service': 'SCREENER_EQUITY',
+            'timestamp': 1718996308740,
             'command': 'SUBS',
             'content': [{
-                'key': 'GOOG',
-                'delayed': False,
-                'ERROR_CODE': 0,
-                'STORY_DATETIME': 1590181199727,
-                'HEADLINE_ID': '0S21111333342',
-                'STATUS': 'Active',
-                'HEADLINE': 'Google Does Something',
-                'STORY_ID': '0S1113435443',
-                'COUNT_FOR_KEYWORD': '1',
-                'KEYWORD_ARRAY': 'GOOG',
-                'IS_HOT': False,
-                'STORY_SOURCE': 'Bloomberg',
+                'key': 'NYSE_VOLUME_5',
+                'TIMESTAMP': 1718996308700,
+                'SORT_FIELD': 'VOLUME',
+                'FREQUENCY': 5,
+                'ITEMS': [{
+                    'symbol': 'XLF',
+                    'description': 'SELECT STR FINANCIAL SELECT SPDR ETF',
+                    'lastPrice': 41.305,
+                    'netChange': 41.305,
+                    'netPercentChange': 1,
+                    'marketShare': 3.40228332,
+                    'totalVolume': 51730877,
+                    'volume': 1760031,
+                    'trades': 644
+                }, {
+                    'symbol': 'HYG',
+                    'description': 'ISHARES IBOXX HIGH YIELD BOND ETF',
+                    'lastPrice': 77.34,
+                    'netChange': 77.34,
+                    'netPercentChange': 1,
+                    'marketShare': 2.10192454,
+                    'totalVolume': 51730877,
+                    'volume': 1087344,
+                    'trades': 354
+                }, {
+                    'symbol': 'CX',
+                    'description': 'Cemex Sab De C V ADR',
+                    'lastPrice': 6.26,
+                    'netChange': 6.26,
+                    'netPercentChange': 1,
+                    'marketShare': 1.93456028,
+                    'totalVolume': 51730877,
+                    'volume': 1000765,
+                    'trades': 825
+                }, {
+                    'symbol': 'ABEV',
+                    'description': 'Ambev S A ADR',
+                    'lastPrice': 2.05,
+                    'netChange': 2.05,
+                    'netPercentChange': 1,
+                    'marketShare': 1.84930559,
+                    'totalVolume': 51730877,
+                    'volume': 956662,
+                    'trades': 1598
+                },{
+                    'symbol': 'CHPT',
+                    'description': 'Chargepoint Holdings A',
+                    'lastPrice': 1.365,
+                    'netChange': 1.365,
+                    'netPercentChange': 1,
+                    'marketShare': 1.73645809,
+                    'totalVolume': 51730877,
+                    'volume': 898285,
+                    'trades': 1024
+                }, {
+                    'symbol': 'GME',
+                    'description': 'Gamestop Corp A',
+                    'lastPrice': 23.78,
+                    'netChange': 23.78,
+                    'netPercentChange': 1,
+                    'marketShare': 1.28934021,
+                    'totalVolume': 51730877,
+                    'volume': 666987,
+                    'trades': 5590
+                }, {
+                    'symbol': 'DNA',
+                    'description': 'GINKGO BIOWORKS HLDG A',
+                    'lastPrice': 0.4151,
+                    'netChange': 0.4151,
+                    'netPercentChange': 1,
+                    'marketShare': 0.93249917,
+                    'totalVolume': 51730877,
+                    'volume': 482390,
+                    'trades': 880
+                }, {
+                    'symbol': 'TELL',
+                    'description': 'Tellurian Investment',
+                    'lastPrice': 0.6347,
+                    'netChange': 0.6347,
+                    'netPercentChange': 1,
+                    'marketShare': 0.84341311,
+                    'totalVolume': 51730877,
+                    'volume': 436305,
+                    'trades': 378
+                }, {
+                    'symbol': 'KVUE',
+                    'description': 'KENVUE Inc',
+                    'lastPrice': 18.775,
+                    'netChange': 18.775,
+                    'netPercentChange': 1,
+                    'marketShare': 0.82902519,
+                    'totalVolume': 51730877,
+                    'volume': 428862,
+                    'trades': 1654
+                }, {
+                    'symbol': 'DNN',
+                    'description': 'DENISON MINES CORP',
+                    'lastPrice': 2.02,
+                    'netChange': 2.02,
+                    'netPercentChange': 1,
+                    'marketShare': 0.82405717,
+                    'totalVolume': 51730877,
+                    'volume': 426292,
+                    'trades': 270
+                }]
             }, {
-                'key': 'MSFT',
-                'delayed': False,
-                'ERROR_CODE': 0,
-                'STORY_DATETIME': 1590181199728,
-                'HEADLINE_ID': '0S21111333343',
-                'STATUS': 'Active',
-                'HEADLINE': 'Microsoft Does Something',
-                'STORY_ID': '0S1113435444',
-                'COUNT_FOR_KEYWORD': '2',
-                'KEYWORD_ARRAY': 'MSFT',
-                'IS_HOT': False,
-                'STORY_SOURCE': 'WSJ',
+                'key': 'NASDAQ_VOLUME_5',
+                'TIMESTAMP': 1718996308714,
+                'SORT_FIELD': 'VOLUME',
+                'FREQUENCY': 5,
+                'ITEMS': [{
+                    'symbol': 'NVDA',
+                    'description': 'Nvidia Corp',
+                    'lastPrice': 126.5299,
+                    'netChange': 126.5299,
+                    'netPercentChange': 1,
+                    'marketShare': 5.84329551,
+                    'totalVolume': 41090169,
+                    'volume': 2401020,
+                    'trades': 18452
+                }, {
+                    'symbol': 'AREB',
+                    'description': 'AMERICAN REBEL HLDGS',
+                    'lastPrice': 0.7776,
+                    'netChange': 0.7776,
+                    'netPercentChange': 1,
+                    'marketShare': 4.2931729,
+                    'totalVolume': 41090169,
+                    'volume': 1764072,
+                    'trades': 2192
+                }, {
+                    'symbol': 'KTRA',
+                    'description': 'KINTARA THERAPEUTICS',
+                    'lastPrice': 0.25335,
+                    'netChange': 0.25335,
+                    'netPercentChange': 1,
+                    'marketShare': 2.12389976,
+                    'totalVolume': 41090169,
+                    'volume': 872714,
+                    'trades': 333
+                }, {
+                    'symbol': 'AAPL',
+                    'description': 'Apple Inc',
+                    'lastPrice': 210.2967,
+                    'netChange': 210.2967,
+                    'netPercentChange': 1,
+                    'marketShare': 1.71872012,
+                    'totalVolume': 41090169,
+                    'volume': 706225,
+                    'trades': 7024
+                }, {
+                    'symbol': 'NKLA',
+                    'description': 'NIKOLA CORP',
+                    'lastPrice': 0.359,
+                    'netChange': 0.359,
+                    'netPercentChange': 1,
+                    'marketShare': 1.64388226,
+                    'totalVolume': 41090169,
+                    'volume': 675474,
+                    'trades': 1016
+                }, {
+                    'symbol': 'SHCR',
+                    'description': 'SHARECARE INC A',
+                    'lastPrice': 1.365,
+                    'netChange': 1.365,
+                    'netPercentChange': 1,
+                    'marketShare': 1.6360288,
+                    'totalVolume': 41090169,
+                    'volume': 672247,
+                    'trades': 265
+                }, {
+                    'symbol': 'SIRI',
+                    'description': 'Sirius Xm Hldgs Inc',
+                    'lastPrice': 2.995,
+                    'netChange': 2.995,
+                    'netPercentChange': 1,
+                    'marketShare': 1.63058224,
+                    'totalVolume': 41090169,
+                    'volume': 670009,
+                    'trades': 983
+                }, {
+                    'symbol': 'CRKN',
+                    'description': 'Crown Electrokinetic',
+                    'lastPrice': 0.0401,
+                    'netChange': 0.0401,
+                    'netPercentChange': 1,
+                    'marketShare': 1.34467201,
+                    'totalVolume': 41090169,
+                    'volume': 552528,
+                    'trades': 885
+                }, {
+                    'symbol': 'TSLA',
+                    'description': 'Tesla Inc',
+                    'lastPrice': 181.4049,
+                    'netChange': 181.4049,
+                    'netPercentChange': 1,
+                    'marketShare': 1.0218454,
+                    'totalVolume': 41090169,
+                    'volume': 419878,
+                    'trades': 4613
+                }, {
+                    'symbol': 'WBD',
+                    'description': 'Warner Brothers Disc',
+                    'lastPrice': 7.125,
+                    'netChange': 7.125,
+                    'netPercentChange': 1,
+                    'marketShare': 0.89736793,
+                    'totalVolume': 41090169,
+                    'volume': 368730,
+                    'trades': 1249
+                }]
             }]
         }
 
         self.assert_handler_called_once_with(handler, expected_item)
         self.assert_handler_called_once_with(async_handler, expected_item)
 
+    ##########################################################################
+    # SCREENER_OPTION
+
     @no_duplicates
     @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
-    async def test_news_headline_not_authorized_notification(self, ws_connect):
+    async def test_screener_option_subs_and_add_success_all_fields(
+            self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            1, 'SCREENER_OPTION', 'SUBS'))]
+
+        await self.client.screener_option_subs(['OPTION_PUT_VOLUME_5', 'OPTION_CALL_VOLUME_5'])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'SCREENER_OPTION',
+            'command': 'SUBS',
+            'requestid': '1',
+            'SchwabClientCustomerId': self.pref_customer_id,
+            'SchwabClientCorrelId': self.pref_correl_id,
+            'parameters': {
+                'keys': 'OPTION_PUT_VOLUME_5,OPTION_CALL_VOLUME_5',
+                'fields': '0,1,2,3,4'
+            }
+        })
+
+        socket.reset_mock()
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            2, 'SCREENER_OPTION', 'ADD'))]
+
+        await self.client.screener_option_add(['OPTION_ALL_TRADES_10'])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'SCREENER_OPTION',
+            'command': 'ADD',
+            'requestid': '2',
+            'SchwabClientCustomerId': self.pref_customer_id,
+            'SchwabClientCorrelId': self.pref_correl_id,
+            'parameters': {
+                'keys': 'OPTION_ALL_TRADES_10',
+                'fields': '0,1,2,3,4'
+            }
+        })
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_screener_option_unsubs_success_all_fields(
+            self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        stream_item = self.streaming_entry('SCREENER_OPTION', 'SUBS')
+
+        socket.recv.side_effect = [
+            json.dumps(self.success_response(1, 'SCREENER_OPTION', 'SUBS')),
+            json.dumps(stream_item),
+            json.dumps(self.success_response(2, 'SCREENER_OPTION', 'UNSUBS', 'UNSUBS command succeeded'))
+        ]
+        handler = Mock()
+        async_handler = AsyncMock()
+        self.client.add_screener_option_handler(handler)
+        self.client.add_screener_option_handler(async_handler)
+
+        await self.client.screener_option_subs(['OPTION_PUT_VOLUME_5', 'OPTION_CALL_VOLUME_5'])
+        await self.client.handle_message()
+        await self.client.screener_option_unsubs(['OPTION_PUT_VOLUME_5', 'OPTION_CALL_VOLUME_5'])
+
+        self.assert_handler_called_once_with(
+                handler, {'service': 'SCREENER_OPTION',
+                          'command': 'SUBS',
+                          'timestamp': REQUEST_TIMESTAMP})
+        self.assert_handler_called_once_with(
+                async_handler, {'service': 'SCREENER_OPTION',
+                                'command': 'SUBS',
+                                'timestamp': REQUEST_TIMESTAMP})
+
+        send_awaited = [
+            call(StringMatchesJson({
+                'requests': [{
+                    'service': 'SCREENER_OPTION',
+                    'requestid': '1',
+                    'command': 'SUBS',
+                    'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+                    'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+                    'parameters': {
+                        'keys': 'OPTION_PUT_VOLUME_5,OPTION_CALL_VOLUME_5',
+                        'fields': '0,1,2,3,4'
+                    }
+                }]
+            })),
+            call(StringMatchesJson({
+                'requests': [{
+                    'service': 'SCREENER_OPTION',
+                    'requestid': '2',
+                    'command': 'UNSUBS',
+                    'SchwabClientCustomerId': CLIENT_CUSTOMER_ID,
+                    'SchwabClientCorrelId': CLIENT_CORRELATION_ID,
+                    'parameters': {
+                        'keys': 'OPTION_PUT_VOLUME_5,OPTION_CALL_VOLUME_5'
+                    }
+                }]
+            })),
+        ]
+        socket.send.assert_has_awaits(send_awaited, any_order=False)
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_screener_option_subs_failure(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        response = self.success_response(1, 'SCREENER_OPTION', 'SUBS')
+        response['response'][0]['content']['code'] = 21
+        socket.recv.side_effect = [json.dumps(response)]
+
+        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
+            await self.client.screener_option_subs(['OPTION_PUT_VOLUME_5', 'OPTION_CALL_VOLUME_5'])
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_screener_option_unsubs_failure(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        response = self.success_response(1, 'SCREENER_OPTION', 'UNSUBS')
+        response['response'][0]['content']['code'] = 21
+        socket.recv.side_effect = [json.dumps(response)]
+
+        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
+            await self.client.screener_option_unsubs(['OPTION_PUT_VOLUME_5', 'OPTION_CALL_VOLUME_5'])
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_screener_option_add_failure(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        response = self.success_response(1, 'SCREENER_OPTION', 'ADD')
+        response['response'][0]['content']['code'] = 21
+        socket.recv.side_effect = [json.dumps(response)]
+
+        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
+            await self.client.screener_option_add(['OPTION_ALL_TRADES_10'])
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_screener_option_handler(self, ws_connect):
         socket = await self.login_and_get_socket(ws_connect)
 
         stream_item = {
-            "notify": [
-                {
-                    "service": "NEWS_HEADLINE",
-                    "timestamp": 1591500923797,
-                    "content": {
-                        "code": 17,
-                        "msg": "Not authorized for all quotes."
-                    }
-                }
-            ]
+            'data': [{
+                'service': 'SCREENER_OPTION',
+                'timestamp': 1718996045319,
+                'command': 'SUBS',
+                'content': [{
+                    'key': 'OPTION_PUT_VOLUME_5',
+                    '1': 1718996045310,
+                    '2': 'VOLUME',
+                    '3': 5,
+                    '4': [{
+                        'symbol': 'SPY   240621P00541000',
+                        'description': 'SPY    Jun 21 2024 541.0 Put',
+                        'lastPrice': 0.02,
+                        'netChange': -0.275,
+                        'netPercentChange': -0.93220339,
+                        'marketShare': 9.01754274,
+                        'totalVolume': 218951,
+                        'volume': 19744,
+                        'trades': 151
+                    }, {
+                        'symbol': 'SPY   240816P00514000',
+                        'description': 'SPY    Aug 16 2024 514.0 Put',
+                        'lastPrice': 2.31,
+                        'netChange': -0.045,
+                        'netPercentChange': -0.01910828,
+                        'marketShare': 2.84995273,
+                        'totalVolume': 218951,
+                        'volume': 6240,
+                        'trades': 3
+                    }, {
+                        'symbol': 'NVDA  240621P00130000',
+                        'description': 'NVDA   Jun 21 2024 130.0 Put',
+                        'lastPrice': 3.35,
+                        'netChange': 1.895,
+                        'netPercentChange': 1.3024055,
+                        'marketShare': 2.6544752,
+                        'totalVolume': 218951,
+                        'volume': 5812,
+                        'trades': 213
+                    }, {
+                        'symbol': 'SPY   240621P00542000',
+                        'description': 'SPY    Jun 21 2024 542.0 Put',
+                        'lastPrice': 0.05,
+                        'netChange': -0.395,
+                        'netPercentChange': -0.88764045,
+                        'marketShare': 2.44940649,
+                        'totalVolume': 218951,
+                        'volume': 5363,
+                        'trades': 108
+                    }, {
+                        'symbol': 'SPY   240621P00544000',
+                        'description': 'SPY    Jun 21 2024 544.0 Put',
+                        'lastPrice': 0.38,
+                        'netChange': -0.565,
+                        'netPercentChange': -0.5978836,
+                        'marketShare': 2.34481688,
+                        'totalVolume': 218951,
+                        'volume': 5134,
+                        'trades': 427
+                    }, {
+                        'symbol': 'NVDA  240621P00125000',
+                        'description': 'NVDA   Jun 21 2024 125.0 Put',
+                        'lastPrice': 0.19,
+                        'netChange': -0.1956,
+                        'netPercentChange': -0.50726141,
+                        'marketShare': 2.0223703,
+                        'totalVolume': 218951,
+                        'volume': 4428,
+                        'trades': 526
+                    }, {
+                        'symbol': 'NVDA  240621P00126000',
+                        'description': 'NVDA   Jun 21 2024 126.0 Put',
+                        'lastPrice': 0.47,
+                        'netChange': -0.06,
+                        'netPercentChange': -0.11320755,
+                        'marketShare': 1.62821819,
+                        'totalVolume': 218951,
+                        'volume': 3565,
+                        'trades': 367
+                    }, {
+                        'symbol': 'SPY   240816P00530000',
+                        'description': 'SPY    Aug 16 2024 530.0 Put',
+                        'lastPrice': 4.33,
+                        'netChange': 0.0296,
+                        'netPercentChange': 0.00688308,
+                        'marketShare': 1.42863015,
+                        'totalVolume': 218951,
+                        'volume': 3128,
+                        'trades': 7
+                    }, {
+                        'symbol': 'QQQ   240621P00480000',
+                        'description': 'QQQ    Jun 21 2024 480.0 Put',
+                        'lastPrice': 0.51,
+                        'netChange': -0.7029,
+                        'netPercentChange': -0.57952016,
+                        'marketShare': 1.25918585,
+                        'totalVolume': 218951,
+                        'volume': 2757,
+                        'trades': 197
+                    }, {
+                        'symbol': 'SPY   240621P00543000',
+                        'description': 'SPY    Jun 21 2024 543.0 Put',
+                        'lastPrice': 0.14,
+                        'netChange': -0.515,
+                        'netPercentChange': -0.78625954,
+                        'marketShare': 1.23909002,
+                        'totalVolume': 218951,
+                        'volume': 2713,
+                        'trades': 237
+                    }]
+                }, {
+                    'key': 'OPTION_CALL_VOLUME_5',
+                    '1': 1718996045320,
+                    '2': 'VOLUME',
+                    '3': 5,
+                    '4': [{
+                        'symbol': 'SPY   240621C00546000',
+                        'description': 'SPY    Jun 21 2024 546.0 Call',
+                        'lastPrice': 0.07,
+                        'netChange': -1.1656,
+                        'netPercentChange': -0.94334736,
+                        'marketShare': 3.07333386,
+                        'totalVolume': 276898,
+                        'volume': 8510,
+                        'trades': 280
+                    }, {
+                        'symbol': 'SPY   240621C00545000',
+                        'description': 'SPY    Jun 21 2024 545.0 Call',
+                        'lastPrice': 0.25,
+                        'netChange': -1.75,
+                        'netPercentChange': -0.875,
+                        'marketShare': 2.45613908,
+                        'totalVolume': 276898,
+                        'volume': 6801,
+                        'trades': 503
+                    }, {
+                        'symbol': 'SIRI  240621C00003000',
+                        'description': 'SIRI   Jun 21 2024 3.0 Call',
+                        'lastPrice': 0.02,
+                        'netChange': -0.035,
+                        'netPercentChange': -0.63636364,
+                        'marketShare': 1.90286676,
+                        'totalVolume': 276898,
+                        'volume': 5269,
+                        'trades': 150
+                    }, {
+                        'symbol': 'NVDA  240621C00128000',
+                        'description': 'NVDA   Jun 21 2024 128.0 Call',
+                        'lastPrice': 0.26,
+                        'netChange': -3.4431,
+                        'netPercentChange': -0.92978856,
+                        'marketShare': 1.77610528,
+                        'totalVolume': 276898,
+                        'volume': 4918,
+                        'trades': 306
+                    }, {
+                        'symbol': 'NVDA  240621C00127000',
+                        'description': 'NVDA   Jun 21 2024 127.0 Call',
+                        'lastPrice': 0.6,
+                        'netChange': -3.9032,
+                        'netPercentChange': -0.86676141,
+                        'marketShare': 1.6320089,
+                        'totalVolume': 276898,
+                        'volume': 4519,
+                        'trades': 491
+                    }, {
+                        'symbol': 'NVDA  240621C00130000',
+                        'description': 'NVDA   Jun 21 2024 130.0 Call',
+                        'lastPrice': 0.05,
+                        'netChange': -2.2177,
+                        'netPercentChange': -0.97795123,
+                        'marketShare': 1.4745502,
+                        'totalVolume': 276898,
+                        'volume': 4083,
+                        'trades': 217
+                    }, {
+                        'symbol': 'SPY   240621C00544000',
+                        'description': 'SPY    Jun 21 2024 544.0 Call',
+                        'lastPrice': 0.68,
+                        'netChange': -2.32,
+                        'netPercentChange': -0.77333333,
+                        'marketShare': 1.42254549,
+                        'totalVolume': 276898,
+                        'volume': 3939,
+                        'trades': 286
+                    }, {
+                        'symbol': 'IWM   240621C00200000',
+                        'description': 'IWM    Jun 21 2024 200.0 Call',
+                        'lastPrice': 0.11,
+                        'netChange': -0.7012,
+                        'netPercentChange': -0.86439842,
+                        'marketShare': 1.24197358,
+                        'totalVolume': 276898,
+                        'volume': 3439,
+                        'trades': 108
+                    }, {
+                        'symbol': 'EWZ   240802C00030000',
+                        'description': 'EWZ    Aug 2 2024 30.0 Call',
+                        'lastPrice': 0.2,
+                        'netChange': 0.0446,
+                        'netPercentChange': 0.28700129,
+                        'marketShare': 1.20983178,
+                        'totalVolume': 276898,
+                        'volume': 3350,
+                        'trades': 1
+                    }, {
+                        'symbol': 'CYH   240719C00004000',
+                        'description': 'CYH    Jul 19 2024 4.0 Call',
+                        'lastPrice': 0.1,
+                        'netChange': 0,
+                        'netPercentChange': 0,
+                        'marketShare': 1.08415373,
+                        'totalVolume': 276898,
+                        'volume': 3002,
+                        'trades': 96
+                    }]
+                }]
+            }]
         }
 
         socket.recv.side_effect = [
-            json.dumps(self.success_response(1, 'NEWS_HEADLINE', 'SUBS')),
+            json.dumps(self.success_response(
+                1, 'SCREENER_OPTION', 'SUBS')),
             json.dumps(stream_item)]
-        await self.client.news_headline_subs(['GOOG', 'MSFT'])
+        await self.client.screener_option_subs(['OPTION_PUT_VOLUME_5', 'OPTION_CALL_VOLUME_5'])
 
         handler = Mock()
         async_handler = AsyncMock()
-        self.client.add_news_headline_handler(handler)
-        self.client.add_news_headline_handler(async_handler)
+        self.client.add_screener_option_handler(handler)
+        self.client.add_screener_option_handler(async_handler)
         await self.client.handle_message()
 
         expected_item = {
-            "service": "NEWS_HEADLINE",
-            "timestamp": 1591500923797,
-            "content": {
-                "code": 17,
-                "msg": "Not authorized for all quotes."
-            }
+            'service': 'SCREENER_OPTION',
+            'timestamp': 1718996045319,
+            'command': 'SUBS',
+            'content': [{
+                'key': 'OPTION_PUT_VOLUME_5',
+                'TIMESTAMP': 1718996045310,
+                'SORT_FIELD': 'VOLUME',
+                'FREQUENCY': 5,
+                'ITEMS': [{
+                    'symbol': 'SPY   240621P00541000',
+                    'description': 'SPY    Jun 21 2024 541.0 Put',
+                    'lastPrice': 0.02,
+                    'netChange': -0.275,
+                    'netPercentChange': -0.93220339,
+                    'marketShare': 9.01754274,
+                    'totalVolume': 218951,
+                    'volume': 19744,
+                    'trades': 151
+                }, {
+                    'symbol': 'SPY   240816P00514000',
+                    'description': 'SPY    Aug 16 2024 514.0 Put',
+                    'lastPrice': 2.31,
+                    'netChange': -0.045,
+                    'netPercentChange': -0.01910828,
+                    'marketShare': 2.84995273,
+                    'totalVolume': 218951,
+                    'volume': 6240,
+                    'trades': 3
+                }, {
+                    'symbol': 'NVDA  240621P00130000',
+                    'description': 'NVDA   Jun 21 2024 130.0 Put',
+                    'lastPrice': 3.35,
+                    'netChange': 1.895,
+                    'netPercentChange': 1.3024055,
+                    'marketShare': 2.6544752,
+                    'totalVolume': 218951,
+                    'volume': 5812,
+                    'trades': 213
+                }, {
+                    'symbol': 'SPY   240621P00542000',
+                    'description': 'SPY    Jun 21 2024 542.0 Put',
+                    'lastPrice': 0.05,
+                    'netChange': -0.395,
+                    'netPercentChange': -0.88764045,
+                    'marketShare': 2.44940649,
+                    'totalVolume': 218951,
+                    'volume': 5363,
+                    'trades': 108
+                }, {
+                    'symbol': 'SPY   240621P00544000',
+                    'description': 'SPY    Jun 21 2024 544.0 Put',
+                    'lastPrice': 0.38,
+                    'netChange': -0.565,
+                    'netPercentChange': -0.5978836,
+                    'marketShare': 2.34481688,
+                    'totalVolume': 218951,
+                    'volume': 5134,
+                    'trades': 427
+                }, {
+                    'symbol': 'NVDA  240621P00125000',
+                    'description': 'NVDA   Jun 21 2024 125.0 Put',
+                    'lastPrice': 0.19,
+                    'netChange': -0.1956,
+                    'netPercentChange': -0.50726141,
+                    'marketShare': 2.0223703,
+                    'totalVolume': 218951,
+                    'volume': 4428,
+                    'trades': 526
+                }, {
+                    'symbol': 'NVDA  240621P00126000',
+                    'description': 'NVDA   Jun 21 2024 126.0 Put',
+                    'lastPrice': 0.47,
+                    'netChange': -0.06,
+                    'netPercentChange': -0.11320755,
+                    'marketShare': 1.62821819,
+                    'totalVolume': 218951,
+                    'volume': 3565,
+                    'trades': 367
+                }, {
+                    'symbol': 'SPY   240816P00530000',
+                    'description': 'SPY    Aug 16 2024 530.0 Put',
+                    'lastPrice': 4.33,
+                    'netChange': 0.0296,
+                    'netPercentChange': 0.00688308,
+                    'marketShare': 1.42863015,
+                    'totalVolume': 218951,
+                    'volume': 3128,
+                    'trades': 7
+                }, {
+                    'symbol': 'QQQ   240621P00480000',
+                    'description': 'QQQ    Jun 21 2024 480.0 Put',
+                    'lastPrice': 0.51,
+                    'netChange': -0.7029,
+                    'netPercentChange': -0.57952016,
+                    'marketShare': 1.25918585,
+                    'totalVolume': 218951,
+                    'volume': 2757,
+                    'trades': 197
+                }, {
+                    'symbol': 'SPY   240621P00543000',
+                    'description': 'SPY    Jun 21 2024 543.0 Put',
+                    'lastPrice': 0.14,
+                    'netChange': -0.515,
+                    'netPercentChange': -0.78625954,
+                    'marketShare': 1.23909002,
+                    'totalVolume': 218951,
+                    'volume': 2713,
+                    'trades': 237
+                }]
+            }, {
+                'key': 'OPTION_CALL_VOLUME_5',
+                'TIMESTAMP': 1718996045320,
+                'SORT_FIELD': 'VOLUME',
+                'FREQUENCY': 5,
+                'ITEMS': [{
+                    'symbol': 'SPY   240621C00546000',
+                    'description': 'SPY    Jun 21 2024 546.0 Call',
+                    'lastPrice': 0.07,
+                    'netChange': -1.1656,
+                    'netPercentChange': -0.94334736,
+                    'marketShare': 3.07333386,
+                    'totalVolume': 276898,
+                    'volume': 8510,
+                    'trades': 280
+                }, {
+                    'symbol': 'SPY   240621C00545000',
+                    'description': 'SPY    Jun 21 2024 545.0 Call',
+                    'lastPrice': 0.25,
+                    'netChange': -1.75,
+                    'netPercentChange': -0.875,
+                    'marketShare': 2.45613908,
+                    'totalVolume': 276898,
+                    'volume': 6801,
+                    'trades': 503
+                }, {
+                    'symbol': 'SIRI  240621C00003000',
+                    'description': 'SIRI   Jun 21 2024 3.0 Call',
+                    'lastPrice': 0.02,
+                    'netChange': -0.035,
+                    'netPercentChange': -0.63636364,
+                    'marketShare': 1.90286676,
+                    'totalVolume': 276898,
+                    'volume': 5269,
+                    'trades': 150
+                }, {
+                    'symbol': 'NVDA  240621C00128000',
+                    'description': 'NVDA   Jun 21 2024 128.0 Call',
+                    'lastPrice': 0.26,
+                    'netChange': -3.4431,
+                    'netPercentChange': -0.92978856,
+                    'marketShare': 1.77610528,
+                    'totalVolume': 276898,
+                    'volume': 4918,
+                    'trades': 306
+                }, {
+                    'symbol': 'NVDA  240621C00127000',
+                    'description': 'NVDA   Jun 21 2024 127.0 Call',
+                    'lastPrice': 0.6,
+                    'netChange': -3.9032,
+                    'netPercentChange': -0.86676141,
+                    'marketShare': 1.6320089,
+                    'totalVolume': 276898,
+                    'volume': 4519,
+                    'trades': 491
+                }, {
+                    'symbol': 'NVDA  240621C00130000',
+                    'description': 'NVDA   Jun 21 2024 130.0 Call',
+                    'lastPrice': 0.05,
+                    'netChange': -2.2177,
+                    'netPercentChange': -0.97795123,
+                    'marketShare': 1.4745502,
+                    'totalVolume': 276898,
+                    'volume': 4083,
+                    'trades': 217
+                }, {
+                    'symbol': 'SPY   240621C00544000',
+                    'description': 'SPY    Jun 21 2024 544.0 Call',
+                    'lastPrice': 0.68,
+                    'netChange': -2.32,
+                    'netPercentChange': -0.77333333,
+                    'marketShare': 1.42254549,
+                    'totalVolume': 276898,
+                    'volume': 3939,
+                    'trades': 286
+                }, {
+                    'symbol': 'IWM   240621C00200000',
+                    'description': 'IWM    Jun 21 2024 200.0 Call',
+                    'lastPrice': 0.11,
+                    'netChange': -0.7012,
+                    'netPercentChange': -0.86439842,
+                    'marketShare': 1.24197358,
+                    'totalVolume': 276898,
+                    'volume': 3439,
+                    'trades': 108
+                }, {
+                    'symbol': 'EWZ   240802C00030000',
+                    'description': 'EWZ    Aug 2 2024 30.0 Call',
+                    'lastPrice': 0.2,
+                    'netChange': 0.0446,
+                    'netPercentChange': 0.28700129,
+                    'marketShare': 1.20983178,
+                    'totalVolume': 276898,
+                    'volume': 3350,
+                    'trades': 1
+                }, {
+                    'symbol': 'CYH   240719C00004000',
+                    'description': 'CYH    Jul 19 2024 4.0 Call',
+                    'lastPrice': 0.1,
+                    'netChange': 0,
+                    'netPercentChange': 0,
+                    'marketShare': 1.08415373,
+                    'totalVolume': 276898,
+                    'volume': 3002,
+                    'trades': 96
+                }]
+            }]
         }
 
         self.assert_handler_called_once_with(handler, expected_item)

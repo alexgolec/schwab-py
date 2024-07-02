@@ -391,6 +391,22 @@ class StreamClient(EnumEnforcer):
             await self._await_response(request_id, 'ADMIN', 'LOGIN')
 
     ##########################################################################
+    # LOGOUT
+
+    async def logout(self):
+        '''
+        Performs a logout operation on the stream. After this method is called,
+        no further stream operations are possible. The client must be
+        re-initialized with :meth:`login` to perform further operations.
+        '''
+        request, request_id = self._make_request(
+            service='ADMIN', command='LOGOUT',
+            parameters={})
+        async with self._lock:
+            await self._send({'requests': [request]})
+            await self._await_response(request_id, 'ADMIN', 'LOGOUT')
+
+    ##########################################################################
     # ACCT_ACTIVITY
 
     class AccountActivityFields(_BaseFieldEnum):
@@ -403,17 +419,18 @@ class StreamClient(EnumEnforcer):
         values stored returned in the stream messages.
         '''
 
-        #: Unknown
-        FIELD_0 = 0
+        #: Passed back to the client from the request to identify a subscription this response belongs to.
+        SUBSCRIPTION_KEY = 0
 
-        #: Unknown
-        FIELD_1 = 1
+        #: Account Number that the activity occurred on.
+        ACCOUNT = 1
 
-        #: Unknown
-        FIELD_2 = 2
+        #: Message Type that dictates the format of the Message Data field.
+        MESSAGE_TYPE = 2
 
-        #: Unknown
-        FIELD_3 = 3
+        #: The core data for the message. Either JSON-formatted data describing the update, NULL in some cases,
+        #: or plain text in case of ERROR.
+        MESSAGE_DATA = 3
 
     async def account_activity_sub(self):
         '''
@@ -544,26 +561,26 @@ class StreamClient(EnumEnforcer):
         values stored returned in the stream messages.
         '''
 
-        #: UNKNOWN
-        FIELD_0 = 0
+        #: Ticker symbol in upper case.
+        SYMBOL = 0
 
-        #: UNKNOWN
-        FIELD_1 = 1
+        #: Milliseconds since Epoch
+        CHART_TIME_MILLIS = 1
 
-        #: UNKNOWN
-        FIELD_2 = 2
+        #: Opening price for the minute
+        OPEN_PRICE = 2
 
-        #: UNKNOWN
-        FIELD_3 = 3
+        #: Highest price for the minute
+        HIGH_PRICE = 3
 
-        #: UNKNOWN
-        FIELD_4 = 4
+        #: Chart's lowest price for the minute
+        LOW_PRICE = 4
 
-        #: UNKNOWN
-        FIELD_5 = 5
+        #: Closing price for the minute
+        CLOSE_PRICE = 5
 
-        #: UNKNOWN
-        FIELD_6 = 6
+        #: Total volume for the minute
+        VOLUME = 6
 
     async def chart_futures_subs(self, symbols):
         '''
@@ -762,8 +779,8 @@ class StreamClient(EnumEnforcer):
         #: Mark change in percent
         MARK_CHANGE_PERCENT = 45
 
-        #: HTB quality
-        HTB_QUALITY = 46
+        #: HTB quantity
+        HTB_QUANTITY = 46
 
         #: HTB rate
         HTB_RATE = 47
@@ -809,6 +826,24 @@ class StreamClient(EnumEnforcer):
         '''
 
         await self._service_op(symbols, 'LEVELONE_EQUITIES', 'UNSUBS')
+
+    async def level_one_equity_add(self, symbols, *, fields=None):
+        '''
+        `Official documentation <https://developer.tdameritrade.com/content/
+        streaming-data#_Toc504640599>`__
+
+        Add symbols to the list to receive quotes for.
+
+        :param symbols: Equity symbols to receive quotes for
+        :param fields: Iterable of :class:`LevelOneEquityFields` representing
+                       the fields to return in streaming entries. If unset, all
+                       fields will be requested.
+        '''
+        if fields and self.LevelOneEquityFields.SYMBOL not in fields:
+            fields.append(self.LevelOneEquityFields.SYMBOL)
+        await self._service_op(
+            symbols, 'LEVELONE_EQUITIES', 'ADD',
+            self.LevelOneEquityFields, fields=fields)
 
     def add_level_one_equity_handler(self, handler):
         '''
@@ -866,7 +901,7 @@ class StreamClient(EnumEnforcer):
         #: Expiration year
         EXPIRATION_YEAR = 12
 
-        #: MULTIPLIER
+        #: Multiplier
         MULTIPLIER = 13
 
         #: Digits
@@ -914,7 +949,7 @@ class StreamClient(EnumEnforcer):
         #: Delta
         DELTA = 28
 
-        #: GAMMA
+        #: Gamma
         GAMMA = 29
 
         #: Theta
@@ -1024,6 +1059,24 @@ class StreamClient(EnumEnforcer):
         '''
         await self._service_op(symbols, 'LEVELONE_OPTIONS', 'UNSUBS')
 
+    async def level_one_option_add(self, symbols, *, fields=None):
+        '''
+        `Official documentation <https://developer.tdameritrade.com/content/
+        streaming-data#_Toc504640602>`__
+
+        Add symbols to the list to receive quotes for.
+
+        :param symbols: Option symbols to add to list to receive quotes for
+        :param fields: Iterable of :class:`LevelOneOptionFields` representing
+                       the fields to return in streaming entries. If unset, all
+                       fields will be requested.
+        '''
+        if fields and self.LevelOneOptionFields.SYMBOL not in fields:
+            fields.append(self.LevelOneOptionFields.SYMBOL)
+        await self._service_op(
+            symbols, 'LEVELONE_OPTIONS', 'ADD',
+            self.LevelOneOptionFields, fields=fields)
+
     def add_level_one_option_handler(self, handler):
         '''
         Register a function to handle level one options quotes as they are sent.
@@ -1041,113 +1094,128 @@ class StreamClient(EnumEnforcer):
         streaming-data#_Toc504640603>`__
         '''
 
-        #: UNKNOWN
-        FIELD_0 = 0
+        #: Ticker symbol in upper case.
+        SYMBOL = 0
 
-        #: UNKNOWN
-        FIELD_1 = 1
+        #: Current Best Bid Price
+        BID_PRICE = 1
 
-        #: UNKNOWN
-        FIELD_2 = 2
+        #: Current Best Ask Price
+        ASK_PRICE = 2
 
-        #: UNKNOWN
-        FIELD_3 = 3
+        #: Price at which the last trade was matched
+        LAST_PRICE = 3
 
-        #: UNKNOWN
-        FIELD_4 = 4
+        #: Number of contracts for bid
+        BID_SIZE = 4
 
-        #: UNKNOWN
-        FIELD_5 = 5
+        #: Number of contracts for ask
+        ASK_SIZE = 5
 
-        #: UNKNOWN
-        FIELD_6 = 6
+        #: Exchange with the best bid
+        BID_ID = 6
 
-        #: UNKNOWN
-        FIELD_7 = 7
+        #: Exchange with the best ask
+        ASK_ID = 7
 
-        #: UNKNOWN
-        FIELD_8 = 8
+        #: Aggregated contracts traded throughout the day, including pre/post market hours.
+        TOTAL_VOLUME = 8
 
-        #: UNKNOWN
-        FIELD_9 = 9
+        #: Number of contracts traded with last trade
+        LAST_SIZE = 9
 
-        #: UNKNOWN
-        FIELD_10 = 10
+        #: Time of the last quote in milliseconds since epoch
+        QUOTE_TIME_MILLIS = 10
 
-        #: UNKNOWN
-        FIELD_11 = 11
+        #: Time of the last trade in milliseconds since epoch
+        TRADE_TIME_MILLIS = 11
 
-        #: UNKNOWN
-        FIELD_12 = 12
+        #: Day's high trade price
+        HIGH_PRICE = 12
 
-        #: UNKNOWN
-        FIELD_13 = 13
+        #: Day's low trade price
+        LOW_PRICE = 13
 
-        #: UNKNOWN
-        FIELD_14 = 14
+        #: Previous day's closing price
+        CLOSE_PRICE = 14
 
-        #: UNKNOWN
-        FIELD_15 = 15
+        #: Primary "listing" Exchange
+        EXCHANGE_ID = 15
 
-        #: UNKNOWN
-        FIELD_16 = 16
+        #: Description of the product
+        DESCRIPTION = 16
 
-        #: UNKNOWN
-        FIELD_17 = 17
+        #: Exchange where last trade was executed
+        LAST_ID = 17
 
-        #: UNKNOWN
-        FIELD_18 = 18
+        #: Day's Open Price
+        OPEN_PRICE = 18
 
-        #: UNKNOWN
-        FIELD_19 = 19
+        #: Current Last-Prev Close
+        NET_CHANGE = 19
 
-        #: UNKNOWN
-        FIELD_20 = 20
+        #: Current percent change
+        FUTURE_CHANGE_PERCENT = 20
 
-        #: UNKNOWN
-        FIELD_21 = 21
+        #: Name of exchange
+        EXCHANGE_NAME = 21
 
-        #: UNKNOWN
-        FIELD_22 = 22
+        #: Trading status of the symbol
+        SECURITY_STATUS = 22
 
-        #: UNKNOWN
-        FIELD_23 = 23
+        #: The total number of futures contracts that are not closed or delivered on a particular day
+        OPEN_INTEREST = 23
 
-        #: UNKNOWN
-        FIELD_24 = 24
+        #: Mark-to-Market value is calculated daily using current prices to determine profit/loss
+        MARK = 24
 
-        #: UNKNOWN
-        FIELD_25 = 25
+        #: Minimum price movement
+        TICK = 25
 
-        #: UNKNOWN
-        FIELD_26 = 26
+        #: Minimum amount that the price of the market can change
+        TICK_AMOUNT = 26
 
-        #: UNKNOWN
-        FIELD_27 = 27
+        #: Futures product
+        PRODUCT = 27
 
-        #: UNKNOWN
-        FIELD_28 = 28
+        #: Display in fraction or decimal format.
+        FUTURE_PRICE_FORMAT = 28
 
-        #: UNKNOWN
-        FIELD_29 = 29
+        #: Trading hours
+        FUTURE_TRADING_HOURS = 29
 
-        #: UNKNOWN
-        FIELD_30 = 30
+        #: Flag to indicate if this future contract is tradable
+        FUTURE_IS_TRADABLE = 30
 
-        #: UNKNOWN
-        FIELD_31 = 31
+        #: Point value
+        FUTURE_MULTIPLIER = 31
 
-        #: UNKNOWN
-        FIELD_32 = 32
+        #: Indicates if this contract is active
+        FUTURE_IS_ACTIVE = 32
 
-        #: UNKNOWN
-        FIELD_33 = 33
+        #: Closing price
+        FUTURE_SETTLEMENT_PRICE = 33
 
-        #: UNKNOWN
-        FIELD_34 = 34
+        #: Symbol of the active contract
+        FUTURE_ACTIVE_SYMBOL = 34
 
-        #: UNKNOWN
-        FIELD_35 = 35
+        #: Expiration date of this contract
+        FUTURE_EXPIRATION_DATE = 35
+
+        #: Expiration Style
+        EXPIRATION_STYLE = 36
+
+        #: Time of the last ask-side quote in milliseconds since epoch
+        ASK_TIME_MILLIS = 37
+
+        #: Time of the last bid-side quote in milliseconds since epoch
+        BID_TIME_MILLIS = 38
+
+        #: Indicates if this contract has quoted during the active session
+        QUOTED_IN_SESSION = 39
+
+        #: Expiration date of this contract
+        SETTLEMENT_DATE = 40
 
     async def level_one_futures_subs(self, symbols, *, fields=None):
         '''
@@ -1161,8 +1229,8 @@ class StreamClient(EnumEnforcer):
                        the fields to return in streaming entries. If unset, all
                        fields will be requested.
         '''
-        if fields and self.LevelOneFuturesFields.FIELD_0 not in fields:
-            fields.append(self.LevelOneFuturesFields.FIELD_0)
+        if fields and self.LevelOneFuturesFields.SYMBOL not in fields:
+            fields.append(self.LevelOneFuturesFields.SYMBOL)
         await self._service_op(
             symbols, 'LEVELONE_FUTURES', 'SUBS', self.LevelOneFuturesFields,
             fields=fields)
@@ -1178,6 +1246,24 @@ class StreamClient(EnumEnforcer):
         '''
 
         await self._service_op(symbols, 'LEVELONE_FUTURES', 'UNSUBS')
+
+    async def level_one_futures_add(self, symbols, *, fields=None):
+        '''
+        `Official documentation <https://developer.tdameritrade.com/content/
+        streaming-data#_Toc504640604>`__
+
+        Add symbols to the list to receive quotes for.
+
+        :param symbols: Futures symbols to add to the list to receive quotes for
+        :param fields: Iterable of :class:`LevelOneFuturesFields` representing
+                       the fields to return in streaming entries. If unset, all
+                       fields will be requested.
+        '''
+        if fields and self.LevelOneFuturesFields.SYMBOL not in fields:
+            fields.append(self.LevelOneFuturesFields.SYMBOL)
+        await self._service_op(
+            symbols, 'LEVELONE_FUTURES', 'ADD',
+            self.LevelOneFuturesFields, fields=fields)
 
     def add_level_one_futures_handler(self, handler):
         '''
@@ -1196,95 +1282,95 @@ class StreamClient(EnumEnforcer):
         streaming-data#_Toc504640606>`__
         '''
 
-        #: UNKNOWN
-        FIELD_0 = 0
+        #: Ticker symbol in upper case.
+        SYMBOL = 0
 
-        #: UNKNOWN
-        FIELD_1 = 1
+        #: Current Bid Price
+        BID_PRICE = 1
 
-        #: UNKNOWN
-        FIELD_2 = 2
+        #: Current Ask Price
+        ASK_PRICE = 2
 
-        #: UNKNOWN
-        FIELD_3 = 3
+        #: Price at which the last trade was matched
+        LAST_PRICE = 3
 
-        #: UNKNOWN
-        FIELD_4 = 4
+        #: Number of currency pairs for bid
+        BID_SIZE = 4
 
-        #: UNKNOWN
-        FIELD_5 = 5
+        #: Number of currency pairs for ask
+        ASK_SIZE = 5
 
-        #: UNKNOWN
-        FIELD_6 = 6
+        #: Aggregated currency pairs traded throughout the day, including pre/post market hours.
+        TOTAL_VOLUME = 6
 
-        #: UNKNOWN
-        FIELD_7 = 7
+        #: Number of currency pairs traded with last trade
+        LAST_SIZE = 7
 
-        #: UNKNOWN
-        FIELD_8 = 8
+        #: Trade time of the last quote in milliseconds since epoch
+        QUOTE_TIME_MILLIS = 8
 
-        #: UNKNOWN
-        FIELD_9 = 9
+        #: Trade time of the last trade in milliseconds since epoch
+        TRADE_TIME_MILLIS = 9
 
-        #: UNKNOWN
-        FIELD_10 = 10
+        #: Day's high trade price
+        HIGH_PRICE = 10
 
-        #: UNKNOWN
-        FIELD_11 = 11
+        #: Day's low trade price
+        LOW_PRICE = 11
 
-        #: UNKNOWN
-        FIELD_12 = 12
+        #: Previous day's closing price
+        CLOSE_PRICE = 12
 
-        #: UNKNOWN
-        FIELD_13 = 13
+        #: Exchange Id
+        EXCHANGE_ID = 13
 
-        #: UNKNOWN
-        FIELD_14 = 14
+        #: Description of the product
+        DESCRIPTION = 14
 
-        #: UNKNOWN
-        FIELD_15 = 15
+        #: Day's Open Price
+        OPEN_PRICE = 15
 
-        #: UNKNOWN
-        FIELD_16 = 16
+        #: Current Last-Prev Close
+        NET_CHANGE = 16
 
-        #: UNKNOWN
-        FIELD_17 = 17
+        #: Current percent change
+        CHANGE_PERCENT = 17
 
-        #: UNKNOWN
-        FIELD_18 = 18
+        #: Name of exchange
+        EXCHANGE_NAME = 18
 
-        #: UNKNOWN
-        FIELD_19 = 19
+        #: Valid decimal points
+        DIGITS = 19
 
-        #: UNKNOWN
-        FIELD_20 = 20
+        #: Trading status of the symbol
+        SECURITY_STATUS = 20
 
-        #: UNKNOWN
-        FIELD_21 = 21
+        #: Minimum price movement
+        TICK = 21
 
-        #: UNKNOWN
-        FIELD_22 = 22
+        #: Minimum amount that the price of the market can change
+        TICK_AMOUNT = 22
 
-        #: UNKNOWN
-        FIELD_23 = 23
+        #: Product name
+        PRODUCT = 23
 
-        #: UNKNOWN
-        FIELD_24 = 24
+        #: Trading hours
+        TRADING_HOURS = 24
 
-        #: UNKNOWN
-        FIELD_25 = 25
+        #: Flag to indicate if this forex is tradable
+        IS_TRADABLE = 25
 
-        #: UNKNOWN
-        FIELD_26 = 26
+        #: Market Maker
+        MARKET_MAKER = 26
 
-        #: UNKNOWN
-        FIELD_27 = 27
+        #: Highest price traded in the past 12 months, or 52 weeks
+        HIGH_PRICE_52_WEEK = 27
 
-        #: UNKNOWN
-        FIELD_28 = 28
+        #: Lowest price traded in the past 12 months, or 52 weeks
+        LOW_PRICE_52_WEEK = 28
 
-        #: UNKNOWN
-        FIELD_29 = 29
+        #: Mark-to-Market value is calculated daily using current prices to determine profit/loss
+        MARK = 29
 
     async def level_one_forex_subs(self, symbols, *, fields=None):
         '''
@@ -1298,8 +1384,8 @@ class StreamClient(EnumEnforcer):
                        the fields to return in streaming entries. If unset, all
                        fields will be requested.
         '''
-        if fields and self.LevelOneForexFields.FIELD_0 not in fields:
-            fields.append(self.LevelOneForexFields.FIELD_0)
+        if fields and self.LevelOneForexFields.SYMBOL not in fields:
+            fields.append(self.LevelOneForexFields.SYMBOL)
         await self._service_op(
             symbols, 'LEVELONE_FOREX', 'SUBS', self.LevelOneForexFields,
             fields=fields)
@@ -1315,6 +1401,25 @@ class StreamClient(EnumEnforcer):
         '''
 
         await self._service_op(symbols, 'LEVELONE_FOREX', 'UNSUBS')
+
+    async def level_one_forex_add(self, symbols, *, fields=None):
+        '''
+        `Official documentation <https://developer.tdameritrade.com/content/
+        streaming-data#_Toc504640606>`__
+
+        Add symbols to the list to receive quotes for.
+
+        :param symbols: Forex symbols to add to list to receive quotes for
+        :param fields: Iterable of :class:`LevelOneForexFields` representing
+                       the fields to return in streaming entries. If unset, all
+                       fields will be requested.
+
+        '''
+        if fields and self.LevelOneForexFields.SYMBOL not in fields:
+            fields.append(self.LevelOneForexFields.SYMBOL)
+        await self._service_op(
+            symbols, 'LEVELONE_FOREX', 'ADD',
+            self.LevelOneForexFields, fields=fields)
 
     def add_level_one_forex_handler(self, handler):
         '''
@@ -1333,113 +1438,101 @@ class StreamClient(EnumEnforcer):
         streaming-data#_Toc504640609>`__
         '''
 
-        #: UNKNOWN
-        FIELD_0 = 0
+        #: Ticker symbol in upper case.
+        SYMBOL = 0
 
-        #: UNKNOWN
-        FIELD_1 = 1
+        #: Current Bid Price
+        BID_PRICE = 1
 
-        #: UNKNOWN
-        FIELD_2 = 2
+        #: Current Ask Price
+        ASK_PRICE = 2
 
-        #: UNKNOWN
-        FIELD_3 = 3
+        #: Price at which the last trade was matched
+        LAST_PRICE = 3
 
-        #: UNKNOWN
-        FIELD_4 = 4
+        #: Number of contracts for bid
+        BID_SIZE = 4
 
-        #: UNKNOWN
-        FIELD_5 = 5
+        #: Number of contracts for ask
+        ASK_SIZE = 5
 
-        #: UNKNOWN
-        FIELD_6 = 6
+        #: Exchange with the bid
+        BID_ID = 6
 
-        #: UNKNOWN
-        FIELD_7 = 7
+        #: Exchange with the ask
+        ASK_ID = 7
 
-        #: UNKNOWN
-        FIELD_8 = 8
+        #: Aggregated contracts traded throughout the day, including pre/post market hours.
+        TOTAL_VOLUME = 8
 
-        #: UNKNOWN
-        FIELD_9 = 9
+        #: Number of contracts traded with last trade
+        LAST_SIZE = 9
 
-        #: UNKNOWN
-        FIELD_10 = 10
+        #: Trade time of the last quote in milliseconds since epoch
+        QUOTE_TIME_MILLIS = 10
 
-        #: UNKNOWN
-        FIELD_11 = 11
+        #: Trade time of the last trade in milliseconds since epoch
+        TRADE_TIME_MILLIS = 11
 
-        #: UNKNOWN
-        FIELD_12 = 12
+        #: Day's high trade price
+        HIGH_PRICE = 12
 
-        #: UNKNOWN
-        FIELD_13 = 13
+        #: Day's low trade price
+        LOW_PRICE = 13
 
-        #: UNKNOWN
-        FIELD_14 = 14
+        #: Previous day's closing price
+        CLOSE_PRICE = 14
 
-        #: UNKNOWN
-        FIELD_15 = 15
+        #: Exchange where last trade was executed
+        LAST_ID = 15
 
-        #: UNKNOWN
-        FIELD_16 = 16
+        #: Description of the product
+        DESCRIPTION = 16
 
-        #: UNKNOWN
-        FIELD_17 = 17
+        #: Day's Open Price
+        OPEN_PRICE = 17
 
-        #: UNKNOWN
-        FIELD_18 = 18
+        #: Open Interest
+        OPEN_INTEREST = 18
 
-        #: UNKNOWN
-        FIELD_19 = 19
+        #: Mark-to-Market value is calculated daily using current prices to determine profit/loss
+        MARK = 19
 
-        #: UNKNOWN
-        FIELD_20 = 20
+        #: Minimum price movement
+        TICK = 20
 
-        #: UNKNOWN
-        FIELD_21 = 21
+        #: Minimum amount that the price of the market can change
+        TICK_AMOUNT = 21
 
-        #: UNKNOWN
-        FIELD_22 = 22
+        #: Point value
+        FUTURE_MULTIPLIER = 22
 
-        #: UNKNOWN
-        FIELD_23 = 23
+        #: Closing price
+        FUTURE_SETTLEMENT_PRICE = 23
 
-        #: UNKNOWN
-        FIELD_24 = 24
+        #: Underlying symbol
+        UNDERLYING_SYMBOL = 24
 
-        #: UNKNOWN
-        FIELD_25 = 25
+        #: Strike Price
+        STRIKE_PRICE = 25
 
-        #: UNKNOWN
-        FIELD_26 = 26
+        #: Expiration date of this contract
+        FUTURE_EXPIRATION_DATE = 26
 
-        #: UNKNOWN
-        FIELD_27 = 27
+        #: Expiration Style
+        EXPIRATION_STYLE = 27
 
-        #: UNKNOWN
-        FIELD_28 = 28
+        #: Contract Type
+        CONTRACT_TYPE = 28
 
-        #: UNKNOWN
-        FIELD_29 = 29
+        #: Security Status
+        SECURITY_STATUS = 29
 
-        #: UNKNOWN
-        FIELD_30 = 30
+        #: Exchange character
+        EXCHANGE_ID = 30
 
-        #: UNKNOWN
-        FIELD_31 = 31
-
-        #: UNKNOWN
-        FIELD_32 = 32
-
-        #: UNKNOWN
-        FIELD_33 = 33
-
-        #: UNKNOWN
-        FIELD_34 = 34
-
-        #: UNKNOWN
-        FIELD_35 = 35
+        #: Display name of exchange
+        EXCHANGE_NAME = 31
 
     async def level_one_futures_options_subs(self, symbols, *, fields=None):
         '''
@@ -1453,8 +1546,8 @@ class StreamClient(EnumEnforcer):
                        representing the fields to return in streaming entries.
                        If unset, all fields will be requested.
         '''
-        if fields and self.LevelOneFuturesOptionsFields.FIELD_0 not in fields:
-            fields.append(self.LevelOneFuturesOptionsFields.FIELD_0)
+        if fields and self.LevelOneFuturesOptionsFields.SYMBOL not in fields:
+            fields.append(self.LevelOneFuturesOptionsFields.SYMBOL)
         await self._service_op(
             symbols, 'LEVELONE_FUTURES_OPTIONS', 'SUBS',
             self.LevelOneFuturesOptionsFields, fields=fields)
@@ -1471,6 +1564,24 @@ class StreamClient(EnumEnforcer):
 
         await self._service_op(symbols, 'LEVELONE_FUTURES_OPTIONS', 'UNSUBS')
 
+    async def level_one_futures_options_add(self, symbols, *, fields=None):
+        '''
+        `Official documentation <https://developer.tdameritrade.com/content/
+        streaming-data#_Toc504640610>`__
+
+        Add symbols to the list to receive quotes for.
+
+        :param symbols: Futures options symbols add to list to receive quotes for
+        :param fields: Iterable of :class:`LevelOneFuturesOptionsFields`
+                       representing the fields to return in streaming entries.
+                       If unset, all fields will be requested.
+        '''
+        if fields and self.LevelOneFuturesOptionsFields.SYMBOL not in fields:
+            fields.append(self.LevelOneFuturesOptionsFields.SYMBOL)
+        await self._service_op(
+            symbols, 'LEVELONE_FUTURES_OPTIONS', 'ADD',
+            self.LevelOneFuturesOptionsFields, fields=fields)
+
     def add_level_one_futures_options_handler(self, handler):
         '''
         Register a function to handle level one futures options quotes as they
@@ -1478,135 +1589,6 @@ class StreamClient(EnumEnforcer):
         '''
         self._handlers['LEVELONE_FUTURES_OPTIONS'].append(
             _Handler(handler, self.LevelOneFuturesOptionsFields))
-
-    ##########################################################################
-    # TIMESALE
-
-    class TimesaleFields(_BaseFieldEnum):
-        '''
-        `Official documentation <https://developer.tdameritrade.com/content/
-        streaming-data#_Toc504640626>`__
-        '''
-
-        #: UNKNOWN
-        FIELD_0 = 0
-
-        #: UNKNOWN
-        FIELD_1 = 1
-
-        #: UNKNOWN
-        FIELD_2 = 2
-
-        #: UNKNOWN
-        FIELD_3 = 3
-
-        #: UNKNOWN
-        FIELD_4 = 4
-
-    async def timesale_equity_subs(self, symbols, *, fields=None):
-        '''
-        `Official documentation <https://developer.tdameritrade.com/content/
-        streaming-data#_Toc504640628>`__
-
-        Subscribe to time of sale notifications for equities.
-
-        :param symbols: Equity symbols to subscribe to
-        '''
-        if fields and self.TimesaleFields.FIELD_0 not in fields:
-            fields.append(self.TimesaleFields.FIELD_0)
-        await self._service_op(
-            symbols, 'TIMESALE_EQUITY', 'SUBS',
-            self.TimesaleFields, fields=fields)
-
-    async def timesale_equity_unsubs(self, symbols):
-        '''
-        `Official documentation <https://developer.tdameritrade.com/content/
-        streaming-data#_Toc504640628>`__
-
-        Un-Subscribe to time of sale notifications for equities.
-
-        :param symbols: Equity symbols to subscribe to
-        '''
-
-        await self._service_op(symbols, 'TIMESALE_EQUITY', 'UNSUBS')
-
-    def add_timesale_equity_handler(self, handler):
-        '''
-        Register a function to handle equity trade notifications as they happen
-        See :ref:`registering_handlers` for details.
-        '''
-        self._handlers['TIMESALE_EQUITY'].append(_Handler(handler,
-                                                          self.TimesaleFields))
-
-    async def timesale_futures_subs(self, symbols, *, fields=None):
-        '''
-        `Official documentation <https://developer.tdameritrade.com/content/
-        streaming-data#_Toc504640628>`__
-
-        Subscribe to time of sale notifications for futures.
-
-        :param symbols: Futures symbols to subscribe to
-        '''
-        if fields and self.TimesaleFields.FIELD_0 not in fields:
-            fields.append(self.TimesaleFields.FIELD_0)
-        await self._service_op(
-            symbols, 'TIMESALE_FUTURES', 'SUBS',
-            self.TimesaleFields, fields=fields)
-
-    async def timesale_futures_unsubs(self, symbols):
-        '''
-        `Official documentation <https://developer.tdameritrade.com/content/
-        streaming-data#_Toc504640628>`__
-
-        Un-Subscribe to time of sale notifications for futures.
-
-        :param symbols: Futures symbols to subscribe to
-        '''
-
-        await self._service_op(symbols, 'TIMESALE_FUTURES', 'UNSUBS')
-
-    def add_timesale_futures_handler(self, handler):
-        '''
-        Register a function to handle futures trade notifications as they happen
-        See :ref:`registering_handlers` for details.
-        '''
-        self._handlers['TIMESALE_FUTURES'].append(_Handler(handler,
-                                                           self.TimesaleFields))
-
-    async def timesale_options_subs(self, symbols, *, fields=None):
-        '''
-        `Official documentation <https://developer.tdameritrade.com/content/
-        streaming-data#_Toc504640628>`__
-
-        Subscribe to time of sale notifications for options.
-
-        :param symbols: Options symbols to subscribe to
-        '''
-        if fields and self.TimesaleFields.FIELD_0 not in fields:
-            fields.append(self.TimesaleFields.FIELD_0)
-        await self._service_op(
-            symbols, 'TIMESALE_OPTIONS', 'SUBS',
-            self.TimesaleFields, fields=fields)
-
-    async def timesale_options_unsubs(self, symbols):
-        '''
-        `Official documentation <https://developer.tdameritrade.com/content/
-        streaming-data#_Toc504640628>`__
-
-        Un-Subscribe to time of sale notifications for options.
-
-        :param symbols: Options symbols to subscribe to
-        '''
-
-        await self._service_op(symbols, 'TIMESALE_OPTIONS', 'UNSUBS')
-
-    def add_timesale_options_handler(self, handler):
-        '''
-        Register a function to handle options trade notifications as they happen
-        See :ref:`registering_handlers` for details.
-        '''
-        self._handlers['TIMESALE_OPTIONS'].append(_Handler(handler,
-                                                           self.TimesaleFields))
 
     ##########################################################################
     # Common book utilities
@@ -1671,30 +1653,40 @@ class StreamClient(EnumEnforcer):
             return new_msg
 
     ##########################################################################
-    # LISTED_BOOK
+    # NYSE_BOOK
 
-    async def listed_book_subs(self, symbols):
+    async def nyse_book_subs(self, symbols):
         '''
-        Subscribe to the NYSE level two order book. Note this stream has no
-        official documentation.
+        Subscribe to the NYSE level two order book.
+
+        :param symbols: NYSE symbols to subscribe to.
         '''
         await self._service_op(
-            symbols, 'LISTED_BOOK', 'SUBS',
+            symbols, 'NYSE_BOOK', 'SUBS',
             self.BookFields, fields=self.BookFields.all_fields())
 
-    async def listed_book_unsubs(self, symbols):
+    async def nyse_book_unsubs(self, symbols):
         '''
-        Un-Subscribe to the NYSE level two order book. Note this stream has no
-        official documentation.
-        '''
-        await self._service_op(symbols, 'LISTED_BOOK', 'UNSUBS')
+        Un-Subscribe to the NYSE level two order book.
 
-    def add_listed_book_handler(self, handler):
+        :param symbols: NYSE symbols to unsubscribe from.
+        '''
+        await self._service_op(symbols, 'NYSE_BOOK', 'UNSUBS')
+
+    async def nyse_book_add(self, symbols):
+        '''
+        Add to the NYSE level two order book.
+
+        :param symbols: NYSE symbols to add to the subscription.
+        '''
+        await self._service_op(symbols, 'NYSE_BOOK', 'ADD', self.BookFields)
+
+    def add_nyse_book_handler(self, handler):
         '''
         Register a function to handle level two NYSE book data as it is updated
         See :ref:`registering_handlers` for details.
         '''
-        self._handlers['LISTED_BOOK'].append(
+        self._handlers['NYSE_BOOK'].append(
             self._BookHandler(handler, self.BookFields))
 
     ##########################################################################
@@ -1702,8 +1694,9 @@ class StreamClient(EnumEnforcer):
 
     async def nasdaq_book_subs(self, symbols):
         '''
-        Subscribe to the NASDAQ level two order book. Note this stream has no
-        official documentation.
+        Subscribe to the NASDAQ level two order book.
+
+        :param symbols: NASDAQ symbols to subscribe to.
         '''
         await self._service_op(symbols, 'NASDAQ_BOOK', 'SUBS',
                                self.BookFields,
@@ -1711,10 +1704,19 @@ class StreamClient(EnumEnforcer):
 
     async def nasdaq_book_unsubs(self, symbols):
         '''
-        Un-Subscribe to the NASDAQ level two order book. Note this stream has no
-        official documentation.
+        Un-Subscribe to the NASDAQ level two order book.
+
+        :param symbols: NASDAQ symbols to unsubscribe from.
         '''
         await self._service_op(symbols, 'NASDAQ_BOOK', 'UNSUBS')
+
+    async def nasdaq_book_add(self, symbols):
+        '''
+        Add to the NASDAQ level two order book.
+
+        :param symbols: NASDAQ symbols to add to the subscription.
+        '''
+        await self._service_op(symbols, 'NASDAQ_BOOK', 'ADD', self.BookFields)
 
     def add_nasdaq_book_handler(self, handler):
         '''
@@ -1729,9 +1731,9 @@ class StreamClient(EnumEnforcer):
 
     async def options_book_subs(self, symbols):
         '''
-        Subscribe to the level two order book for options. Note this stream has no
-        official documentation, and it's not entirely clear what exchange it
-        corresponds to. Use at your own risk.
+        Subscribe to the level two order book for options.
+
+        :param symbols: Option symbols to subscribe to.
         '''
         await self._service_op(symbols, 'OPTIONS_BOOK', 'SUBS',
                                self.BookFields,
@@ -1739,11 +1741,19 @@ class StreamClient(EnumEnforcer):
 
     async def options_book_unsubs(self, symbols):
         '''
-        Un-Subscribe to the level two order book for options. Note this stream has no
-        official documentation, and it's not entirely clear what exchange it
-        corresponds to. Use at your own risk.
+        Un-Subscribe to the level two order book for options.
+
+        :param symbols: Option symbols to unsubscribe from.
         '''
         await self._service_op(symbols, 'OPTIONS_BOOK', 'UNSUBS')
+
+    async def options_book_add(self, symbols):
+        '''
+        Add to the level two order book for options.
+
+        :param symbols: Option symbols to add to the subscription.
+        '''
+        await self._service_op(symbols, 'OPTIONS_BOOK', 'ADD', self.BookFields)
 
     def add_options_book_handler(self, handler):
         '''
@@ -1754,60 +1764,84 @@ class StreamClient(EnumEnforcer):
             self._BookHandler(handler, self.BookFields))
 
     ##########################################################################
-    # NEWS_HEADLINE
+    # SCREENER_EQUITY/SCREENER_OPTION
 
-    class NewsHeadlineFields(_BaseFieldEnum):
-        '''
-        `Official documentation <https://developer.tdameritrade.com/content/
-        streaming-data#_Toc504640626>`__
-        '''
-
-        #: Ticker symbol in upper case. Represented in the stream as the
-        #: ``key`` field.
+    class ScreenerFields(_BaseFieldEnum):
+        #: The symbol used to look up either actives, gainers or losers
         SYMBOL = 0
 
-        #: Specifies if there is any error
-        ERROR_CODE = 1
+        #: Market snapshot timestamp in milliseconds since Epoch
+        TIMESTAMP = 1
 
-        #: Headline’s datetime in milliseconds since epoch
-        STORY_DATETIME = 2
+        #: Field to sort on
+        SORT_FIELD = 2
 
-        #: Unique ID for the headline
-        HEADLINE_ID = 3
-        STATUS = 4
+        #: Frequency of data to sort
+        FREQUENCY = 3
 
-        #: News headline
-        HEADLINE = 5
-        STORY_ID = 6
-        COUNT_FOR_KEYWORD = 7
-        KEYWORD_ARRAY = 8
-        IS_HOT = 9
-        STORY_SOURCE = 10
+        #: Array of fields
+        ITEMS = 4
 
-    async def news_headline_subs(self, symbols):
+    async def screener_equity_subs(self, symbols):
         '''
-        `Official documentation <https://developer.tdameritrade.com/content/
-        streaming-data#_Toc504640626>`__
+        Subscribe to Screener Equity.
 
-        Subscribe to news headlines related to the given symbols.
+        :param symbols: Equity symbols to subscribe to.
         '''
-        await self._service_op(symbols, 'NEWS_HEADLINE', 'SUBS',
-                               self.NewsHeadlineFields,
-                               fields=self.NewsHeadlineFields.all_fields())
+        await self._service_op(symbols, 'SCREENER_EQUITY', 'SUBS', self.ScreenerFields)
 
-    async def news_headline_unsubs(self, symbols):
+    async def screener_equity_unsubs(self, symbols):
         '''
-        `Official documentation <https://developer.tdameritrade.com/content/
-        streaming-data#_Toc504640626>`__
+        Un-Subscribe to Screener Equity.
 
-        Un-Subscribe to news headlines related to the given symbols.
+        :param symbols: Equity symbols to unsubscribe from.
         '''
-        await self._service_op(symbols, 'NEWS_HEADLINE', 'UNSUBS')
+        await self._service_op(symbols, 'SCREENER_EQUITY', 'UNSUBS')
 
-    def add_news_headline_handler(self, handler):
+    async def screener_equity_add(self, symbols):
         '''
-        Register a function to handle news headlines as they are provided. See
-        :ref:`registering_handlers` for details.
+        Add symbols to the Screener Equity list.
+
+        :param symbols: Equity symbols to add to the subscription.
         '''
-        self._handlers['NEWS_HEADLINE'].append(
-            self._BookHandler(handler, self.NewsHeadlineFields))
+        await self._service_op(symbols, 'SCREENER_EQUITY', 'ADD', self.ScreenerFields)
+
+    def add_screener_equity_handler(self, handler):
+        '''
+        Register a function to handle Screener Equity data as it is
+        updated See :ref:`registering_handlers` for details.
+        '''
+        self._handlers['SCREENER_EQUITY'].append(
+            _Handler(handler, self.ScreenerFields))
+
+    async def screener_option_subs(self, symbols):
+        '''
+        Subscribe to Screener Option.
+
+        :param symbols: Option symbols to subscribe to.
+        '''
+        await self._service_op(symbols, 'SCREENER_OPTION', 'SUBS', self.ScreenerFields)
+
+    async def screener_option_unsubs(self, symbols):
+        '''
+        Un-Subscribe to Screener Option.
+
+        :param symbols: Option symbols to unsubscribe from.
+        '''
+        await self._service_op(symbols, 'SCREENER_OPTION', 'UNSUBS')
+
+    async def screener_option_add(self, symbols):
+        '''
+        Add symbols to the Screener Option list.
+
+        :param symbols: Option symbols to add to the subscription.
+        '''
+        await self._service_op(symbols, 'SCREENER_OPTION', 'ADD', self.ScreenerFields)
+
+    def add_screener_option_handler(self, handler):
+        '''
+        Register a function to handle Screener Option data as it is
+        updated See :ref:`registering_handlers` for details.
+        '''
+        self._handlers['SCREENER_OPTION'].append(
+            _Handler(handler, self.ScreenerFields))
