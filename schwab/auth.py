@@ -5,7 +5,7 @@ import contextlib
 import httpx
 import json
 import logging
-import multiprocessing
+import multiprocess
 import os
 import psutil
 import queue
@@ -303,9 +303,9 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
     callback_port = parsed.port if parsed.port else 443
     callback_path = parsed.path if parsed.path else '/'
 
-    output_queue = multiprocessing.Queue()
+    output_queue = multiprocess.Queue()
 
-    server = multiprocessing.Process(
+    server = multiprocess.Process(
             target=__run_client_from_login_flow_server,
             args=(output_queue, callback_port, callback_path))
 

@@ -34,6 +34,7 @@ setuptools.setup(
         'authlib',
         'flask',
         'httpx',
+        'multiprocess',
         'prompt_toolkit',
         'psutil',
         'python-dateutil',
