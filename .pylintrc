@@ -1,0 +1,23 @@
+[MASTER]
+ignore-patterns=test_*.py,conftest.py
+py-version=3.10
+
+[MESSAGE CONTROL]
+disable=C0301,C0111,W0611,C0103,R0903,W0621,R0913,R0914,R0912,R0915,C0302,R0902,R0904
+
+[FORMAT]
+max-line-length=100
+
+[DESIGN]
+max-args=5
+max-locals=15
+max-returns=6
+max-branches=12
+max-statements=50
+
+[BASIC]
+good-names=i,j,k,ex,Run,_
+
+[REPORTS]
+output-format=colorized
+evaluation=10.0 - ((float(5 * error + warning + refactor + convention) / statement) * 10)

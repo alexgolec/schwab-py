@@ -1,14 +1,8 @@
-import autopep8
-import schwab
-
-from schwab.orders.generic import OrderBuilder
-from schwab.orders.common import (
-        EquityInstrument,
-        OptionInstrument,
-        OrderStrategyType,
-)
-
 from collections import defaultdict
+import autopep8
+
+import schwab
+from schwab.orders.generic import OrderBuilder
 
 
 def _call_setters_with_values(order, builder):
@@ -38,13 +32,13 @@ _FIELDS_AND_SETTERS = (
         schwab.orders.common.ComplexOrderStrategyType),
     ('quantity', 'set_quantity', None),
     # XXX: Destinations are weird/busted
-    #       * As of 2024-05-16, the example in the place_order documentation 
+    #       * As of 2024-05-16, the example in the place_order documentation
     #         references destinationLinkName but not requestedDestination.
-    #       * The same documentation lists requestedDestination as a parameter 
+    #       * The same documentation lists requestedDestination as a parameter
     #         to the method, but doesn't list destinationLinkName.
     #       * Fetching historical orders returns orders which contain both.
     #      These parameters are being ignored until we gain more clarity.
-    #('destinationLinkName', 'set_destination_link_name',
+    # ('destinationLinkName', 'set_destination_link_name',
     #    schwab.orders.common.Destination),
     ('stopPrice', 'copy_stop_price', None),
     ('stopPriceLinkBasis', 'set_stop_price_link_basis',
@@ -65,8 +59,9 @@ _FIELDS_AND_SETTERS = (
         schwab.orders.common.OrderStrategyType),
 )
 
+
 def construct_repeat_order(historical_order):
-    builder = schwab.orders.generic.OrderBuilder()
+    builder = OrderBuilder()
 
     # Top-level fields
     _call_setters_with_values(historical_order, builder)
@@ -74,15 +69,15 @@ def construct_repeat_order(historical_order):
     # Composite orders
     if 'orderStrategyType' in historical_order:
         if historical_order['orderStrategyType'] == 'TRIGGER':
-            builder = schwab.orders.common.first_triggers_second(
-                    builder, construct_repeat_order(
-                        historical_order['childOrderStrategies'][0]))
+            builder = schwab.orders.builders.first_triggers_second(
+                builder, construct_repeat_order(
+                    historical_order['childOrderStrategies'][0]))
         elif historical_order['orderStrategyType'] == 'OCO':
-            builder = schwab.orders.common.one_cancels_other(
-                    construct_repeat_order(
-                        historical_order['childOrderStrategies'][0]),
-                    construct_repeat_order(
-                        historical_order['childOrderStrategies'][1]))
+            builder = schwab.orders.builders.one_cancels_other(
+                construct_repeat_order(
+                    historical_order['childOrderStrategies'][0]),
+                construct_repeat_order(
+                    historical_order['childOrderStrategies'][1]))
     else:
         raise ValueError('historical order is missing orderStrategyType')
 
@@ -91,17 +86,17 @@ def construct_repeat_order(historical_order):
         for leg in historical_order['orderLegCollection']:
             if leg['orderLegType'] == 'EQUITY':
                 builder.add_equity_leg(
-                        schwab.orders.common.EquityInstruction[leg['instruction']],
-                        leg['instrument']['symbol'],
-                        leg['quantity'])
+                    schwab.orders.common.EquityInstruction[leg['instruction']],
+                    leg['instrument']['symbol'],
+                    leg['quantity'])
             elif leg['orderLegType'] == 'OPTION':
                 builder.add_option_leg(
-                        schwab.orders.common.OptionInstruction[leg['instruction']],
-                        leg['instrument']['symbol'],
-                        leg['quantity'])
+                    schwab.orders.common.OptionInstruction[leg['instruction']],
+                    leg['instrument']['symbol'],
+                    leg['quantity'])
             else:
                 raise ValueError(
-                        'unknown orderLegType {}'.format(leg['orderLegType']))
+                    f'unknown orderLegType {leg["orderLegType"]}')
 
     return builder
 
@@ -127,11 +122,10 @@ def code_for_builder(builder, var_name=None):
 
     import_lines = []
     for module, names in imports.items():
-        line = 'from {} import {}'.format(
-                module, ', '.join(names))
+        line = f'from {module} import {", ".join(names)}'
         if len(line) > 80:
-            line = 'from {} import (\n{}\n)'.format(
-                    module, ',\n'.join(names))
+            line = 'from {} import (\n{}\n)'.format(   # pylint: disable=consider-using-f-string
+                module, ',\n'.join(names))
         import_lines.append(line)
 
     if var_name:
@@ -140,10 +134,10 @@ def code_for_builder(builder, var_name=None):
         var_prefix = ''
 
     return autopep8.fix_code(
-            '\n'.join(import_lines) + 
-            '\n\n' +
-            var_prefix +
-            '\n'.join(lines))
+        '\n'.join(import_lines)
+        + '\n\n'
+        + var_prefix
+        + '\n'.join(lines))
 
 
 class FirstTriggersSecondAST:
@@ -152,7 +146,7 @@ class FirstTriggersSecondAST:
         self.second = second
 
     def render(self, imports, lines, paren_depth=0):
-        imports['schwab.orders.common'].add('first_triggers_second')
+        imports['schwab.orders.builders'].add('first_triggers_second')
 
         lines.append('first_triggers_second(')
         self.first.render(imports, lines, paren_depth + 1)
@@ -167,7 +161,7 @@ class OneCancelsOtherAST:
         self.other = other
 
     def render(self, imports, lines, paren_depth=0):
-        imports['schwab.orders.common'].add('one_cancels_other')
+        imports['schwab.orders.builders'].add('one_cancels_other')
 
         lines.append('one_cancels_other(')
         self.one.render(imports, lines, paren_depth + 1)
@@ -182,7 +176,7 @@ class FieldAST:
         self.enum_type = enum_type
         self.value = value
 
-    def render(self, imports, lines, paren_depth=0):
+    def render(self, imports, lines, paren_depth=0):  # pylint: disable=unused-argument
         value = self.value
         if self.enum_type:
             imports[self.enum_type.__module__].add(self.enum_type.__qualname__)
@@ -197,10 +191,9 @@ class EquityOrderLegAST:
         self.symbol = symbol
         self.quantity = quantity
 
-    def render(self, imports, lines, paren_depth=0):
+    def render(self, imports, lines, paren_depth=0):  # pylint: disable=unused-argument
         imports['schwab.orders.common'].add('EquityInstruction')
-        lines.append('.add_equity_leg(EquityInstruction.{}, "{}", {})'.format(
-            self.instruction, self.symbol, self.quantity))
+        lines.append(f'.add_equity_leg(EquityInstruction.{self.instruction}, "{self.symbol}", {self.quantity})')
 
 
 class OptionOrderLegAST:
@@ -209,32 +202,30 @@ class OptionOrderLegAST:
         self.symbol = symbol
         self.quantity = quantity
 
-    def render(self, imports, lines, paren_depth=0):
+    def render(self, imports, lines, paren_depth=0):  # pylint: disable=unused-argument
         imports['schwab.orders.common'].add('OptionInstruction')
-        lines.append('.add_option_leg(OptionInstruction.{}, "{}", {})'.format(
-            self.instruction, self.symbol, self.quantity))
+        lines.append(f'.add_option_leg(OptionInstruction.{self.instruction}, "{self.symbol}", {self.quantity})')
 
 
 class GenericBuilderAST:
     def __init__(self, builder):
         self.top_level_fields = []
         for name, setter, enum_type in sorted(_FIELDS_AND_SETTERS):
-            value = getattr(builder, '_'+name)
+            value = getattr(builder, '_' + name)
             if value is not None:
                 self.top_level_fields.append(FieldAST(setter, enum_type, value))
 
         for leg in builder._orderLegCollection:
             if leg['instrument']._assetType == 'EQUITY':
                 self.top_level_fields.append(EquityOrderLegAST(
-                    leg['instruction'], leg['instrument']._symbol, 
+                    leg['instruction'], leg['instrument']._symbol,
                     leg['quantity']))
             elif leg['instrument']._assetType == 'OPTION':
                 self.top_level_fields.append(OptionOrderLegAST(
-                    leg['instruction'], leg['instrument']._symbol, 
+                    leg['instruction'], leg['instrument']._symbol,
                     leg['quantity']))
             else:
-                raise ValueError('unknown leg asset type {}'.format(
-                    leg['instrument']._assetType))
+                raise ValueError(f'unknown leg asset type {leg["instrument"]._assetType}')
 
     def render(self, imports, lines, paren_depth=0):
         imports['schwab.orders.generic'].add('OrderBuilder')
@@ -248,13 +239,14 @@ class GenericBuilderAST:
 
 
 def construct_order_ast(builder):
-    if builder._orderStrategyType == 'OCO':
+    if builder._orderStrategyType == 'OCO':  # pylint: disable=protected-access
         return OneCancelsOtherAST(
-                construct_order_ast(builder._childOrderStrategies[0]),
-                construct_order_ast(builder._childOrderStrategies[1]))
-    elif builder._orderStrategyType == 'TRIGGER':
+            construct_order_ast(builder._childOrderStrategies[0]),  # pylint: disable=protected-access
+            construct_order_ast(builder._childOrderStrategies[1]))  # pylint: disable=protected-access
+
+    if builder._orderStrategyType == 'TRIGGER':  # pylint: disable=protected-access
         return FirstTriggersSecondAST(
-                GenericBuilderAST(builder),
-                construct_order_ast(builder._childOrderStrategies[0]))
-    else:
-        return GenericBuilderAST(builder)
+            GenericBuilderAST(builder),
+            construct_order_ast(builder._childOrderStrategies[0]))  # pylint: disable=protected-access
+
+    return GenericBuilderAST(builder)

@@ -8,6 +8,7 @@ API_KEY = "XXXXXX"
 CLIENT_SECRET = "XXXXXX"
 CALLBACK_URL = "https://xxxxxx"
 
+
 class MyStreamConsumer:
     """
     We use a class to enforce good code organization practices
@@ -42,10 +43,11 @@ class MyStreamConsumer:
         """
         Create the clients and log in. Token should be previously generated using client_from_manual_flow()
 
-        TODO: update to easy_client() when client_from_login_flow() works, 
+        TODO: update to easy_client() when client_from_login_flow() works,
         or when easy_client() can redirect to client_from_manual_flow()
         """
-        self.schwab_client = schwab.auth.client_from_token_file(self.token_path, 
+        self.schwab_client = schwab.auth.client_from_token_file(
+            self.token_path,
             api_key=self.api_key,
             app_secret=self.client_secret)
 
@@ -65,7 +67,7 @@ class MyStreamConsumer:
         await self.stream_client.login()  # Log into the streaming service
 
         # TODO: QOS is currently not working as the command formatting has changed. Update & re-enable after docs are released
-        #await self.stream_client.quality_of_service(StreamClient.QOSLevel.EXPRESS)
+        # await self.stream_client.quality_of_service(StreamClient.QOSLevel.EXPRESS)
 
         await self.stream_client.level_one_equity_subs(self.symbols)
 

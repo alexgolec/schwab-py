@@ -1,11 +1,6 @@
 '''Implements additional functionality beyond what's implemented in the client
 module.'''
 
-import datetime
-import dateutil.parser
-import enum
-import httpx
-import inspect
 import re
 
 
@@ -34,19 +29,19 @@ class EnumEnforcer:
                         possible_members[-2:])]) + '? '
 
         raise ValueError(
-            ('expected type "{}", got type "{}". {}(initialize with ' +
-             'enforce_enums=False to disable this checking)').format(
+            ('expected type "{}", got type "{}". {}(initialize with '
+             + 'enforce_enums=False to disable this checking)').format(
                 required_enum_type.__name__,
                 type(value).__name__,
                 possible_members_message))
 
-    def convert_enum(self, value, required_enum_type):
+    def convert_enum(self, value, required_enum_type):  # pylint: disable=inconsistent-return-statements
         if value is None:
             return None
 
         if isinstance(value, required_enum_type):
             return value.value
-        elif self.enforce_enums:
+        if self.enforce_enums:
             self.type_error(value, required_enum_type)
         else:
             return value
@@ -91,6 +86,7 @@ class LazyLog:
     'Helper to defer evaluation of expensive variables in log messages'
     def __init__(self, func):
         self.func = func
+
     def __str__(self):
         return self.func()
 
@@ -128,7 +124,7 @@ class Utils(EnumEnforcer):
         '''
         if place_order_response.is_error:
             raise UnsuccessfulOrderException(
-                'order not successful: status {}'.format(place_order_response.status_code))
+                f'order not successful: status {place_order_response.status_code}')
 
         try:
             location = place_order_response.headers['Location']
@@ -136,8 +132,8 @@ class Utils(EnumEnforcer):
             return None
 
         m = re.match(
-                r'https://api.schwabapi.com/trader/v1/accounts/(\w+)/orders/(\d+)',
-                location)
+            r'https://api.schwabapi.com/trader/v1/accounts/(\w+)/orders/(\d+)',
+            location)
 
         if m is None:
             return None

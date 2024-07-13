@@ -53,6 +53,8 @@ setuptools.setup(
             'sphinx_rtd_theme',
             'twine',
             'wheel',
+            'flake8',
+            'pylint'
         ]
     },
     keywords='finance trading equities bonds options research',
@@ -67,4 +69,3 @@ setuptools.setup(
         'bin/schwab-generate-token.py',
     ],
 )
-

@@ -83,3 +83,31 @@ jobs:
     - name: Verify that documentation builds
       run: |
         sphinx-build -W docs/ docs-build
+
+  lint:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ubuntu-latest]
+        python:
+        - version: "3.12"
+          toxenv: py312
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python.version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python.version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install tox
+        pip install ".[dev]"
+
+    - name: Run linters
+      run: |
+        pylint examples bin docs schwab  #TODO: Add tests
+        flake8 examples bin docs schwab  #TODO: Add tests

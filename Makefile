@@ -20,3 +20,8 @@ release: clean dist
 
 clean:
 	rm -rf build dist docs-build schwab_py.egg-info __pycache__ htmlcov
+
+lint:
+	pylint examples bin docs schwab || true   #TODO: Add tests
+	flake8 examples bin docs schwab || true   #TODO: Add tests
+

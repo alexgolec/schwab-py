@@ -101,8 +101,8 @@ class RegisterRedactionsTest(unittest.TestCase):
         self.assertRegex(
             self.captured.getvalue(),
             r'\[.*\] Good Number: 900009\n' +
-            r'\[.*\] Bad Number: <REDACTED 1-BadNumber>\n' +
-            r'\[.*\] Other Bad Number: <REDACTED 2-OtherBadNumber>\n')
+            r'\[.*\] Bad Number: <REDACTED BadNumber>\n' +
+            r'\[.*\] Other Bad Number: <REDACTED OtherBadNumber>\n')
 
     @no_duplicates
     def test_whitelist(self):
@@ -121,7 +121,7 @@ class RegisterRedactionsTest(unittest.TestCase):
         self.assertRegex(
             self.captured.getvalue(),
             r'\[.*\] Good Number: 900009\n' +
-            r'\[.*\] Bad Number: <REDACTED 1-BadNumber>\n' +
+            r'\[.*\] Bad Number: <REDACTED BadNumber>\n' +
             r'\[.*\] Other Bad Number: 200002\n')
 
     @no_duplicates

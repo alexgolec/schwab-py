@@ -1,30 +1,17 @@
-from abc import ABC, abstractmethod
 from collections import defaultdict, deque
 from enum import Enum
 
 import asyncio
 import copy
-import datetime
-import httpx
 import inspect
 import json
 import logging
-import schwab
-import urllib.parse
 
+import httpx
 import websockets.legacy.client as ws_client
 
+from schwab.decoders import StreamJsonDecoder
 from .utils import EnumEnforcer, LazyLog
-
-
-class StreamJsonDecoder(ABC):
-    @abstractmethod
-    def decode_json_string(self, raw):
-        '''
-        Parse a JSON-formatted string into a proper object. Raises
-        ``JSONDecodeError`` on parse failure.
-        '''
-        raise NotImplementedError()
 
 
 class NaiveJsonStreamDecoder(StreamJsonDecoder):
@@ -54,7 +41,7 @@ class _BaseFieldEnum(Enum):
     @classmethod
     def relabel_message(cls, old_msg, new_msg):
         # Make a copy of the items so we can modify the dict during iteration
-        for old_key, value in list(old_msg.items()):
+        for old_key, _ in list(old_msg.items()):
             if old_key in cls.key_mapping():
                 new_key = cls.key_mapping()[old_key]
                 new_msg[new_key] = new_msg.pop(old_key)
@@ -94,13 +81,12 @@ class _Handler:
                 self._field_enum_type.relabel_message(msg['content'][idx],
                                                       new_msg['content'][idx])
             return new_msg
-        else:
-            return msg
+        return msg
 
 
 class StreamClient(EnumEnforcer):
 
-    def __init__(self, client, *, account_id=None,
+    def __init__(self, client, *, account_id=None,  # pylint: disable=unused-argument
                  enforce_enums=True, ssl_context=None):
         super().__init__(enforce_enums)
 
@@ -144,9 +130,9 @@ class StreamClient(EnumEnforcer):
                              incoming JSON strings. See
                              :class:`StreamJsonDecoder` for details.
         '''
-        if not isinstance(json_decoder, schwab.contrib.util.StreamJsonDecoder):
-            raise ValueError('Custom JSON parser must be a subclass of ' +
-                             'schwab.contrib.util.StreamJsonDecoder')
+        if not isinstance(json_decoder, StreamJsonDecoder):
+            raise ValueError('Custom JSON parser must be a subclass of '
+                             + 'schwab.contrib.util.StreamJsonDecoder')
         self.json_decoder = json_decoder
 
     def req_num(self):
@@ -158,8 +144,9 @@ class StreamClient(EnumEnforcer):
             raise ValueError(
                 'Socket not open. Did you forget to call login()?')
 
-        self.logger.debug('Send %s: Sending %s',
-                self.req_num(), LazyLog(lambda: json.dumps(obj, indent=4)))
+        self.logger.debug(
+            'Send %s: Sending %s',
+            self.req_num(), LazyLog(lambda: json.dumps(obj, indent=4)))
 
         await self._socket.send(json.dumps(obj))
 
@@ -179,10 +166,10 @@ class StreamClient(EnumEnforcer):
             try:
                 ret = self.json_decoder.decode_json_string(raw)
             except json.decoder.JSONDecodeError as e:
-                msg = ('Failed to parse message. This often happens with ' +
-                       'unknown symbols or other error conditions. Full ' +
-                       'message text: ' + raw)
-                raise UnparsableMessage(raw, e, msg)
+                msg = ('Failed to parse message. This often happens with '
+                       + 'unknown symbols or other error conditions. Full '
+                       + 'message text: ' + raw)
+                raise UnparsableMessage(raw, e, msg) from e
 
             self.logger.debug(
                 'Receive %s: Returning message from stream: %s',
@@ -206,8 +193,7 @@ class StreamClient(EnumEnforcer):
             websocket_connect_args['ssl'] = self._ssl_context
 
         self._socket = await ws_client.connect(
-                wss_url, **websocket_connect_args)
-
+            wss_url, **websocket_connect_args)
 
     def _make_request(self, *, service, command, parameters):
         request_id = self._request_id
@@ -251,31 +237,26 @@ class StreamClient(EnumEnforcer):
                 resp_request_id = int(resp['response'][0]['requestid'])
                 if resp_request_id != request_id:
                     raise UnexpectedResponse(
-                        resp, 'unexpected requestid: {}'.format(
-                            resp_request_id))
+                        resp, f'unexpected requestid: {resp_request_id}')
 
                 # Validate service
                 resp_service = resp['response'][0]['service']
                 if resp_service != service:
                     raise UnexpectedResponse(
-                        resp, 'unexpected service: {}'.format(
-                            resp_service))
+                        resp, f'unexpected service: {resp_service}')
 
                 # Validate command
                 resp_command = resp['response'][0]['command']
                 if resp_command != command:
                     raise UnexpectedResponse(
-                        resp, 'unexpected command: {}'.format(
-                            resp_command))
+                        resp, f'unexpected command: {resp_command}')
 
                 # Validate response code
                 resp_code = resp['response'][0]['content']['code']
                 if resp_code != 0:
                     raise UnexpectedResponseCode(
                         resp,
-                        'unexpected response code: {}, msg is \'{}\''.format(
-                            resp_code,
-                            resp['response'][0]['content']['msg']))
+                        'unexpected response code: {resp_code}, msg is \'{resp["response"][0]["content"]["msg"]}\'')
 
                 break
 
@@ -306,10 +287,13 @@ class StreamClient(EnumEnforcer):
 
         # response
         if 'response' in msg:
-            raise UnexpectedResponse(msg,
-                                     'unexpected response code during message handling: {}, msg is \'{}\''.format(
-                                         msg['response'][0]['content']['code'],
-                                         msg['response'][0]['content']['msg']))
+            raise UnexpectedResponse(
+                msg,
+                'unexpected response code during message handling: '
+                + str(msg["response"][0]["content"]["code"])
+                + ', msg is \''
+                + str(msg["response"][0]["content"]["msg"])
+                + '\'')
 
         # data
         if 'data' in msg:
@@ -356,9 +340,9 @@ class StreamClient(EnumEnforcer):
         All stream operations are available after this method completes.
 
         :param websocket_connect_args: ``dict`` of additional arguments to pass
-                                       to the websocket ``connect`` call. Useful 
-                                       for setting timeouts and other connection 
-                                       parameters. See `the official 
+                                       to the websocket ``connect`` call. Useful
+                                       for setting timeouts and other connection
+                                       parameters. See `the official
                                        documentation <https://websockets.readthedocs.io/en/stable/reference/client.html#websockets.client.connect>`__
                                        for details.
         '''
@@ -374,13 +358,13 @@ class StreamClient(EnumEnforcer):
         r = r.json()
 
         await self._init_from_preferences(
-                r, websocket_connect_args if websocket_connect_args else {})
+            r, websocket_connect_args if websocket_connect_args else {})
 
         # Build and send the request object
         request_parameters = {
-                'Authorization': self._client.token_metadata.token['access_token'],
-                'SchwabClientChannel': self._stream_channel,
-                'SchwabClientFunctionId': self._stream_function_id,
+            'Authorization': self._client.token_metadata.token['access_token'],
+            'SchwabClientChannel': self._stream_channel,
+            'SchwabClientFunctionId': self._stream_function_id,
         }
 
         request, request_id = self._make_request(
@@ -851,7 +835,7 @@ class StreamClient(EnumEnforcer):
         See :ref:`registering_handlers` for details.
         '''
         self._handlers['LEVELONE_EQUITIES'].append(
-                _Handler(handler, self.LevelOneEquityFields))
+            _Handler(handler, self.LevelOneEquityFields))
 
     ##########################################################################
     # LEVELONE_OPTIONS
@@ -1083,7 +1067,7 @@ class StreamClient(EnumEnforcer):
         See :ref:`registering_handlers` for details.
         '''
         self._handlers['LEVELONE_OPTIONS'].append(
-                _Handler(handler, self.LevelOneOptionFields))
+            _Handler(handler, self.LevelOneOptionFields))
 
     ##########################################################################
     # LEVELONE_FUTURES

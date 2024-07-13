@@ -1,47 +1,50 @@
 import warnings
 
-from enum import Enum
+import httpx
 
-from schwab.orders import common
 from schwab.utils import EnumEnforcer
 
-import httpx
+from .common import Duration, Session, OrderType, ComplexOrderStrategyType
+from .common import Destination, StopPriceLinkBasis, StopPriceLinkType
+from .common import StopType, PriceLinkBasis, PriceLinkType
+from .common import EquityInstruction, OptionInstruction, SpecialInstruction, OrderStrategyType
+from .common import EquityInstrument, OptionInstrument
 
 
 def _build_object(obj):
     # Literals are passed straight through
-    if isinstance(obj, str) or isinstance(obj, int) or isinstance(obj, float):
+    if isinstance(obj, (float, int, str)):
         return obj
 
     # Note enums are not handled because call callers convert their enums to
     # values.
 
     # Dicts and lists are iterated over, with keys intact
-    elif isinstance(obj, dict):
+    if isinstance(obj, dict):
         return dict((key, _build_object(value)) for key, value in obj.items())
-    elif isinstance(obj, list):
+
+    if isinstance(obj, list):
         return [_build_object(i) for i in obj]
 
     # Objects have their variables translated into keys
-    else:
-        ret = {}
-        for name, value in vars(obj).items():
-            if value is None or name[0] != '_':
-                continue
+    ret = {}
+    for name, value in vars(obj).items():
+        if value is None or name[0] != '_':
+            continue
 
-            name = name[1:]
-            ret[name] = _build_object(value)
-        return ret
+        name = name[1:]
+        ret[name] = _build_object(value)
+    return ret
 
 
 def truncate_float(flt):
-    warnings.warn('passing floats to set_price and set_stop_price is '+
-                  'deprecated and will be removed soon. Please update your '+
-                  'code to pass prices as strings instead.')
+    warnings.warn('passing floats to set_price and set_stop_price is '
+                  + 'deprecated and will be removed soon. Please update your '
+                  + 'code to pass prices as strings instead.')
     if abs(flt) < 1 and flt != 0.0:
-        return '{:.4f}'.format(float(int(flt * 10000)) / 10000.0)
-    else:
-        return '{:.2f}'.format(float(int(flt * 100)) / 100.0)
+        return f'{(float(int(flt * 10000)) / 10000.0):.4f}'
+
+    return f'{(float(int(flt * 100)) / 100.0):.2f}'
 
 
 class OrderBuilder(EnumEnforcer):
@@ -83,7 +86,7 @@ class OrderBuilder(EnumEnforcer):
         Set the order session. See :class:`~schwab.orders.common.Session` for
         details.
         '''
-        session = self.convert_enum(session, common.Session)
+        session = self.convert_enum(session, Session)
         self._session = session
         return self
 
@@ -100,7 +103,7 @@ class OrderBuilder(EnumEnforcer):
         Set the order duration. See :class:`~schwab.orders.common.Duration` for
         details.
         '''
-        duration = self.convert_enum(duration, common.Duration)
+        duration = self.convert_enum(duration, Duration)
         self._duration = duration
         return self
 
@@ -117,7 +120,7 @@ class OrderBuilder(EnumEnforcer):
         Set the order type. See :class:`~schwab.orders.common.OrderType` for
         details.
         '''
-        order_type = self.convert_enum(order_type, common.OrderType)
+        order_type = self.convert_enum(order_type, OrderType)
         self._orderType = order_type
         return self
 
@@ -135,7 +138,7 @@ class OrderBuilder(EnumEnforcer):
         :class:`~schwab.orders.common.ComplexOrderStrategyType` for details.
         '''
         complex_order_strategy_type = self.convert_enum(
-            complex_order_strategy_type, common.ComplexOrderStrategyType)
+            complex_order_strategy_type, ComplexOrderStrategyType)
         self._complexOrderStrategyType = complex_order_strategy_type
         return self
 
@@ -171,7 +174,7 @@ class OrderBuilder(EnumEnforcer):
         :class:`~schwab.orders.common.Destination` for details.
         '''
         destination_link_name = self.convert_enum(
-            destination_link_name, common.Destination)
+            destination_link_name, Destination)
         self._destinationLinkName = destination_link_name
         return self
 
@@ -216,7 +219,7 @@ class OrderBuilder(EnumEnforcer):
         :class:`~schwab.orders.common.StopPriceLinkBasis` for details.
         '''
         stop_price_link_basis = self.convert_enum(
-            stop_price_link_basis, common.StopPriceLinkBasis)
+            stop_price_link_basis, StopPriceLinkBasis)
         self._stopPriceLinkBasis = stop_price_link_basis
         return self
 
@@ -234,7 +237,7 @@ class OrderBuilder(EnumEnforcer):
         :class:`~schwab.orders.common.StopPriceLinkType` for details.
         '''
         stop_price_link_type = self.convert_enum(
-            stop_price_link_type, common.StopPriceLinkType)
+            stop_price_link_type, StopPriceLinkType)
         self._stopPriceLinkType = stop_price_link_type
         return self
 
@@ -266,7 +269,7 @@ class OrderBuilder(EnumEnforcer):
         Set the stop type. See
         :class:`~schwab.orders.common.StopType` for more details.
         '''
-        stop_type = self.convert_enum(stop_type, common.StopType)
+        stop_type = self.convert_enum(stop_type, StopType)
         self._stopType = stop_type
         return self
 
@@ -284,7 +287,7 @@ class OrderBuilder(EnumEnforcer):
         :class:`~schwab.orders.common.PriceLinkBasis` for details.
         '''
         price_link_basis = self.convert_enum(
-            price_link_basis, common.PriceLinkBasis)
+            price_link_basis, PriceLinkBasis)
         self._priceLinkBasis = price_link_basis
         return self
 
@@ -302,7 +305,7 @@ class OrderBuilder(EnumEnforcer):
         :class:`~schwab.orders.common.PriceLinkType` for more details.
         '''
         price_link_type = self.convert_enum(
-            price_link_type, common.PriceLinkType)
+            price_link_type, PriceLinkType)
         self._priceLinkType = price_link_type
         return self
 
@@ -364,7 +367,7 @@ class OrderBuilder(EnumEnforcer):
         :class:`~schwab.orders.common.SpecialInstruction` for details.
         '''
         special_instruction = self.convert_enum(
-            special_instruction, common.SpecialInstruction)
+            special_instruction, SpecialInstruction)
         self._specialInstruction = special_instruction
         return self
 
@@ -382,7 +385,7 @@ class OrderBuilder(EnumEnforcer):
         :class:`~schwab.orders.common.OrderStrategyType` for more details.
         '''
         order_strategy_type = self.convert_enum(
-            order_strategy_type, common.OrderStrategyType)
+            order_strategy_type, OrderStrategyType)
         self._orderStrategyType = order_strategy_type
         return self
 
@@ -397,9 +400,9 @@ class OrderBuilder(EnumEnforcer):
     def add_child_order_strategy(self, child_order_strategy):
         if isinstance(child_order_strategy, httpx.Response):
             raise ValueError(
-                    'Child order cannot be a response. See here for ' +
-                    'details: https://schwab-api.readthedocs.io/en/latest/' +
-                    'order-templates.html#utility-methods')
+                'Child order cannot be a response. See here for '
+                + 'details: https://schwab-api.readthedocs.io/en/latest/'
+                + 'order-templates.html#utility-methods')
 
         if (not isinstance(child_order_strategy, OrderBuilder)
                 and not isinstance(child_order_strategy, dict)):
@@ -443,9 +446,9 @@ class OrderBuilder(EnumEnforcer):
         :param symbol: Equity symbol
         :param quantity: Number of shares for the order
         '''
-        instruction = self.convert_enum(instruction, common.EquityInstruction)
+        instruction = self.convert_enum(instruction, EquityInstruction)
         return self.__add_order_leg(
-            instruction, common.EquityInstrument(symbol), quantity)
+            instruction, EquityInstrument(symbol), quantity)
 
     def add_option_leg(self, instruction, symbol, quantity):
         '''
@@ -457,9 +460,9 @@ class OrderBuilder(EnumEnforcer):
         :param symbol: Option symbol
         :param quantity: Number of contracts for the order
         '''
-        instruction = self.convert_enum(instruction, common.OptionInstruction)
+        instruction = self.convert_enum(instruction, OptionInstruction)
         return self.__add_order_leg(
-            instruction, common.OptionInstrument(symbol), quantity)
+            instruction, OptionInstrument(symbol), quantity)
 
     def clear_order_legs(self):
         '''
