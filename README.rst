@@ -75,7 +75,7 @@ daily historical price data for the past twenty years:
 
   api_key = 'YOUR_API_KEY'
   app_secret = 'YOUR_APP_SECRET'
-  redirect_uri = 'https://127.0.0.1/'
+  callback_url = 'https://127.0.0.1:8182/'
   token_path = '/path/to/token.json'
 
   c = auth.easy_client(api_key, app_secret, callback_url, token_path)
