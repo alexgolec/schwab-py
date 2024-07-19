@@ -17,14 +17,17 @@ jobs:
           toxenv: py311
         - version: "3.12"
           toxenv: py312
+        - version: "3.13"
+          toxenv: py313
     runs-on: ${{ matrix.platform }}
 
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python.version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python.version }}
+        allow-prereleases: true
 
     - name: Install dependencies
       run: |
