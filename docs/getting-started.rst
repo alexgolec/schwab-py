@@ -20,24 +20,54 @@ you'll have accomplished the three prerequisites for using ``schwab-py``:
 #. Choose and save the callback URL (important for authenticating).
 #. Receive an app key and a secret.
 
+**Create a Developer Account**
+
 You can create a developer account `here 
 <https://beta-developer.schwab.com/>`__.  The instructions from here on out 
 assume you're logged in, so make sure you log into the developer site after 
 you've created your account.
 
+**Create an Application**
+
+.. figure:: _static/setting-up-create-app.png
+
 Next, you'll want to `create an application
 <https://beta-developer.schwab.com/dashboard/apps/apps/add>`__ and populate the 
-required fields. The first thing you'll select is the API Product. We in the 
-community aren't currently clear on the difference between the options 
-("Accounts and Trading" and "Market Data"). It seems that selecting "Accounts 
-and Trading" grants access to all APIs supported by ``schwab-py``, so unless you 
+required fields.
+
+**API Product**
+
+.. figure:: _static/setting-up-api-product.png
+
+The first thing you'll select is the API Product. We in the community aren't 
+currently clear on the difference between the options ("Accounts and Trading 
+Production" and "Market Data"). It seems that selecting "Accounts and Trading 
+Production" grants access to all APIs supported by ``schwab-py``, so unless you 
 have a reason to do differently, we recommend selecting that option.
+
+**Order Limit**
+
+.. figure:: _static/setting-up-order-limit.png
+
+The order limit is the number of order-related requests your app will be 
+permitted to place each minute. If you make, cancel, or replace more than this 
+many orders each minute, you'll be throttled and your orders will be rejected.  
+Most users have no reason to restrict this, so we recommend setting this to 120.
+
+**App Name and Description**
+
+.. figure:: _static/setting-up-name-and-description.png
 
 Next are the app name and description. ``schwab-py`` does not use these values, 
 but the folks at at Schwab might. We recommend being descriptive here, if only 
 so that users and app approvers know what your app will do.
 
-Next is the callback URL.  In a nutshell, the `OAuth login flow
+**App Name and Description**
+
+.. figure:: _static/setting-up-callback-url.png
+
+Finally, we have the callback URL. This one is important.  In a nutshell, the 
+`OAuth login flow
 <https://requests-oauthlib.readthedocs.io/en/
 latest/oauth2_workflow.html#web-application-flow>`__ that Schwab uses works by 
 opening a login page, securely collecting credentials on their domain, and then 
@@ -53,6 +83,11 @@ number is not require to use ``schwab-py``, but it is required to use
 use a non-local callback URL, but this documentation assumes they are advanced 
 enough not to need our help creating such a setup.
 
+*Update July 21, 2024:* We are receiving intermittent reports that Schwab is 
+refusing to create apps with callback URLs containing ``127.0.0.1``. If you 
+encounter this, please let our Discord community know in our `help channel 
+<https://discord.gg/mm44rstRCg>`__.
+
 In any case, note that whatever callback URL you choose, you must pass it to 
 ``schwab-py`` *exactly* in the same way as you specified it while creating your 
 app.  Any deviation (including adding or removing a trailing slash!) can cause 
@@ -60,16 +95,28 @@ difficult-to-debug issues. Be careful not to mis-copy this value.
 
 .. _approved_pending:
 
+**Waiting for Approval**
+
+.. figure:: _static/setting-up-approved-pending.png
+
+.. figure:: _static/setting-up-ready-for-use.png
+
 After your app is created, you will likely see it in an ``Approved - Pending`` 
 state when you view it in your dashboard. Don't be fooled by the word 
 ``Approved``: your app is not yet ready for use. You must wait for Schwab to 
 *actually* approve it, at which point its status will be ``Ready For Use.`` This 
 can take up to a few days. Only then can you proceed to using ``schwab-py``.
 
-Once your app is created and approved, you will receive your app key and secret.  
-Neither of these are meant to be shared by anyone, so keep them safe. You will 
-also be required to pass these into ``schwab-py``. This library does not share 
-these values with anyone except official Schwab endpoints.
+**Client Secrets**
+
+.. figure:: _static/setting-up-secrets.png
+
+Once your app is created and approved, you will be able to access your app key
+and app secret by clicking through to your approved application in the 
+dashobard. Neither  of these are meant to be shared by anyone, so keep them safe 
+(the ones displayed here are fake). You will also be required to pass these into 
+``schwab-py``.  This library does not share these values with anyone except 
+official Schwab endpoints, not even its authors. Don't share them with anyone.
 
 ++++++++++++++++++++++++
 Installing ``schwab-py``
