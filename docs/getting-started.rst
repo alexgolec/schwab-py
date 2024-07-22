@@ -86,7 +86,9 @@ enough not to need our help creating such a setup.
 *Update July 21, 2024:* We are receiving intermittent reports that Schwab is 
 refusing to create apps with callback URLs containing ``127.0.0.1``. If you 
 encounter this, please let our Discord community know in our `help channel 
-<https://discord.gg/mm44rstRCg>`__.
+<https://discord.gg/mm44rstRCg>`__. If you don't have any problem, we still
+encourage you to drop by anyway and tell us you were successful. It'll make
+us feel better about this potential issue.
 
 In any case, note that whatever callback URL you choose, you must pass it to 
 ``schwab-py`` *exactly* in the same way as you specified it while creating your 
