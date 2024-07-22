@@ -35,7 +35,7 @@ In addition to your code, it would really help if you shared:
  1. Your OS (Windows? Mac OS? Linux?) and execution environment (VSCode? A raw 
     terminal? A notebook? A docker container in the cloud?) 
  2. Your ``schwab-py`` version.  You can see this by 
-    executing``print(schwab.__version__)`` in a python shell. Make sure you're 
+    executing ``print(schwab.__version__)`` in a python shell. Make sure you're 
     using the most recent version *before* asking for help. You can ensure this 
     using ``pip install --upgrade schwab-py`
  3. The full stack trace and error message.  Descriptions of errors will be met 
