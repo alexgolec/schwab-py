@@ -124,7 +124,7 @@ Bug reports, suggestions, and patches are always welcome! Submit issues
 `here <https://github.com/alexgolec/schwab-py/pulls>`__.
 
 ``schwab-py`` is released under the
-`MIT license <https://github.com/alexgolec/tda-api/blob/master/LICENSE>`__.
+`MIT license <https://github.com/alexgolec/schwab-py/blob/master/LICENSE>`__.
 
 **Disclaimer:** *schwab-py is an unofficial API wrapper. It is in no way 
 endorsed by or affiliated with Charles Schwab or any associated organization.

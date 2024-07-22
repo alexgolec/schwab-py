@@ -74,11 +74,11 @@ implementations of this flow, and ``schwab-py``'s authentication module makes
 using them easy.
 
 
+.. _login_flow:
+
 --------------------------------------
 Fetching a Token and Creating a Client
 --------------------------------------
-
-.. _login_flow:
 
 This function will guide you through the process of logging in and creating a 
 token.
@@ -329,8 +329,9 @@ What If I Can't Use a Browser?
 ++++++++++++++++++++++++++++++
 
 Launching a browser can be inconvenient in some situations, most notably in
-containerized applications running on a cloud provider. ``tda-api`` supports two
-alternatives to creating tokens by opening a web browser.
+containerized applications running on a cloud provider, or when running in a 
+notebook. ``schwab-py`` supports two alternatives to creating tokens by opening 
+a web browser.
 
 Firstly, the :ref:`manual login flow<manual_login>` flow allows you to go
 through the login flow on a different machine than the one on which 
