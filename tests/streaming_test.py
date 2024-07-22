@@ -5945,7 +5945,7 @@ class StreamClientTest(IsolatedAsyncioTestCase):
             "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
             'parameters': {
                 'keys': 'GOOG,MSFT',
-                'fields': '1,2,5,14,36,1'
+                'fields': '1,2,5,14,36'
             }
         })
 
