@@ -8,6 +8,37 @@ Welcome to ``schwab-py``! Read this page to learn how to install and configure
 your first Schwab Python application.
 
 
++++++++++++++++++++
+Critical Schwab Bug
++++++++++++++++++++
+
+As of July 21st, 2024, Schwab appears to be suffering from a breaking bug on the 
+`developer console site <https://beta-developer.schwab.com>`__ that is 
+interfering with creating and managing apps. Don't let this warning prevent you 
+from using this getting started guide, but if you experience any of the 
+following errors, please email Schwab's API team at `traderapi@schwab.com 
+<mailto:traderapi@schwab.com>`__ describing the issues you see. You can also 
+join our `Discord server <https://discord.gg/mm44rstRCg>`__ to get updates.
+
+.. figure:: _static/setting-up-invalid-url.png
+
+  When creating a new app, an error message warning about an invalid callback 
+  URL or one warning about a non-HTTPS URL even though it's clearly HTTPS.
+
+.. figure:: _static/setting-up-invalid-url-banner.png
+
+  After clicking the "Create" button when creating a new app, banners
+  indicating the callback URL is invalid
+
+.. figure:: _static/setting-up-error-fetching-app-details.png
+
+  When opening app details on an app, a banner reporting that app details 
+  couldn't be fetched.
+
+.. figure:: _static/setting-up-app-registration-error.png
+
+  After creating an app, a status of ``App Registration Error``
+
 +++++++++++++++++
 Schwab API Access
 +++++++++++++++++
