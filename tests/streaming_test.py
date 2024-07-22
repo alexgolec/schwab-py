@@ -5913,3 +5913,40 @@ class StreamClientTest(IsolatedAsyncioTestCase):
                 'fields': '0,1,2,3,4,5,6,7,8'
             }
         })
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_service_op_sorts_fields(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            1, 'LEVELONE_EQUITIES', 'SUBS'))]
+
+        await self.client._service_op(
+            symbols=['GOOG', 'MSFT'],
+            service='LEVELONE_EQUITIES',
+            command='SUBS',
+            field_type=StreamClient.LevelOneEquityFields,
+            fields=[
+            StreamClient.LevelOneEquityFields.ASK_SIZE,  # 5
+            StreamClient.LevelOneEquityFields.ASK_PRICE,  # 2
+            StreamClient.LevelOneEquityFields.MARGINABLE ,  # 14
+            StreamClient.LevelOneEquityFields.REGULAR_MARKET_TRADE_MILLIS,  # 36
+            StreamClient.LevelOneEquityFields.BID_PRICE ,  # 1
+        ])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'LEVELONE_EQUITIES',
+            'command': 'SUBS',
+            'requestid': '1',
+            "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
+            "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
+            'parameters': {
+                'keys': 'GOOG,MSFT',
+                'fields': '1,2,5,14,36'
+            }
+        })
+
+
