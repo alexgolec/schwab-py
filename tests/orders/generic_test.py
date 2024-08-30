@@ -1130,6 +1130,49 @@ class OrderBuilderExamplesTest(unittest.TestCase):
 
         self.assertFalse(has_diff(expected, builder.build()))
 
+    @no_duplicates
+    def test_sell_trailing_stop_limit_stock(self):
+        builder = (
+            OrderBuilder()
+            .set_complex_order_strategy_type(ComplexOrderStrategyType.NONE)
+            .set_order_type(OrderType.TRAILING_STOP_LIMIT)
+            .set_session(Session.NORMAL)
+            .set_stop_price_link_basis(StopPriceLinkBasis.BID)
+            .set_stop_price_link_type(StopPriceLinkType.VALUE)
+            .set_stop_price_offset(10)
+            .set_price_link_basis(PriceLinkBasis.LAST)
+            .set_price_link_type(PriceLinkType.VALUE)
+            .set_price_offset(12)
+            .set_duration(Duration.DAY)
+            .set_order_strategy_type(OrderStrategyType.SINGLE)
+            .add_equity_leg(EquityInstruction.SELL, 'XYZ', 10))
+
+        expected = {
+            'complexOrderStrategyType': 'NONE',
+            'orderType': 'TRAILING_STOP_LIMIT',
+            'session': 'NORMAL',
+            'stopPriceLinkBasis': 'BID',
+            'stopPriceLinkType': 'VALUE',
+            'stopPriceOffset': 10,
+            'priceLinkBasis': 'LAST',
+            'priceLinkType': 'VALUE',
+            'priceOffset': 12,
+            'duration': 'DAY',
+            'orderStrategyType': 'SINGLE',
+            'orderLegCollection': [
+                {
+                    'instruction': 'SELL',
+                    'quantity': 10,
+                    'instrument': {
+                        'symbol': 'XYZ',
+                        'assetType': 'EQUITY'
+                    }
+                }
+            ]
+        }
+
+        self.assertFalse(has_diff(expected, builder.build()))
+
 
 class TruncateFloatTest(unittest.TestCase):
 
