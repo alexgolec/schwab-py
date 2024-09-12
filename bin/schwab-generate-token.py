@@ -9,7 +9,7 @@ def main(api_key, app_secret, callback_url, token_path, requested_browser):
     try:
         schwab.auth.client_from_login_flow(
                 api_key, app_secret, callback_url, token_path,
-                requested_browser=requested_browser, callback_timeout=1)
+                requested_browser=requested_browser, callback_timeout=300)
         return 0
     except:
         print('Failed to fetch a token using a web browser, falling back to '
