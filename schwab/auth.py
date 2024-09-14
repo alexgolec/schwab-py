@@ -578,10 +578,11 @@ def client_from_access_functions(api_key, app_secret, token_read_func,
 AuthContext = collections.namedtuple(
         'AuthContext', ['callback_url', 'authorization_url', 'state'])
 
-def get_auth_context(api_key, callback_url):
+def get_auth_context(api_key, callback_url, state=None):
     oauth = OAuth2Client(api_key, redirect_uri=callback_url)
     authorization_url, state = oauth.create_authorization_url(
-        'https://api.schwabapi.com/v1/oauth/authorize')
+        'https://api.schwabapi.com/v1/oauth/authorize',
+        state=state)
 
     return AuthContext(callback_url, authorization_url, state)
 
@@ -597,7 +598,8 @@ def client_from_received_url(
     token = oauth.fetch_token(
         TOKEN_ENDPOINT,
         authorization_response=received_url,
-        client_id=api_key, auth=(api_key, app_secret))
+        client_id=api_key, auth=(api_key, app_secret),
+        state=auth_context.state)
 
     # Don't emit token details in debug logs
     register_redactions(token)
