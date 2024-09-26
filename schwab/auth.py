@@ -238,7 +238,18 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
                               values
                               `here <https://docs.python.org/3/library/webbrowser.html#webbrowser.register>`__
     '''
+    if api_key is None:
+        raise TypeError("api_key must be defined, not type None")
 
+    if app_secret is None:
+        raise TypeError("app_secret must be defined, not type None")
+
+    if callback_url is None:
+        raise TypeError("callback_url must be defined, not type None")
+
+    if token_path is None:
+        raise TypeError("token_path must be defined, not type None")
+    
     if callback_timeout is None:
         callback_timeout = 0
     if callback_timeout < 0:
@@ -449,9 +460,21 @@ def client_from_manual_flow(api_key, app_secret, callback_url, token_path,
                           need it. For most users, it is advised to use enums
                           to avoid errors.
     '''
+
     get_logger().info('Creating new token with callback URL \'%s\' ' +
                        'and token path \'%s\'', callback_url, token_path)
+    if api_key is None:
+        raise TypeError("api_key must be defined, not type None")
 
+    if app_secret is None:
+        raise TypeError("app_secret must be defined, not type None")
+
+    if callback_url is None:
+        raise TypeError("callback_url must be defined, not type None")
+
+    if token_path is None:
+        raise TypeError("token_path must be defined, not type None")
+    
     auth_context = get_auth_context(api_key, callback_url)
 
     print('\n**************************************************************\n')
@@ -538,6 +561,12 @@ def client_from_access_functions(api_key, app_secret, token_read_func,
                           need it. For most users, it is advised to use enums
                           to avoid errors.
     '''
+    if api_key is None:
+        raise TypeError("api_key must be defined, not type None")
+
+    if app_secret is None:
+        raise TypeError("app_secret must be defined, not type None")
+
     token = token_read_func()
 
     # Extract metadata and unpack the token, if necessary
@@ -688,6 +717,18 @@ def easy_client(api_key, app_secret, callback_url, token_path, asyncio=False,
                               :func:`client_from_login_flow 
                               <client_from_login_flow>`.
     '''
+    if api_key is None:
+        raise TypeError("api_key must be defined, not type None")
+
+    if app_secret is None:
+        raise TypeError("app_secret must be defined, not type None")
+
+    if callback_url is None:
+        raise TypeError("callback_url must be defined, not type None")
+
+    if token_path is None:
+        raise TypeError("token_path must be defined, not type None")
+    
     if max_token_age is None:
         max_token_age = 0
     if max_token_age < 0:
