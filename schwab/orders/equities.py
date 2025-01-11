@@ -1,8 +1,11 @@
 from enum import Enum
 from schwab.orders.common import Duration, EquityInstruction, OrderStrategyType, OrderType, \
                                  Session, StopType, StopPriceLinkType, StopPriceLinkBasis
+from schwab.orders.generic import OrderBuilder
+
 
 gtc_days_default = 120
+
 
 ##########################################################################
 # Buy orders

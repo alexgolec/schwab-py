@@ -4,7 +4,9 @@ from enum import Enum
 
 from schwab.orders import common
 from schwab.utils import EnumEnforcer
+from schwab.orders.common import Duration
 
+from datetime import datetime, timedelta
 import httpx
 
 
