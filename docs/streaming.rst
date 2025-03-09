@@ -27,10 +27,11 @@ run this outside regular trading hours you may not see anything):
 
   # Assumes you've already created a token. See the authentication page for more
   # information.
-  client = client_from_token_file(
-          token_path='/path/to/token.json',
+  client = easy_client(
           api_key='YOUR_API_KEY',
-          app_secret='YOUR_APP_SECRET')
+          app_secret='YOUR_APP_SECRET',
+          callback_url='https://127.0.0.1',
+          token_path='/path/to/token.json')
   stream_client = StreamClient(client, account_id=1234567890)
 
   async def read_stream():

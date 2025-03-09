@@ -23,7 +23,7 @@ this will likely cause issues with the underlying OAuth2 session management**
   from schwab.auth import client_from_manual_flow
 
   # Follow the instructions on the screen to authenticate your client.
-  c = client_from_manual_flow(
+  c = easy_client(
           api_key='APIKEY',
           app_secret='APP_SECRET',
           callback_url='https://127.0.0.1',
