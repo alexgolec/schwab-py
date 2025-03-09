@@ -17,61 +17,41 @@ plan on distributing your app, or if you plan on running it on a server and
 allowing access to other users, these login flows are not for you.
 
 
----------------
-OAuth Refresher
----------------
+------------------------
+The Quick and Easy Route
+------------------------
 
-*This section is purely for the curious. If you already understand OAuth (wow,
-congrats) or if you don't care and just want to use this package as fast as
-possible, feel free to skip this section. If you encounter any weird behavior, 
-this section may help you understand what's going on.*
+If all you want to do is create a client, you should use 
+:func:`~schwab.auth.easy_client`. This method will attempt to create a client in 
+a way that's appropriate to the context in which you're running:
 
-Webapp authentication is a complex beast. The OAuth protocol was created to 
-allow applications to access one anothers' APIs securely and with the minimum 
-level of trust possible. A full treatise on this topic is well beyond the scope
-of this guide, but in order to alleviate some of the complexity that seems to 
-surround this part of the API, let's give a quick explanation of how OAuth works 
-in the context of Schwab's API.
+ * If you've already got a token at ``token_path``,
+   :func:`load it <schwab.auth.client_from_token_file>` and continue. Otherwise 
+   create a new one.
+ * In desktop environments, :func:`start a web browser 
+   <schwab.auth.client_from_login_flow>` in which you can sign in, and 
+   automatically capture the created token.
+ * In a notebook like Google Colab or Jupyter, instead run the :func:`manual 
+   flow <schwab.auth.client_from_manual_flow>`.
 
-The first thing to understand is that the OAuth webapp flow was created to allow 
-client-side applications consisting of a webapp frontend and a remotely hosted 
-backend to interact with a third party API. Unlike the `backend application flow
-<https://requests-oauthlib.readthedocs.io/en/latest/oauth2_workflow.html
-#backend-application-flow>`__, in which the remotely hosted backend has a secret 
-which allows it to access the API on its own behalf, the webapp flow allows 
-either the webapp frontend or the remotely host backend to access the API *on 
-behalf of its users*.
+Here's how you can use it. If for some reason this doesn't work, please report 
+your issues in the `Discord server <https://discord.gg/BEr6y6Xqyv>`__. See 
+:func:`~schwab.auth.easy_client` for details:
 
-If you've ever installed a GitHub, Facebook, Twitter, GMail, etc. app, you've 
-seen this flow. You click on the "install" link, a login window pops up, you
-enter your password, and you're presented with a page that asks whether you want 
-to grant the app access to your account.
+.. code-block:: python
 
-Here's what's happening under the hood. The window that pops up is the 
-authentication URL, which opens a login page for the target API. The aim is to 
-allow the user to input their username and password without the webapp frontend 
-or the remotely hosted backend seeing it.  On web browsers, this is accomplished 
-using the browser's refusal to send credentials from one domain to another.
+  from schwab.auth import easy_client
 
-Once login here is successful, the API replies with a redirect to a URL that the 
-remotely hosted backend controls. This is the callback URL. This redirect will 
-contain a code which securely identifies the user to the API, embedded in the 
-query of the request.
+  # Follow the instructions on the screen to authenticate your client.
+  c = easy_client(
+          api_key='APIKEY',
+          app_secret='APP_SECRET',
+          callback_url='https://127.0.0.1',
+          token_path='/tmp/token.json')
 
-You might think that code is enough to access the API, and it would be if the 
-API author were willing to sacrifice long-term security. The exact reasons why 
-it doesn't work involve some deep security topics like robustness against replay
-attacks and session duration limitation, but we'll skip them here.
-
-This code is useful only for fetching a token from the authentication endpoint.  
-*This token* is what we want: a secure secret which the client can use to access 
-API endpoints, and can be refreshed over time.
-
-If you've gotten this far and your head isn't spinning, you haven't been paying 
-attention. Security-sensitive protocols can be very complicated, and you should 
-**never** build your own implementation. Fortunately there exist very robust 
-implementations of this flow, and ``schwab-py``'s authentication module makes 
-using them easy.
+  resp = c.get_price_history_every_day('AAPL')
+  assert resp.status_code == httpx.codes.OK
+  history = resp.json()
 
 
 .. _login_flow:
@@ -88,8 +68,8 @@ token.
 .. _manual_login:
 
 If for some reason you cannot open a web browser, such as when running in a 
-cloud environment, this function will guide you through the process of manually 
-creating a token by copy-pasting relevant URLs.
+cloud environment or a notebook, this function will guide you through the 
+process of manually creating a token by copy-pasting relevant URLs.
 
 .. autofunction:: schwab.auth.client_from_manual_flow
 
@@ -202,6 +182,64 @@ rejected with an :ref:`invalid_client error<invalid_client>`. There is currently
 no way to make a refresh token last longer than seven days. Once you start 
 seeing this error, you have no choice but to delete your old token file and 
 create a new one.
+
+
+---------------
+OAuth Refresher
+---------------
+
+*This section is purely for the curious. If you already understand OAuth (wow,
+congrats) or if you don't care and just want to use this package as fast as
+possible, feel free to skip this section. If you encounter any weird behavior, 
+this section may help you understand what's going on.*
+
+Webapp authentication is a complex beast. The OAuth protocol was created to 
+allow applications to access one anothers' APIs securely and with the minimum 
+level of trust possible. A full treatise on this topic is well beyond the scope
+of this guide, but in order to alleviate some of the complexity that seems to 
+surround this part of the API, let's give a quick explanation of how OAuth works 
+in the context of Schwab's API.
+
+The first thing to understand is that the OAuth webapp flow was created to allow 
+client-side applications consisting of a webapp frontend and a remotely hosted 
+backend to interact with a third party API. Unlike the `backend application flow
+<https://requests-oauthlib.readthedocs.io/en/latest/oauth2_workflow.html
+#backend-application-flow>`__, in which the remotely hosted backend has a secret 
+which allows it to access the API on its own behalf, the webapp flow allows 
+either the webapp frontend or the remotely host backend to access the API *on 
+behalf of its users*.
+
+If you've ever installed a GitHub, Facebook, Twitter, GMail, etc. app, you've 
+seen this flow. You click on the "install" link, a login window pops up, you
+enter your password, and you're presented with a page that asks whether you want 
+to grant the app access to your account.
+
+Here's what's happening under the hood. The window that pops up is the 
+authentication URL, which opens a login page for the target API. The aim is to 
+allow the user to input their username and password without the webapp frontend 
+or the remotely hosted backend seeing it.  On web browsers, this is accomplished 
+using the browser's refusal to send credentials from one domain to another.
+
+Once login here is successful, the API replies with a redirect to a URL that the 
+remotely hosted backend controls. This is the callback URL. This redirect will 
+contain a code which securely identifies the user to the API, embedded in the 
+query of the request.
+
+You might think that code is enough to access the API, and it would be if the 
+API author were willing to sacrifice long-term security. The exact reasons why 
+it doesn't work involve some deep security topics like robustness against replay
+attacks and session duration limitation, but we'll skip them here.
+
+This code is useful only for fetching a token from the authentication endpoint.  
+*This token* is what we want: a secure secret which the client can use to access 
+API endpoints, and can be refreshed over time.
+
+If you've gotten this far and your head isn't spinning, you haven't been paying 
+attention. Security-sensitive protocols can be very complicated, and you should 
+**never** build your own implementation. Fortunately there exist very robust 
+implementations of this flow, and ``schwab-py``'s authentication module makes 
+using them easy.
+
 
 
 ---------------
