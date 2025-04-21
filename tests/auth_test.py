@@ -37,7 +37,7 @@ class ClientFromLoginFlowTest(unittest.TestCase):
     @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     @patch('schwab.auth.webbrowser.get', new_callable=MagicMock)
-    @patch('schwab.auth.prompt', MagicMock(return_value=''))
+    @patch('schwab.auth.input', MagicMock(return_value=''))
     @patch('time.time', MagicMock(return_value=MOCK_NOW))
     def test_create_token_file(
             self, mock_webbrowser_get, async_session, sync_session, client):
@@ -71,7 +71,7 @@ class ClientFromLoginFlowTest(unittest.TestCase):
     @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     @patch('schwab.auth.webbrowser.get', new_callable=MagicMock)
-    @patch('schwab.auth.prompt', MagicMock(return_value=''))
+    @patch('schwab.auth.input', MagicMock(return_value=''))
     @patch('time.time', MagicMock(return_value=MOCK_NOW))
     def test_specify_web_browser(
             self, mock_webbrowser_get, async_session, sync_session, client):
@@ -100,7 +100,7 @@ class ClientFromLoginFlowTest(unittest.TestCase):
     @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     @patch('schwab.auth.webbrowser.get', new_callable=MagicMock)
-    @patch('schwab.auth.prompt')
+    @patch('schwab.auth.input')
     @patch('time.time', MagicMock(return_value=MOCK_NOW))
     def test_create_token_file_not_interactive(
             self, mock_prompt,mock_webbrowser_get, async_session, sync_session,
@@ -138,7 +138,7 @@ class ClientFromLoginFlowTest(unittest.TestCase):
     @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     @patch('schwab.auth.webbrowser.get', new_callable=MagicMock)
-    @patch('schwab.auth.prompt', MagicMock(return_value=''))
+    @patch('schwab.auth.input', MagicMock(return_value=''))
     @patch('time.time', MagicMock(return_value=MOCK_NOW))
     def test_create_token_file_root_callback_url(
             self, mock_webbrowser_get, async_session, sync_session, client):
@@ -233,7 +233,7 @@ class ClientFromLoginFlowTest(unittest.TestCase):
     @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     @patch('schwab.auth.webbrowser.get', new_callable=MagicMock)
-    @patch('schwab.auth.prompt', MagicMock(return_value=''))
+    @patch('schwab.auth.input', MagicMock(return_value=''))
     @patch('time.time', MagicMock(return_value=MOCK_NOW))
     def test_time_out_waiting_for_request(
             self, mock_webbrowser_get, async_session, sync_session, client):
@@ -256,7 +256,7 @@ class ClientFromLoginFlowTest(unittest.TestCase):
     @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     @patch('schwab.auth.webbrowser.get', new_callable=MagicMock)
-    @patch('schwab.auth.prompt', MagicMock(return_value=''))
+    @patch('schwab.auth.input', MagicMock(return_value=''))
     @patch('time.time', MagicMock(return_value=MOCK_NOW))
     def test_wait_forever_callback_timeout_equals_none(
             self, mock_webbrowser_get, async_session, sync_session, client):
@@ -278,7 +278,7 @@ class ClientFromLoginFlowTest(unittest.TestCase):
     @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
     @patch('schwab.auth.webbrowser.get', new_callable=MagicMock)
-    @patch('schwab.auth.prompt', MagicMock(return_value=''))
+    @patch('schwab.auth.input', MagicMock(return_value=''))
     @patch('time.time', MagicMock(return_value=MOCK_NOW))
     def test_wait_forever_callback_timeout_equals_zero(
             self, mock_webbrowser_get, async_session, sync_session, client):
@@ -641,7 +641,7 @@ class ClientFromManualFlow(unittest.TestCase):
     @patch('schwab.auth.Client')
     @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
-    @patch('schwab.auth.prompt')
+    @patch('schwab.auth.input')
     @patch('time.time', MagicMock(return_value=MOCK_NOW))
     def test_no_token_file(
             self, prompt_func, async_session, sync_session, client):
@@ -668,7 +668,7 @@ class ClientFromManualFlow(unittest.TestCase):
     @patch('schwab.auth.Client')
     @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
-    @patch('schwab.auth.prompt')
+    @patch('schwab.auth.input')
     @patch('time.time', MagicMock(return_value=MOCK_NOW))
     def test_custom_token_write_func(
             self, prompt_func, async_session, sync_session, client):
@@ -704,7 +704,7 @@ class ClientFromManualFlow(unittest.TestCase):
     @patch('schwab.auth.Client')
     @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
-    @patch('schwab.auth.prompt')
+    @patch('schwab.auth.input')
     @patch('builtins.print')
     @patch('time.time', MagicMock(return_value=MOCK_NOW))
     def test_print_warning_on_http_redirect_uri(
@@ -736,7 +736,7 @@ class ClientFromManualFlow(unittest.TestCase):
     @patch('schwab.auth.Client')
     @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
-    @patch('schwab.auth.prompt')
+    @patch('schwab.auth.input')
     @patch('time.time', MagicMock(return_value=MOCK_NOW))
     def test_enforce_enums_disabled(
             self, prompt_func, async_session, sync_session, client):
@@ -761,7 +761,7 @@ class ClientFromManualFlow(unittest.TestCase):
     @patch('schwab.auth.Client')
     @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
     @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
-    @patch('schwab.auth.prompt')
+    @patch('schwab.auth.input')
     @patch('time.time', MagicMock(return_value=MOCK_NOW))
     def test_enforce_enums_enabled(
             self, prompt_func, async_session, sync_session, client):
@@ -852,7 +852,74 @@ class EasyClientTest(unittest.TestCase):
 
         c = auth.easy_client(API_KEY, APP_SECRET, CALLBACK_URL, self.token_path)
 
-        assert c is mock_client
+        self.assertIs(c, mock_client)
+
+
+    @no_duplicates
+    @patch('schwab.auth.client_from_token_file')
+    @patch('schwab.auth.client_from_login_flow', new_callable=MockOAuthClient)
+    @patch('schwab.auth.client_from_manual_flow', new_callable=MockOAuthClient)
+    @patch('os.getenv', new_callable=MockOAuthClient)
+    @patch('time.time', MagicMock(return_value=MOCK_NOW))
+    def test_running_on_collab_environment(
+            self, getenv, client_from_manual_flow, client_from_login_flow, 
+            client_from_token_file):
+        def do_getenv(flag):
+            assert flag == 'COLAB_RELEASE_TAG'
+            return 'yes'
+        getenv.side_effect = do_getenv
+
+        mock_client = MagicMock()
+        client_from_manual_flow.return_value = mock_client
+
+        c = auth.easy_client(API_KEY, APP_SECRET, CALLBACK_URL, self.token_path)
+        self.assertIs(c, mock_client)
+
+
+    @no_duplicates
+    @patch('schwab.auth.client_from_token_file')
+    @patch('schwab.auth.client_from_login_flow', new_callable=MockOAuthClient)
+    @patch('schwab.auth.client_from_manual_flow', new_callable=MockOAuthClient)
+    @patch('os.getenv', new_callable=MockOAuthClient)
+    @patch('schwab.auth._get_ipython')
+    @patch('time.time', MagicMock(return_value=MOCK_NOW))
+    def test_running_on_ipython_in_notebook_mode(
+            self, get_ipython, getenv, client_from_manual_flow, 
+            client_from_login_flow, client_from_token_file):
+        getenv.return_value = ''
+
+        class ZMQInteractiveShell:
+            pass
+        get_ipython.return_value = ZMQInteractiveShell()
+
+        mock_client = MagicMock()
+        client_from_manual_flow.return_value = mock_client
+
+        c = auth.easy_client(API_KEY, APP_SECRET, CALLBACK_URL, self.token_path)
+        self.assertIs(c, mock_client)
+
+
+    @no_duplicates
+    @patch('schwab.auth.client_from_token_file')
+    @patch('schwab.auth.client_from_login_flow', new_callable=MockOAuthClient)
+    @patch('schwab.auth.client_from_manual_flow', new_callable=MockOAuthClient)
+    @patch('os.getenv', new_callable=MockOAuthClient)
+    @patch('schwab.auth._get_ipython')
+    @patch('time.time', MagicMock(return_value=MOCK_NOW))
+    def test_running_on_ipython_in_something_other_than_notebook_mode(
+            self, get_ipython, getenv, client_from_manual_flow, 
+            client_from_login_flow, client_from_token_file):
+        getenv.return_value = ''
+
+        class NotZMQInteractiveShell:
+            pass
+        get_ipython.return_value = NotZMQInteractiveShell()
+
+        mock_client = MagicMock()
+        client_from_login_flow.return_value = mock_client
+
+        c = auth.easy_client(API_KEY, APP_SECRET, CALLBACK_URL, self.token_path)
+        self.assertIs(c, mock_client)
 
 
     @no_duplicates
@@ -870,7 +937,7 @@ class EasyClientTest(unittest.TestCase):
                 callback_timeout='callback_timeout', interactive='interactive',
                 requested_browser='requested_browser')
 
-        assert c is mock_client
+        self.assertIs(c, mock_client)
 
         client_from_login_flow.assert_called_once_with(
                 API_KEY, APP_SECRET, CALLBACK_URL, self.token_path,
@@ -893,7 +960,7 @@ class EasyClientTest(unittest.TestCase):
 
         c = auth.easy_client(API_KEY, APP_SECRET, CALLBACK_URL, self.token_path)
 
-        assert c is mock_client
+        self.assertIs(c, mock_client)
 
 
     @no_duplicates
@@ -911,7 +978,7 @@ class EasyClientTest(unittest.TestCase):
         c = auth.easy_client(API_KEY, APP_SECRET, CALLBACK_URL, self.token_path,
                              asyncio='asyncio', enforce_enums='enforce_enums')
 
-        assert c is mock_client
+        self.assertIs(c, mock_client)
 
         client_from_token_file.assert_called_once_with(
                 self.token_path, API_KEY, APP_SECRET,
@@ -936,7 +1003,7 @@ class EasyClientTest(unittest.TestCase):
 
         c = auth.easy_client(API_KEY, APP_SECRET, CALLBACK_URL, self.token_path)
 
-        assert c is mock_browser_client
+        self.assertIs(c, mock_browser_client)
 
 
     @no_duplicates
@@ -966,7 +1033,7 @@ class EasyClientTest(unittest.TestCase):
         c = auth.easy_client(API_KEY, APP_SECRET, CALLBACK_URL, self.token_path,
                              max_token_age=None)
 
-        assert c is mock_client
+        self.assertIs(c, mock_client)
 
 
     @no_duplicates
@@ -983,5 +1050,3 @@ class EasyClientTest(unittest.TestCase):
 
         c = auth.easy_client(API_KEY, APP_SECRET, CALLBACK_URL, self.token_path,
                              max_token_age=0)
-
-        assert c is mock_client

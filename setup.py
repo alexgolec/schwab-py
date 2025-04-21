@@ -35,7 +35,6 @@ setuptools.setup(
         'flask',
         'httpx',
         'multiprocess',
-        'prompt_toolkit',
         'psutil',
         'python-dateutil',
         'urllib3',

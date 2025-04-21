@@ -1,5 +1,4 @@
 from authlib.integrations.httpx_client import AsyncOAuth2Client, OAuth2Client
-from prompt_toolkit import prompt
 
 import collections
 import contextlib
@@ -349,7 +348,7 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
         print()
 
         if interactive:
-            prompt('Press ENTER to open the browser. Note you can call ' +
+            input('Press ENTER to open the browser. Note you can call ' +
                   'this method with interactive=False to skip this input.')
 
         controller = webbrowser.get(requested_browser)
@@ -508,7 +507,7 @@ def client_from_manual_flow(api_key, app_secret, callback_url, token_path,
                'and update your callback URL to begin with \'https\' ' +
                'to stop seeing this message.').format(callback_url))
 
-    received_url = prompt('Redirect URL> ').strip()
+    received_url = input('Redirect URL> ').strip()
 
     token_write_func = (
         __make_update_token_func(token_path) if token_write_func is None
@@ -668,6 +667,31 @@ def client_from_received_url(
 # easy_client
 
 
+# TODO: Figure out how to properly mock global objects in unittest. This hack 
+# ensures that the _get_ipython variable is defined so that we can patch is 
+# using module-level patching. This is safe in most contexts, but there are 
+# circumstances where it gets weird like starting an ipython notebook after 
+# schwab-py is loaded.
+try:
+    _get_ipython = get_ipython
+except NameError:
+    _get_ipython = None
+
+
+def __running_in_notebook():
+    # Google Colab
+    if os.getenv('COLAB_RELEASE_TAG'):
+        return True
+
+    # ipython in notebook mode
+    if _get_ipython is not None:
+        shell = _get_ipython().__class__.__name__
+        if shell == 'ZMQInteractiveShell':
+            return True
+
+    return False
+
+
 def easy_client(api_key, app_secret, callback_url, token_path, asyncio=False, 
                 enforce_enums=True, max_token_age=60*60*24*6.5,
                 callback_timeout=300.0, interactive=True,
@@ -748,7 +772,18 @@ def easy_client(api_key, app_secret, callback_url, token_path, asyncio=False,
             logger.info('token too old, proactively creating a new one')
             c = None
 
-    if c is None:
+    # Return early on success
+    if c is not None:
+        return c
+
+    # Detect whether we're running in a notebook
+    if __running_in_notebook():
+        c = client_from_manual_flow(api_key, app_secret, callback_url, 
+                                    token_path, enforce_enums=enforce_enums)
+        logger.info(
+            'Returning client fetched using manual flow, writing' +
+            'token to \'%s\'', token_path)
+    else:
         c = client_from_login_flow(
             api_key, app_secret, callback_url, token_path, asyncio=asyncio,
             enforce_enums=enforce_enums, callback_timeout=callback_timeout,
