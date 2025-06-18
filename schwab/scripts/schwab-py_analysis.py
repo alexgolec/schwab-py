@@ -539,7 +539,7 @@ def main() -> None:
         
         if analysis.is_expired:
             print("\n⚠️  WARNING: Token is expired!")
-            return
+            #return
         elif analysis.should_refresh:
             print(f"\n⚠️  WARNING: Token expires soon (within {analyzer.refresh_threshold} seconds)")
         
