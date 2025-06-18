@@ -9,7 +9,9 @@ Usage:
     python token_analysis.py --check-updates   # Include package update checks
     python token_analysis.py --help            # Show all options
 """
-
+"""
+Contributed by George Neusse 6/2025
+"""
 import argparse
 import json
 import sys
@@ -63,12 +65,17 @@ class PackageVersionChecker:
     
     # Package distributions to check for compatibility analysis
     CRITICAL_PACKAGES = [
-        "authlib",
-        "httpx", 
+        'autopep8',
+        'authlib',
+        'flask',
+        'httpx',
+        'multiprocess',
+        'psutil',
+        'python-dateutil',
+        'urllib3',
+        'websockets',
         "certifi",
-        "urllib3",
-        "requests",
-        "request",
+        "pytest",
         "schwab-py",  # Main Schwab API package
         "packaging",   # Added since we're using it
     ]
@@ -481,8 +488,8 @@ Examples:
     parser.add_argument(
         '--token-path', '-t',
         type=Path,
-        default=Path('token.txt'),
-        help='Path to the token file (default: token.txt)'
+        default=Path('token.json'),
+        help='Path to the token file (default: token.json)'
     )
     
     parser.add_argument(

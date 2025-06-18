@@ -62,6 +62,7 @@ setuptools.setup(
     },
     license='MIT',
     scripts=[
+        'bin/schwab-analysis.py',
         'bin/schwab-order-codegen.py',
         'bin/schwab-generate-token.py',
     ],
