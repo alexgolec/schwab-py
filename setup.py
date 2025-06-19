@@ -60,6 +60,7 @@ setup(
     entry_points={
         'console_scripts': [
             'schwab-analysis = schwab.scripts.schwab_analysis:main',
+            'schwab-refresh-token = schwab.scripts.schwab_refresh_token:main',
             'schwab-fetch-new-token = schwab.scripts.schwab_fetch_new_token:main',
             'schwab-setup-env = schwab.scripts.schwab_setup_env:main',   
             'schwab-package-checker = schwab.scripts.schwab_package_checker:main', 
