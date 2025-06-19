@@ -57,6 +57,7 @@ setuptools.setup(
     entry_points={
         'console_scripts': [
             'schwab-analysis = schwab.scripts.schwab_analysis:main',   
+            'schwab-package-checker = schwab.scripts.schwab_package_checker:main', 
             # these will not compile in the bin directory.  need to be moved to schwab dir
             # but even then they are not executing correctly.  leaving in bin dir.
             #'schwab-order-codegen = schwab.bin.schwab_order_codegen:main',
