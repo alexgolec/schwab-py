@@ -1,3 +1,5 @@
+
+#!/usr/bin/env python
 """
 Token Analysis Module for Schwab API
 

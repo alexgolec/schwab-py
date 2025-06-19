@@ -162,7 +162,7 @@ def test_parse_arguments_defaults(ta, monkeypatch):
     monkeypatch.setattr(sys, "argv", ["prog"])
     args = ta.parse_arguments()
     assert not args.check_updates
-    assert args.token_path == Path("token.txt")
+    assert args.token_path == Path("token.json")
     assert args.timeout == 10
     assert args.refresh_threshold == 300
 
