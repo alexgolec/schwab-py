@@ -476,7 +476,6 @@ def parse_arguments() -> argparse.Namespace:
 Examples:
   %(prog)s                          # Basic token analysis
   %(prog)s --check-updates          # Include package update checks
-  %(prog)s --token-path auth.json   # Use custom token file
   %(prog)s --timeout 15             # Set custom timeout for update checks
         """
     )
@@ -487,12 +486,12 @@ Examples:
         help='Check for available package updates (requires internet connection)'
     )
     
-    parser.add_argument(
-        '--token-path', '-t',
-        type=Path,
-        default=Path('token.json'),
-        help='Path to the token file (default: token.json)'
-    )
+    # parser.add_argument(
+    #     '--token-path', '-t',
+    #     type=Path,
+    #     default=Path('token.json'),
+    #     help='Path to the token file (default: token.json)'
+    # )
     
     parser.add_argument(
         '--timeout',
@@ -529,11 +528,13 @@ def main() -> None:
     import os
     api_key = os.getenv("schwab_api_key")
     app_secret = os.getenv("schwab_app_secret")
+    token_path = os.getenv("schwab_token_path")
     
-    if not api_key or not app_secret:
+    if not api_key or not app_secret or not token_path:
         print("❌ ERROR: Missing required environment variables:")
         print("  - schwab_api_key")
         print("  - schwab_app_secret")
+        print("  - schwab_token_path")
         return
     
     try:
@@ -544,7 +545,7 @@ def main() -> None:
         if args.check_updates:
             analyzer.package_checker.timeout = args.timeout
         
-        analysis = analyzer.analyze_and_print(args.token_path, args.check_updates)
+        analysis = analyzer.analyze_and_print(token_path, args.check_updates)
         
         if analysis.is_expired:
             print("\n⚠️  WARNING: Token is expired!")
@@ -557,7 +558,7 @@ def main() -> None:
         client_start_time = time.perf_counter()
         
         api_tester = SchwabAPITester(api_key, app_secret)
-        client = api_tester.create_client(args.token_path)
+        client = api_tester.create_client(token_path)
         print(f"Client object: {client}")
         
         # Step 3: Test quote retrieval
