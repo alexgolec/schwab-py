@@ -7,8 +7,8 @@ import pytest
 
 def load_module():
     # Dynamically import the schwab-analysis script from the bin directory
-    module_path = Path(__file__).parents[1] / "bin" / "schwab-analysis.py"
-    spec = importlib.util.spec_from_file_location("schwab-analysis", module_path)
+    module_path = Path(__file__).parents[1] / "schwab" /  "schwab_analysis.py"
+    spec = importlib.util.spec_from_file_location("schwab_analysis", module_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module

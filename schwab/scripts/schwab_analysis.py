@@ -12,7 +12,7 @@ Usage:
     python token_analysis.py --help            # Show all options
 """
 """
-Contributed by George Neusse 6/2025
+Contributed by George Neusse 6/2025 Ver. 1.0.0
 """
 import argparse
 import json

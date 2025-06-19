@@ -54,6 +54,15 @@ setuptools.setup(
             'wheel',
         ]
     },
+    entry_points={
+        'console_scripts': [
+            'schwab-analysis = schwab.scripts.schwab_analysis:main',   
+            # these will not compile in the bin directory.  need to be moved to schwab dir
+            # but even then they are not executing correctly.  leaving in bin dir.
+            #'schwab-order-codegen = schwab.bin.schwab_order_codegen:main',
+            #'schwab-generate-token = schwab.bin.schwab_generate_token:main',
+        ],
+    },
     keywords='finance trading equities bonds options research',
     project_urls={
         'Documentation': 'https://schwab-py.readthedocs.io/en/latest/',
@@ -61,10 +70,11 @@ setuptools.setup(
         'Tracker': 'https://github.com/alexgolec/schwab-py/issues',
     },
     license='MIT',
+
     scripts=[
-        'bin/schwab-analysis.py',
         'bin/schwab-order-codegen.py',
         'bin/schwab-generate-token.py',
     ],
+
 )
 

@@ -5,7 +5,7 @@ import sys
 
 import schwab
 
-def main(api_key, app_secret, callback_url, token_path, requested_browser):
+def real_main(api_key, app_secret, callback_url, token_path, requested_browser):
     try:
         schwab.auth.client_from_login_flow(
                 api_key, app_secret, callback_url, token_path,
@@ -20,8 +20,7 @@ def main(api_key, app_secret, callback_url, token_path, requested_browser):
 
     return 0
 
-
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(
             description='Fetch a new token and write it to a file')
 
@@ -40,5 +39,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    sys.exit(main(args.api_key, args.app_secret, args.callback_url,
+    sys.exit(real_main(args.api_key, args.app_secret, args.callback_url,
                   args.token_file, args.browser))
+
+
+if __name__ == '__main__':
+    main()
