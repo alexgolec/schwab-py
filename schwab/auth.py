@@ -494,6 +494,41 @@ def client_from_manual_flow(api_key, app_secret, callback_url, token_path,
             api_key, app_secret, auth_context, received_url, token_write_func, 
             asyncio, enforce_enums)
 
+################################################################################
+# client_from_access_functions_async
+
+async def client_from_access_functions_async(api_key, app_secret, token_read_func,
+                                             token_write_func, asyncio=False,
+                                             enforce_enums=True):
+    '''
+    Async wrapper around client_from_access_functions to be able to use an async token_read_func.
+
+    :param api_key: Your Schwab application's app key.
+    :param app_secret: Application secret. Provided upon :ref:`app approval
+                       <approved_pending>`.
+    :param token_read_func: Async function that takes no arguments and returns a token
+                            object.
+    :param token_write_func: Function that writes the token on update. Will be
+                             called whenever the token is updated, such as when
+                             it is refreshed. See the above-mentioned example
+                             for what parameters this method takes.
+    :param asyncio: If set to ``True``, this will enable async support allowing
+                    the client to be used in an async environment. Defaults to
+                    ``False``
+    :param enforce_enums: Set it to ``False`` to disable the enum checks on ALL
+                          the client methods. Only do it if you know you really
+                          need it. For most users, it is advised to use enums
+                          to avoid errors.
+    '''
+    token = await token_read_func()
+
+    def token_read_func():
+        return token
+
+    return client_from_access_functions(api_key, app_secret, token_read_func, token_write_func, asyncio, enforce_enums)
+
+
+
 
 ################################################################################
 # client_from_access_functions
