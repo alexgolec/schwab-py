@@ -18,12 +18,11 @@ CALLBACK_URL = 'https://redirect.url.com'
 
 class ClientFromAccessFunctionsTest(unittest.IsolatedAsyncioTestCase):
 
-
     def setUp(self):
         self.raw_token = {'token': 'yes'}
         self.token = {
-                'token': self.raw_token,
-                'creation_timestamp': TOKEN_CREATION_TIMESTAMP
+            'token': self.raw_token,
+            'creation_timestamp': TOKEN_CREATION_TIMESTAMP
         }
 
 
@@ -38,8 +37,10 @@ class ClientFromAccessFunctionsTest(unittest.IsolatedAsyncioTestCase):
 
         token_writes = []
 
+
         def token_write_func(token):
             token_writes.append(token)
+
 
         client.return_value = 'returned client'
         self.assertEqual('returned client',
@@ -67,6 +68,7 @@ class ClientFromAccessFunctionsTest(unittest.IsolatedAsyncioTestCase):
             'creation_timestamp': TOKEN_CREATION_TIMESTAMP,
             'token': self.raw_token
         }], token_writes)
+
 
     @no_duplicates
     @patch('schwab.auth.Client')
@@ -79,8 +81,10 @@ class ClientFromAccessFunctionsTest(unittest.IsolatedAsyncioTestCase):
 
         token_writes = []
 
+
         def token_write_func(token):
             token_writes.append(token)
+
 
         client.return_value = 'returned client'
         self.assertEqual('returned client',
@@ -109,6 +113,7 @@ class ClientFromAccessFunctionsTest(unittest.IsolatedAsyncioTestCase):
             'token': self.raw_token
         }], token_writes)
 
+
     @no_duplicates
     @patch('schwab.auth.Client')
     @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
@@ -120,8 +125,10 @@ class ClientFromAccessFunctionsTest(unittest.IsolatedAsyncioTestCase):
 
         token_writes = []
 
+
         def token_write_func(token):
             token_writes.append(token)
+
 
         client.return_value = 'returned client'
         self.assertEqual('returned client',
@@ -132,7 +139,8 @@ class ClientFromAccessFunctionsTest(unittest.IsolatedAsyncioTestCase):
                              token_write_func, enforce_enums=False))
 
         client.assert_called_once_with(
-                API_KEY, _, token_metadata=_, enforce_enums=False)
+            API_KEY, _, token_metadata=_, enforce_enums=False)
+
 
     @no_duplicates
     @patch('schwab.auth.Client')
@@ -145,8 +153,10 @@ class ClientFromAccessFunctionsTest(unittest.IsolatedAsyncioTestCase):
 
         token_writes = []
 
+
         def token_write_func(token):
             token_writes.append(token)
+
 
         client.return_value = 'returned client'
         self.assertEqual('returned client',
@@ -157,5 +167,4 @@ class ClientFromAccessFunctionsTest(unittest.IsolatedAsyncioTestCase):
                              token_write_func))
 
         client.assert_called_once_with(
-                API_KEY, _, token_metadata=_, enforce_enums=True)
-
+            API_KEY, _, token_metadata=_, enforce_enums=True)

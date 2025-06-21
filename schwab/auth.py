@@ -19,7 +19,6 @@ import webbrowser
 from schwab.client import AsyncClient, Client
 from schwab.debug import register_redactions
 
-
 TOKEN_ENDPOINT = 'https://api.schwabapi.com/v1/oauth/token'
 
 
@@ -33,6 +32,8 @@ def __make_update_token_func(token_path):
 
         with open(token_path, 'w') as f:
             json.dump(t, f)
+
+
     return update_token
 
 
@@ -42,6 +43,8 @@ def __token_loader(token_path):
 
         with open(token_path, 'rb') as f:
             return json.load(f)
+
+
     return load_token
 
 
@@ -50,6 +53,8 @@ class TokenMetadata:
     Provides the functionality required to maintain and update our view of the
     token's metadata.
     '''
+
+
     def __init__(self, token, creation_timestamp, unwrapped_token_write_func):
         '''
         :param token: The token to wrap in metadata
@@ -73,6 +78,7 @@ class TokenMetadata:
         # is called.
         self.token = token
 
+
     @classmethod
     def from_loaded_token(cls, token, unwrapped_token_write_func):
         '''
@@ -82,24 +88,28 @@ class TokenMetadata:
         '''
         if 'creation_timestamp' not in token:
             raise ValueError(
-                    'WARNING: The token format has changed since this token '+
-                    'was created. Please delete it and create a new one.')
+                'WARNING: The token format has changed since this token ' +
+                'was created. Please delete it and create a new one.')
 
         return TokenMetadata(
-                token['token'],
-                token['creation_timestamp'],
-                unwrapped_token_write_func)
+            token['token'],
+            token['creation_timestamp'],
+            unwrapped_token_write_func)
+
 
     def token_age(self):
         '''Returns the number of second elapsed since this token was initially 
         created.'''
         return int(time.time()) - self.creation_timestamp
 
+
     def wrapped_token_write_func(self):
         '''
         Returns a version of the unwrapped write function which wraps the token 
         in metadata and updates our view on the most recent token.
         '''
+
+
         def wrapped_token_write_func(token, *args, **kwargs):
             # If the write function is going to raise an exception, let it do so 
             # here before we update our reference to the current token.
@@ -110,7 +120,9 @@ class TokenMetadata:
 
             return ret
 
+
         return wrapped_token_write_func
+
 
     def wrap_token_in_metadata(self, token):
         return {
@@ -133,14 +145,17 @@ def __run_client_from_login_flow_server(
 
     app = flask.Flask(__name__)
 
+
     @app.route(callback_path)
     def handle_token():
         q.put(flask.request.url)
         return 'schwab-py callback received! You may now close this window/tab.'
 
+
     @app.route('/schwab-py-internal/status')
     def status():
         return 'running'
+
 
     if callback_port == 443:
         return
@@ -160,15 +175,18 @@ def __run_client_from_login_flow_server(
 class RedirectTimeoutError(Exception):
     pass
 
+
 class RedirectServerExitedError(Exception):
     pass
 
-# Capture the real time.time so that we can use it in server initialization 
+
+# Capture the real time.time so that we can use it in server initialization
 # while simultaneously mocking it in testing
 __TIME_TIME = time.time
 
+
 def client_from_login_flow(api_key, app_secret, callback_url, token_path,
-                           asyncio=False, enforce_enums=False, 
+                           asyncio=False, enforce_enums=False,
                            token_write_func=None, callback_timeout=300.0,
                            interactive=True, requested_browser=None):
     '''
@@ -249,11 +267,11 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
     if parsed.hostname != '127.0.0.1':
         # TODO: document this error
         raise ValueError(
-                ('Disallowed hostname {}. client_from_login_flow only allows '+
-                 'callback URLs with hostname 127.0.0.1. See here for ' +
-                 'more information: https://schwab-py.readthedocs.io/en/' +
-                 'latest/auth.html#callback-url-advisory').format(
-                     parsed.hostname))
+            ('Disallowed hostname {}. client_from_login_flow only allows ' +
+             'callback URLs with hostname 127.0.0.1. See here for ' +
+             'more information: https://schwab-py.readthedocs.io/en/' +
+             'latest/auth.html#callback-url-advisory').format(
+                parsed.hostname))
 
     callback_port = parsed.port if parsed.port else 443
     callback_path = parsed.path if parsed.path else '/'
@@ -261,8 +279,9 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
     output_queue = multiprocess.Queue()
 
     server = multiprocess.Process(
-            target=__run_client_from_login_flow_server,
-            args=(output_queue, callback_port, callback_path))
+        target=__run_client_from_login_flow_server,
+        args=(output_queue, callback_port, callback_path))
+
 
     # Context manager to kill the server upon completion
     @contextlib.contextmanager
@@ -277,6 +296,7 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
             except psutil.NoSuchProcess:
                 pass
 
+
     with callback_server():
         # Wait until the server successfully starts
         while True:
@@ -284,8 +304,8 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
             if server.exitcode is not None:
                 # TODO: document this error
                 raise RedirectServerExitedError(
-                        'Redirect server exited. Are you attempting to use a ' +
-                        'callback URL without a port number specified?')
+                    'Redirect server exited. Are you attempting to use a ' +
+                    'callback URL without a port number specified?')
 
             import traceback
 
@@ -293,12 +313,12 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
             try:
                 with warnings.catch_warnings():
                     warnings.filterwarnings(
-                            'ignore',
-                            category=urllib3.exceptions.InsecureRequestWarning)
+                        'ignore',
+                        category=urllib3.exceptions.InsecureRequestWarning)
 
                     resp = httpx.get(
-                            'https://127.0.0.1:{}/schwab-py-internal/status'.format(
-                                callback_port), verify=False)
+                        'https://127.0.0.1:{}/schwab-py-internal/status'.format(
+                            callback_port), verify=False)
                 break
             except httpx.ConnectError as e:
                 pass
@@ -326,7 +346,7 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
         print('callback URL, ignoring URL parameters. As a reminder, your callback URL')
         print('is:')
         print()
-        print('>>',callback_url)
+        print('>>', callback_url)
         print()
         print('See here to learn more about self-signed SSL certificates:')
         print('https://schwab-py.readthedocs.io/en/latest/auth.html#ssl-errors')
@@ -362,24 +382,24 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
             # Attempt to fetch from the queue
             try:
                 received_url = output_queue.get(
-                        timeout=min(timeout_time - now, 0.1))
+                    timeout=min(timeout_time - now, 0.1))
                 break
             except queue.Empty:
                 pass
 
         if not received_url:
             raise RedirectTimeoutError(
-                    'Timed out waiting for a post-authorization callback. You '+
-                    'can set a longer timeout by passing a value of ' +
-                    'callback_timeout to client_from_login_flow.')
+                'Timed out waiting for a post-authorization callback. You ' +
+                'can set a longer timeout by passing a value of ' +
+                'callback_timeout to client_from_login_flow.')
 
         token_write_func = (
             __make_update_token_func(token_path) if token_write_func is None
             else token_write_func)
 
         return client_from_received_url(
-                api_key, app_secret, auth_context, received_url, 
-                token_write_func, asyncio, enforce_enums)
+            api_key, app_secret, auth_context, received_url,
+            token_write_func, asyncio, enforce_enums)
 
 
 ################################################################################
@@ -449,7 +469,7 @@ def client_from_manual_flow(api_key, app_secret, callback_url, token_path,
                           to avoid errors.
     '''
     get_logger().info('Creating new token with callback URL \'%s\' ' +
-                       'and token path \'%s\'', callback_url, token_path)
+                      'and token path \'%s\'', callback_url, token_path)
 
     auth_context = get_auth_context(api_key, callback_url)
 
@@ -491,8 +511,9 @@ def client_from_manual_flow(api_key, app_secret, callback_url, token_path,
         else token_write_func)
 
     return client_from_received_url(
-            api_key, app_secret, auth_context, received_url, token_write_func, 
-            asyncio, enforce_enums)
+        api_key, app_secret, auth_context, received_url, token_write_func,
+        asyncio, enforce_enums)
+
 
 ################################################################################
 # client_from_access_functions_async
@@ -522,12 +543,12 @@ async def client_from_access_functions_async(api_key, app_secret, token_read_fun
     '''
     token = await token_read_func()
 
+
     def token_read_func():
         return token
 
+
     return client_from_access_functions(api_key, app_secret, token_read_func, token_write_func, asyncio, enforce_enums)
-
-
 
 
 ################################################################################
@@ -586,6 +607,8 @@ def client_from_access_functions(api_key, app_secret, token_read_func,
     if asyncio:
         async def oauth_client_update_token(t, *args, **kwargs):
             wrapped_token_write_func(t, *args, **kwargs)  # pragma: no cover
+
+
         session_class = AsyncOAuth2Client
         client_class = AsyncClient
     else:
@@ -610,7 +633,8 @@ def client_from_access_functions(api_key, app_secret, token_read_func,
 
 
 AuthContext = collections.namedtuple(
-        'AuthContext', ['callback_url', 'authorization_url', 'state'])
+    'AuthContext', ['callback_url', 'authorization_url', 'state'])
+
 
 def get_auth_context(api_key, callback_url, state=None):
     oauth = OAuth2Client(api_key, redirect_uri=callback_url)
@@ -622,7 +646,7 @@ def get_auth_context(api_key, callback_url, state=None):
 
 
 def client_from_received_url(
-        api_key, app_secret, auth_context, received_url, token_write_func, 
+        api_key, app_secret, auth_context, received_url, token_write_func,
         asyncio=False, enforce_enums=True):
     # XXX: The AuthContext must be serializable, which means the original 
     #      OAuth2Client created in get_auth_context cannot be passed around. 
@@ -651,6 +675,8 @@ def client_from_received_url(
     if asyncio:
         async def oauth_client_update_token(t, *args, **kwargs):
             token_write_func(t, *args, **kwargs)  # pragma: no cover
+
+
         session_class = AsyncOAuth2Client
         client_class = AsyncClient
     else:
@@ -698,8 +724,8 @@ def __running_in_notebook():
     return False
 
 
-def easy_client(api_key, app_secret, callback_url, token_path, asyncio=False, 
-                enforce_enums=True, max_token_age=60*60*24*6.5,
+def easy_client(api_key, app_secret, callback_url, token_path, asyncio=False,
+                enforce_enums=True, max_token_age=60 * 60 * 24 * 6.5,
                 callback_timeout=300.0, interactive=True,
                 requested_browser=None):
     '''
@@ -772,7 +798,7 @@ def easy_client(api_key, app_secret, callback_url, token_path, asyncio=False,
 
     # Detect whether we're running in a notebook
     if __running_in_notebook():
-        c = client_from_manual_flow(api_key, app_secret, callback_url, 
+        c = client_from_manual_flow(api_key, app_secret, callback_url,
                                     token_path, enforce_enums=enforce_enums)
         logger.info(
             'Returning client fetched using manual flow, writing' +
