@@ -463,3 +463,100 @@ def bear_put_vertical_close(
                 OptionInstruction.BUY_TO_CLOSE, short_put_symbol, quantity)
             .add_option_leg(
                 OptionInstruction.SELL_TO_CLOSE, long_put_symbol, quantity))
+
+def short_straddle_open(
+        short_call_symbol, short_put_symbol, quantity, net_credit):
+    '''
+    Returns a pre-filled :class:`~schwab.orders.generic.OrderBuilder` that opens a
+    short straddle.
+    '''
+    from schwab.orders.common import OptionInstruction, OrderType, OrderStrategyType
+    from schwab.orders.common import ComplexOrderStrategyType
+    call_strike = OptionSymbol.parse_symbol(short_call_symbol).strike_price
+    put_strike = OptionSymbol.parse_symbol(short_put_symbol).strike_price
+    if call_strike != put_strike:
+        raise ValueError(
+            f'Short straddle strikes must be the same. Call: {call_strike} Put: {put_strike}')
+
+    return (__base_builder()
+            .set_order_type(OrderType.NET_CREDIT)
+            .set_complex_order_strategy_type(ComplexOrderStrategyType.STRADDLE)
+            .set_price(net_credit)
+            .set_quantity(quantity)
+            .set_order_strategy_type(OrderStrategyType.SINGLE)
+            .add_option_leg(
+                OptionInstruction.SELL_TO_OPEN, short_call_symbol, quantity)
+            .add_option_leg(
+                OptionInstruction.SELL_TO_OPEN, short_put_symbol, quantity))
+
+def short_straddle_close(
+        short_call_symbol, short_put_symbol, quantity, net_debit):
+    '''
+    Returns a pre-filled :class:`~schwab.orders.generic.OrderBuilder` that closes a
+    short straddle.
+    '''
+    from schwab.orders.common import OptionInstruction, OrderType, OrderStrategyType
+    from schwab.orders.common import ComplexOrderStrategyType
+    call_strike = OptionSymbol.parse_symbol(short_call_symbol).strike_price
+    put_strike = OptionSymbol.parse_symbol(short_put_symbol).strike_price
+    if call_strike != put_strike:
+        raise ValueError(
+            f'Short straddle strikes must be the same. Call: {call_strike} Put: {put_strike}')
+    return (__base_builder()
+            .set_order_type(OrderType.NET_DEBIT)
+            .set_complex_order_strategy_type(ComplexOrderStrategyType.STRADDLE)
+            .set_price(net_debit)
+            .set_quantity(quantity)
+            .set_order_strategy_type(OrderStrategyType.SINGLE)
+            .add_option_leg(
+                OptionInstruction.BUY_TO_CLOSE, short_call_symbol, quantity)
+            .add_option_leg(
+                OptionInstruction.BUY_TO_CLOSE, short_put_symbol, quantity))
+
+def long_straddle_open(
+        long_call_symbol, long_put_symbol, quantity, net_debit):
+    '''
+    Returns a pre-filled :class:`~schwab.orders.generic.OrderBuilder` that opens a
+    long straddle.
+    '''
+    call_strike = OptionSymbol.parse_symbol(long_call_symbol).strike_price
+    put_strike = OptionSymbol.parse_symbol(long_put_symbol).strike_price
+    if call_strike != put_strike:
+        raise ValueError(
+            f'Long straddle strikes must be the same. Call: {call_strike} Put: {put_strike}')
+    from schwab.orders.common import OptionInstruction, OrderType, OrderStrategyType
+    from schwab.orders.common import ComplexOrderStrategyType
+    return (__base_builder()
+            .set_order_type(OrderType.NET_DEBIT)
+            .set_complex_order_strategy_type(ComplexOrderStrategyType.STRADDLE)
+            .set_price(net_debit)
+            .set_quantity(quantity)
+            .set_order_strategy_type(OrderStrategyType.SINGLE)
+            .add_option_leg(
+                OptionInstruction.BUY_TO_OPEN, long_call_symbol, quantity)
+            .add_option_leg(
+                OptionInstruction.BUY_TO_OPEN, long_put_symbol, quantity))
+
+def long_straddle_close(
+        long_call_symbol, long_put_symbol, quantity, net_credit):
+    '''
+    Returns a pre-filled :class:`~schwab.orders.generic.OrderBuilder` that closes a
+    long straddle.
+    '''
+    call_strike = OptionSymbol.parse_symbol(long_call_symbol).strike_price
+    put_strike = OptionSymbol.parse_symbol(long_put_symbol).strike_price
+    if call_strike != put_strike:
+        raise ValueError(
+            f'Long straddle strikes must be the same. Call: {call_strike} Put: {put_strike}')
+    from schwab.orders.common import OptionInstruction, OrderType, OrderStrategyType
+    from schwab.orders.common import ComplexOrderStrategyType
+    return (__base_builder()
+            .set_order_type(OrderType.NET_CREDIT)
+            .set_complex_order_strategy_type(ComplexOrderStrategyType.STRADDLE)
+            .set_price(net_credit)
+            .set_quantity(quantity)
+            .set_order_strategy_type(OrderStrategyType.SINGLE)
+            .add_option_leg(
+                OptionInstruction.SELL_TO_CLOSE, long_call_symbol, quantity)
+            .add_option_leg(
+                OptionInstruction.SELL_TO_CLOSE, long_put_symbol, quantity))
