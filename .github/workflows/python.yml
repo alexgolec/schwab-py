@@ -17,6 +17,10 @@ jobs:
           toxenv: py311
         - version: "3.12"
           toxenv: py312
+        - version: "3.13"
+          toxenv: py313
+        - version: "3.14-dev"
+          toxenv: py314
     runs-on: ${{ matrix.platform }}
 
     steps:
