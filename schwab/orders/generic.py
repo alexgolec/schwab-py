@@ -4,7 +4,9 @@ from enum import Enum
 
 from schwab.orders import common
 from schwab.utils import EnumEnforcer
+from schwab.orders.common import Duration
 
+from datetime import datetime, timedelta
 import httpx
 
 
@@ -109,6 +111,45 @@ class OrderBuilder(EnumEnforcer):
         Clear the order duration.
         '''
         self._duration = None
+        return self
+
+    def _get_weekday(self, days_from_now):
+        """
+        Get the first weekday (Monday to Friday) that is `days_from_now` days
+        from today. If the resulting day falls on a weekend, adjust to the
+        following Monday. The date always uses the time "20:00:00+0000".
+        """
+        target_date = datetime.utcnow() + timedelta(days=days_from_now)
+
+        # If the day is Saturday (5) or Sunday (6), adjust to Monday
+        if target_date.weekday() == 5:  # Saturday
+            target_date += timedelta(days=2)
+        elif target_date.weekday() == 6:  # Sunday
+            target_date += timedelta(days=1)
+
+        # Set the time to 20:00:00 UTC
+        target_date = target_date.replace(hour=20, minute=0, second=0, microsecond=0)
+        return target_date
+
+    def set_cancel_date(self, date_input, duration):
+        """
+        Set the date. The date can be passed as either a `datetime` object
+        or an `int` (representing days from today). The date is formatted
+        as an ISO 8601 string with the fixed time "20:00:00+0000".
+        """
+        if not (duration == Duration.GOOD_TILL_CANCEL):
+            return self
+
+        if isinstance(date_input, datetime):
+            date = date_input
+        elif isinstance(date_input, int):
+            date = self._get_weekday(days_from_now=date_input)
+        else:
+            raise ValueError("date_input must be a datetime object or an integer (days from today).")
+
+        # Set the time to 20:00:00 UTC
+        date = date.replace(hour=20, minute=0, second=0, microsecond=0)
+        self._cancelTime = date.strftime("%Y-%m-%dT%H:%M:%S+0000")
         return self
 
     # OrderType
