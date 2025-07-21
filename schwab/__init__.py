@@ -1,3 +1,6 @@
+# Default base URL for Schwab API
+DEFAULT_BASE_URL = 'https://api.schwabapi.com'
+
 from . import auth
 from . import client
 #from . import contrib

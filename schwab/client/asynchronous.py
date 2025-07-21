@@ -14,7 +14,7 @@ class AsyncClient(BaseClient):
         await self.session.aclose()
 
     async def _get_request(self, path, params):
-        dest = 'https://api.schwabapi.com' + path
+        dest = self.base_url + path
 
         req_num = self._req_num()
         self.logger.debug('Req %s: GET to %s, params=%s',
@@ -26,7 +26,7 @@ class AsyncClient(BaseClient):
         return resp
 
     async def _post_request(self, path, data):
-        dest = 'https://api.schwabapi.com' + path
+        dest = self.base_url + path
 
         req_num = self._req_num()
         self.logger.debug('Req %s: POST to %s, json=%s',
@@ -38,7 +38,7 @@ class AsyncClient(BaseClient):
         return resp
 
     async def _put_request(self, path, data):
-        dest = 'https://api.schwabapi.com' + path
+        dest = self.base_url + path
 
         req_num = self._req_num()
         self.logger.debug('Req %s: PUT to %s, json=%s',
@@ -50,7 +50,7 @@ class AsyncClient(BaseClient):
         return resp
 
     async def _delete_request(self, path):
-        dest = 'https://api.schwabapi.com' + path
+        dest = self.base_url + path
 
         req_num = self._req_num()
         self.logger.debug('Req %s: DELETE to %s', req_num, dest)
