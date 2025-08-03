@@ -41,7 +41,8 @@ setuptools.setup(
         'python-dateutil',
         'tenacity>=8.2.0',
         'urllib3',
-        'websockets'
+        'websockets',
+        'apscheduler>=3.10.0'
     ],
     extras_require={
         'dev': [
