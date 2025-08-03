@@ -39,7 +39,8 @@ setuptools.setup(
         'psutil',
         'python-dateutil',
         'urllib3',
-        'websockets'
+        'websockets',
+        'apscheduler>=3.10.0'
     ],
     extras_require={
         'dev': [
