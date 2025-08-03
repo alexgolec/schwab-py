@@ -33,6 +33,7 @@ setuptools.setup(
         'autopep8',
         'authlib>=1.6.0',
         'certifi>=2025.6.15',
+        'cryptography>=40.0.0',
         'flask',
         'httpx>=0.28.1',
         'multiprocess',
@@ -53,6 +54,13 @@ setuptools.setup(
             'sphinx_rtd_theme',
             'twine',
             'wheel',
+        ],
+        'fastapi': [
+            'fastapi>=0.100.0',
+            'uvicorn[standard]>=0.22.0',
+        ],
+        'security': [
+            'bandit>=1.7.0',
         ]
     },
     keywords='finance trading equities bonds options research',
