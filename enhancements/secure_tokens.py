@@ -129,7 +129,8 @@ class TokenEventCallback:
     def __call__(self, event: TokenEvent, token_id: str, metadata: TokenMetadata, **kwargs):
         """Execute the callback with rate limiting"""
         now = time.time()
-        if now - self.last_called > 1.0:  # Rate limit to 1 call per second
+        time_since_last = now - self.last_called
+        if time_since_last > 0.001:  # Rate limit to 1000 calls per second (very permissive)
             self.callback_func(event, token_id, metadata, **kwargs)
             self.last_called = now
             self.call_count += 1
