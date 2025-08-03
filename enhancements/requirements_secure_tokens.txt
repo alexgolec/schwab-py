@@ -1,0 +1,26 @@
+# Secure Token Management System Dependencies
+# Agent 6: Security & Token Specialist
+
+# Core cryptography for token encryption
+cryptography>=41.0.0
+
+# Keyring for secure credential storage
+keyring>=24.0.0
+
+# Process and system utilities
+psutil>=5.9.0
+
+# Testing dependencies
+pytest>=7.0.0
+pytest-cov>=4.0.0
+
+# Optional: Hardware Security Module support
+# pyscard>=2.0.0  # For smart card/HSM integration
+# pkcs11>=0.7.0   # For PKCS#11 HSM support
+
+# Optional: Database support (SQLite is built-in)
+# sqlalchemy>=2.0.0  # For additional database backends
+
+# Optional: Monitoring and logging
+# prometheus-client>=0.17.0  # For metrics collection
+# structlog>=23.0.0  # For structured logging 
