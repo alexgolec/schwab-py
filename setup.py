@@ -38,6 +38,7 @@ setuptools.setup(
         'multiprocess',
         'psutil',
         'python-dateutil',
+        'tenacity>=8.2.0',
         'urllib3',
         'websockets'
     ],
