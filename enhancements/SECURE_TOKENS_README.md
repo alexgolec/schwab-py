@@ -2,586 +2,530 @@
 
 **Agent 6: Security & Token Specialist**
 
-A bulletproof OAuth token lifecycle management system for high-availability trading services.
+Bulletproof OAuth token lifecycle management system for high-availability trading services.
 
-## Features
+## 🚀 Features
 
-### 🔐 Security Features
-- **Encrypted Storage**: All tokens encrypted at rest using Fernet (AES-256)
-- **Memory Protection**: Token decryption only in memory, never logged
-- **HSM Integration**: Hardware Security Module support for production
-- **Token Blacklisting**: Revocation and blacklisting capabilities
-- **Zero-Downtime Rotation**: Seamless token rotation without service interruption
+### 🔐 Security
+- **Encrypted Storage**: All tokens encrypted at rest using Fernet (AES-128-CBC)
+- **Memory Safety**: Token decryption only in memory, never logged
+- **HSM Integration**: Support for Hardware Security Modules in production
+- **Token Blacklisting**: Comprehensive token revocation and blacklisting
+- **Environment Key Support**: Secure key management via environment variables
 
 ### 🔄 Lifecycle Management
-- **Automatic Refresh**: Proactive refresh 24 hours before expiration
-- **Health Monitoring**: Comprehensive health checks and monitoring
-- **Recovery Mechanisms**: Corrupted storage recovery capabilities
-- **Multi-User Support**: Per-user token isolation
+- **Automatic Refresh**: Tokens refreshed 24 hours before expiration
+- **Zero-Downtime Rotation**: Seamless token rotation without service interruption
+- **Background Processing**: Non-blocking token refresh in background threads
+- **Retry Logic**: Exponential backoff for failed refresh attempts
 
 ### 💾 Storage Backends
-- **Encrypted Files**: File-based encrypted storage
-- **Keyring**: System keyring integration
-- **SQLite Database**: Encrypted database storage
-- **HSM**: Hardware Security Module (placeholder for production)
+- **Keyring**: System-level secure credential storage (macOS Keychain, Windows Credential Manager, Linux Secret Service)
+- **Encrypted Files**: Local encrypted JSON files with metadata
+- **SQLite Database**: Relational storage with event tracking
+- **Extensible**: Easy to add new storage backends
 
-### 🔌 Integration Features
-- **Event System**: Token lifecycle events for other agents
-- **Scheduler Integration**: Agent 9 (scheduler) event notifications
-- **Multi-Agent Support**: Works with all other agents transparently
-- **API Compatibility**: Drop-in replacement for existing token systems
+### 🛠️ Recovery & Monitoring
+- **Corruption Recovery**: Automatic recovery from corrupted storage
+- **Health Checks**: Comprehensive system health monitoring
+- **Event System**: Rich event system for Agent 9 (scheduler) integration
+- **Backup Tokens**: In-memory backup for critical recovery scenarios
 
-## Quick Start
+## 📦 Installation
 
-### Basic Usage
-
-```python
-from enhancements.secure_tokens import SecureTokenManager, StorageBackend
-
-# Create token manager
-token_manager = SecureTokenManager(
-    storage_backend=StorageBackend.ENCRYPTED_FILE,
-    storage_config={'storage_dir': './secure_tokens'},
-    enable_auto_refresh=True
-)
-
-# Store a token
-token_id = token_manager.store_token(
-    token_data=b"your_oauth_token_data",
-    api_key="your_api_key",
-    user_id="user_123"
-)
-
-# Retrieve a token
-token_data = token_manager.retrieve_token(token_id)
-
-# Clean up
-token_manager.shutdown()
-```
-
-### Advanced Configuration
-
-```python
-from enhancements.secure_tokens import (
-    SecureTokenManager, 
-    StorageBackend,
-    TokenEventCallback,
-    log_token_event
-)
-
-# Create with custom configuration
-token_manager = SecureTokenManager(
-    storage_backend=StorageBackend.SQLITE,
-    storage_config={'db_path': './tokens.db'},
-    refresh_threshold_hours=12,  # Refresh 12 hours before expiry
-    max_concurrent_refreshes=10,
-    enable_auto_refresh=True,
-    event_callbacks=[TokenEventCallback(log_token_event)]
-)
-
-# Store with tags
-token_id = token_manager.store_token(
-    token_data=b"token_data",
-    api_key="api_key",
-    user_id="user_123",
-    tags={"production", "high_priority"}
-)
-```
-
-## Storage Backends
-
-### Encrypted File Backend
-```python
-# File-based encrypted storage
-token_manager = SecureTokenManager(
-    storage_backend=StorageBackend.ENCRYPTED_FILE,
-    storage_config={'storage_dir': './secure_tokens'}
-)
-```
-
-### Keyring Backend
-```python
-# System keyring storage
-token_manager = SecureTokenManager(
-    storage_backend=StorageBackend.KEYRING,
-    storage_config={'service_name': 'schwab_secure_tokens'}
-)
-```
-
-### SQLite Backend
-```python
-# Encrypted database storage
-token_manager = SecureTokenManager(
-    storage_backend=StorageBackend.SQLITE,
-    storage_config={'db_path': './tokens.db'}
-)
-```
-
-### HSM Backend (Production)
-```python
-# Hardware Security Module (placeholder)
-token_manager = SecureTokenManager(
-    storage_backend=StorageBackend.HSM,
-    storage_config={'hsm_config': {
-        'provider': 'your_hsm_provider',
-        'key_id': 'your_key_id'
-    }}
-)
-```
-
-## Token Operations
-
-### Store Token
-```python
-# Basic storage
-token_id = token_manager.store_token(
-    token_data=b"oauth_token_data",
-    api_key="api_key_123",
-    user_id="user_456"
-)
-
-# With custom token ID
-token_id = token_manager.store_token(
-    token_data=b"token_data",
-    api_key="api_key",
-    user_id="user_123",
-    token_id="custom_token_id",
-    tags={"production", "trading"}
-)
-```
-
-### Retrieve Token
-```python
-# Retrieve token data
-token_data = token_manager.retrieve_token(token_id)
-
-# Get metadata
-metadata = token_manager.get_token_metadata(token_id)
-print(f"Token age: {metadata.token_age()} seconds")
-print(f"Refresh count: {metadata.refresh_count}")
-print(f"Status: {metadata.status}")
-```
-
-### Token Rotation
-```python
-# Zero-downtime token rotation
-new_token_data = b"new_oauth_token_data"
-success = token_manager.rotate_token(token_id, new_token_data)
-
-if success:
-    print("Token rotated successfully")
-else:
-    print("Token rotation failed")
-```
-
-### Token Revocation
-```python
-# Revoke and blacklist token
-success = token_manager.revoke_token(
-    token_id, 
-    reason="Security breach detected"
-)
-
-if success:
-    print("Token revoked and blacklisted")
-```
-
-### Token Recovery
-```python
-# Recover from corrupted storage
-backup_token_data = b"backup_token_data"
-success = token_manager.recover_corrupted_token(
-    token_id, 
-    backup_token_data
-)
-
-if success:
-    print("Token recovered successfully")
-```
-
-## Event System
-
-### Event Callbacks
-```python
-def my_token_event_callback(event, token_id, metadata, **kwargs):
-    print(f"Token event: {event.value} for {token_id}")
-    if event == TokenEvent.REFRESHED:
-        print(f"Token {token_id} was refreshed")
-    elif event == TokenEvent.REVOKED:
-        print(f"Token {token_id} was revoked: {kwargs.get('reason')}")
-
-# Create token manager with callback
-token_manager = SecureTokenManager(
-    storage_backend=StorageBackend.ENCRYPTED_FILE,
-    storage_config={'storage_dir': './tokens'},
-    event_callbacks=[TokenEventCallback(my_token_event_callback)]
-)
-```
-
-### Built-in Event Callbacks
-```python
-from enhancements.secure_tokens import (
-    log_token_event,
-    notify_scheduler_event,
-    security_audit_event
-)
-
-# Multiple callbacks
-token_manager = SecureTokenManager(
-    storage_backend=StorageBackend.ENCRYPTED_FILE,
-    storage_config={'storage_dir': './tokens'},
-    event_callbacks=[
-        TokenEventCallback(log_token_event),
-        TokenEventCallback(notify_scheduler_event),
-        TokenEventCallback(security_audit_event)
-    ]
-)
-```
-
-## Multi-User Support
-
-### User Isolation
-```python
-# Store tokens for different users
-user1_token = token_manager.store_token(
-    b"user1_token_data",
-    "api_key_1",
-    "user_1"
-)
-
-user2_token = token_manager.store_token(
-    b"user2_token_data", 
-    "api_key_2",
-    "user_2"
-)
-
-# List tokens for specific user
-user1_tokens = token_manager.list_tokens(user_id="user_1")
-user2_tokens = token_manager.list_tokens(user_id="user_2")
-
-print(f"User 1 tokens: {user1_tokens}")
-print(f"User 2 tokens: {user2_tokens}")
-```
-
-## Health Monitoring
-
-### Health Check
-```python
-# Comprehensive health check
-health_status = token_manager.health_check()
-
-print(f"Overall healthy: {health_status['overall_healthy']}")
-print(f"Backend healthy: {health_status['backend_healthy']}")
-print(f"Encryption healthy: {health_status['encryption_healthy']}")
-print(f"Cache size: {health_status['cache_size']}")
-print(f"Blacklist size: {health_status['blacklist_size']}")
-print(f"Active refreshes: {health_status['active_refreshes']}")
-```
-
-### Background Monitoring
-```python
-# Token manager automatically performs health checks
-# and monitors token expiration in the background
-
-# Health checks every 5 minutes
-# Auto-refresh checks every hour
-# Background threads handle all monitoring
-```
-
-## Security Considerations
-
-### Encryption
-- All tokens encrypted at rest using Fernet (AES-256)
-- Encryption keys never logged or stored in plain text
-- Support for password-based key derivation (PBKDF2)
-- HSM integration for production environments
-
-### Access Control
-- Token blacklisting for revocation
-- Per-user token isolation
-- Concurrent access protection
-- Memory-only token decryption
-
-### Audit Trail
-- Comprehensive event logging
-- Token lifecycle tracking
-- Security event notifications
-- Audit callback system
-
-## Integration with Other Agents
-
-### Agent 2 (Secure Authentication)
-```python
-# Works seamlessly with Agent 2's secure authentication
-# Tokens are automatically managed and refreshed
-# No changes needed to existing authentication flow
-```
-
-### Agent 7 (Per-User Isolation)
-```python
-# Supports Agent 7's per-user token isolation
-# Each user's tokens are completely isolated
-# User-specific token listing and management
-```
-
-### Agent 9 (Scheduler)
-```python
-# Emits events for Agent 9 (scheduler)
-# Automatic refresh scheduling
-# Token lifecycle event notifications
-```
-
-## Testing
-
-### Run Tests
-```bash
-# Run comprehensive test suite
-python -m pytest tests/test_secure_tokens.py -v
-
-# Run with coverage
-python -m pytest tests/test_secure_tokens.py --cov=enhancements.secure_tokens
-
-# Run specific test categories
-python -m pytest tests/test_secure_tokens.py::TestSecurityFeatures -v
-```
-
-### Test Categories
-- **TokenMetadata**: Metadata creation and serialization
-- **StorageBackends**: All storage backend implementations
-- **SecureTokenManager**: Core token management functionality
-- **SecurityFeatures**: Security and penetration testing
-- **IntegrationFeatures**: Multi-agent integration
-- **ErrorHandling**: Error handling and edge cases
-
-## Performance Considerations
-
-### Caching
-- In-memory token cache for performance
-- Configurable cache size limits
-- Automatic cache cleanup
-
-### Concurrency
-- Thread-safe operations
-- Configurable concurrent refresh limits
-- Background monitoring threads
-
-### Storage Optimization
-- Efficient encrypted storage
-- Minimal metadata overhead
-- Configurable storage backends
-
-## Production Deployment
-
-### Environment Setup
 ```bash
 # Install dependencies
 pip install -r enhancements/requirements_secure_tokens.txt
 
-# Set up storage directory
-mkdir -p /var/secure/tokens
-chmod 700 /var/secure/tokens
-
-# Configure logging
-export LOG_LEVEL=INFO
+# Set encryption key (optional)
+export SCHWAB_ENCRYPTION_KEY="your_base64_encoded_key_here"
 ```
 
-### Configuration
+## 🚀 Quick Start
+
+### Basic Usage
+
 ```python
-# Production configuration
-token_manager = SecureTokenManager(
-    storage_backend=StorageBackend.HSM,  # Use HSM in production
-    storage_config={'hsm_config': {
-        'provider': 'your_hsm_provider',
-        'key_id': 'production_key_id'
-    }},
-    refresh_threshold_hours=24,
-    max_concurrent_refreshes=20,
-    enable_auto_refresh=True,
-    event_callbacks=[
-        TokenEventCallback(log_token_event),
-        TokenEventCallback(security_audit_event)
-    ]
+from enhancements.secure_tokens import SecureTokenManager, KeyringStorageBackend
+
+# Create manager with keyring storage
+manager = SecureTokenManager(
+    storage_backend=KeyringStorageBackend(),
+    refresh_threshold_hours=24
+)
+
+# Store a token
+token_data = {
+    'access_token': 'your_access_token',
+    'refresh_token': 'your_refresh_token',
+    'token_type': 'Bearer',
+    'expires_at': time.time() + 3600,  # 1 hour from now
+    'creation_timestamp': time.time()
+}
+
+success = manager.store_token('user123', token_data)
+
+# Retrieve token
+token = manager.get_token('user123')
+
+# Refresh token
+manager.refresh_token('user123')
+
+# Check token health
+health = manager.get_token_health('user123')
+print(f"Token valid: {health['is_valid']}")
+print(f"Time to expiry: {health['time_to_expiry']} seconds")
+```
+
+### Global Manager
+
+```python
+from enhancements.secure_tokens import (
+    get_global_token_manager,
+    get_user_token,
+    store_user_token,
+    refresh_user_token
+)
+
+# Use global manager (automatically created)
+manager = get_global_token_manager()
+
+# Convenience functions for other agents
+store_user_token('user123', token_data)
+token = get_user_token('user123')
+refresh_user_token('user123')
+```
+
+## 💾 Storage Backends
+
+### Keyring Storage (Default)
+
+```python
+from enhancements.secure_tokens import KeyringStorageBackend
+
+backend = KeyringStorageBackend(service_name="my_app_tokens")
+manager = SecureTokenManager(storage_backend=backend)
+```
+
+**Features:**
+- Uses system keychain (macOS Keychain, Windows Credential Manager, Linux Secret Service)
+- No files created on disk
+- Automatic credential management
+- Limited listing capabilities
+
+### Encrypted File Storage
+
+```python
+from enhancements.secure_tokens import EncryptedFileStorageBackend
+
+backend = EncryptedFileStorageBackend(storage_dir="./secure_tokens")
+manager = SecureTokenManager(storage_backend=backend)
+```
+
+**Features:**
+- Local encrypted JSON files
+- Full user listing support
+- File-based backup and recovery
+- Human-readable metadata
+
+### Database Storage
+
+```python
+from enhancements.secure_tokens import DatabaseStorageBackend
+
+backend = DatabaseStorageBackend(db_path="./tokens.db")
+manager = SecureTokenManager(storage_backend=backend)
+```
+
+**Features:**
+- SQLite database with event tracking
+- Transaction support
+- Token revocation tracking
+- Rich metadata storage
+
+## 📡 Event System
+
+The system emits rich events for integration with Agent 9 (scheduler):
+
+```python
+from enhancements.secure_tokens import TokenEvent, TokenEventType
+
+def token_event_callback(event: TokenEvent):
+    print(f"Token event: {event.event_type.value}")
+    print(f"User: {event.user_id}")
+    print(f"Timestamp: {event.timestamp}")
+    print(f"Metadata: {event.metadata}")
+
+# Register callback
+manager = SecureTokenManager(event_callbacks=[token_event_callback])
+```
+
+**Event Types:**
+- `TOKEN_CREATED`: New token stored
+- `TOKEN_REFRESHED`: Token refreshed
+- `TOKEN_EXPIRED`: Token expired
+- `TOKEN_REVOKED`: Token revoked
+- `TOKEN_ROTATED`: Token rotated
+- `TOKEN_CORRUPTED`: Token corruption detected
+- `TOKEN_RECOVERED`: Token recovered from backup
+- `STORAGE_ERROR`: Storage backend error
+- `REFRESH_FAILED`: Token refresh failed
+
+## 🔧 Security Configuration
+
+### Environment Variables
+
+```bash
+# Set encryption key (base64 encoded)
+export SCHWAB_ENCRYPTION_KEY="your_32_byte_base64_encoded_key"
+
+# Optional: Custom storage configuration
+export SCHWAB_TOKEN_STORAGE_DIR="./secure_tokens"
+export SCHWAB_TOKEN_DB_PATH="./tokens.db"
+```
+
+### HSM Integration (Production)
+
+```python
+# For production environments with HSM
+from enhancements.secure_tokens import SecureTokenManager
+
+# Configure HSM integration
+hsm_config = {
+    'hsm_type': 'pkcs11',
+    'hsm_library': '/usr/lib/libpkcs11.so',
+    'slot_id': 0,
+    'key_id': 'token_encryption_key'
+}
+
+manager = SecureTokenManager(
+    encryption_key=hsm_key,  # Key from HSM
+    hsm_config=hsm_config
 )
 ```
 
-### Monitoring
-```python
-# Regular health checks
-health = token_manager.health_check()
-if not health['overall_healthy']:
-    # Alert monitoring system
-    alert_monitoring_system(health)
+## 🔍 Token Validation
 
-# Event monitoring
-def production_event_callback(event, token_id, metadata, **kwargs):
-    # Send to monitoring system
-    send_to_monitoring_system(event, token_id, metadata)
+The system includes comprehensive token validation:
+
+```python
+from enhancements.secure_tokens import TokenValidator
+
+validator = TokenValidator()
+
+# Validate token structure
+is_valid, message = validator.validate_token(token_data)
+
+# Check token health
+health = validator.check_token_health(token_data)
+print(f"Valid: {health['is_valid']}")
+print(f"Time to expiry: {health['time_to_expiry']} seconds")
+print(f"Token hash: {health['token_hash']}")
 ```
 
-## Troubleshooting
+**Validation Checks:**
+- Required fields present (`access_token`, `refresh_token`, `token_type`)
+- Token not expired
+- Token not expiring soon (within 1 hour)
+- Valid token structure
+
+## 🚀 Advanced Features
+
+### Token Rotation
+
+```python
+# Rotate token with zero downtime
+success = manager.rotate_token('user123')
+if success:
+    print("Token rotated successfully")
+```
+
+### Token Revocation
+
+```python
+# Revoke and blacklist token
+success = manager.revoke_token('user123')
+if success:
+    print("Token revoked and blacklisted")
+```
+
+### Health Monitoring
+
+```python
+# Comprehensive health check
+health = manager.health_check()
+print(f"Storage healthy: {health['storage_backend_healthy']}")
+print(f"Refresh thread alive: {health['refresh_thread_alive']}")
+print(f"Blacklisted tokens: {health['blacklisted_tokens_count']}")
+print(f"Cached tokens: {health['cached_tokens_count']}")
+```
+
+### Recovery Mechanisms
+
+```python
+# Enable/disable corruption recovery
+manager._corruption_recovery_enabled = True
+
+# Manual recovery (if needed)
+recovered_token = manager._recover_token('user123')
+if recovered_token:
+    print("Token recovered from backup")
+```
+
+## 🔗 Integration with Other Agents
+
+### Agent 2 (Secure Authentication)
+
+```python
+# The secure token manager integrates with Agent 2's auth system
+# Token refresh calls would use Agent 2's OAuth refresh endpoints
+def _simulate_token_refresh(self, current_token):
+    # In real implementation, this would call Agent 2's refresh method
+    # return agent2.refresh_oauth_token(current_token['refresh_token'])
+    pass
+```
+
+### Agent 7 (Multi-User Support)
+
+```python
+# Per-user token isolation is built-in
+manager.store_token('user1', token_data_1)
+manager.store_token('user2', token_data_2)
+
+# Each user's tokens are completely isolated
+token1 = manager.get_token('user1')  # Only user1's token
+token2 = manager.get_token('user2')  # Only user2's token
+```
+
+### Agent 9 (System Scheduler)
+
+```python
+# Rich event system for scheduler integration
+def scheduler_event_handler(event: TokenEvent):
+    if event.event_type == TokenEventType.TOKEN_EXPIRED:
+        # Schedule immediate refresh
+        scheduler.schedule_refresh(event.user_id)
+    elif event.event_type == TokenEventType.TOKEN_REFRESHED:
+        # Update scheduler state
+        scheduler.update_token_status(event.user_id, 'refreshed')
+
+manager = SecureTokenManager(event_callbacks=[scheduler_event_handler])
+```
+
+## 🧪 Testing
+
+### Run Tests
+
+```bash
+# Run all tests
+python -m pytest tests/test_secure_tokens.py -v
+
+# Run specific test categories
+python -m pytest tests/test_secure_tokens.py::TestTokenValidator -v
+python -m pytest tests/test_secure_tokens.py::TestSecureTokenManager -v
+python -m pytest tests/test_secure_tokens.py::TestSecurityFeatures -v
+```
+
+### Test Coverage
+
+```bash
+# Run with coverage
+python -m pytest tests/test_secure_tokens.py --cov=enhancements.secure_tokens --cov-report=html
+```
+
+### Security Testing
+
+```bash
+# Test encryption at rest
+python -m pytest tests/test_secure_tokens.py::TestSecurityFeatures::test_encryption_at_rest -v
+
+# Test token blacklisting
+python -m pytest tests/test_secure_tokens.py::TestSecurityFeatures::test_token_blacklisting -v
+```
+
+## 🚀 Production Deployment
+
+### 1. Environment Setup
+
+```bash
+# Set production encryption key
+export SCHWAB_ENCRYPTION_KEY="$(openssl rand -base64 32)"
+
+# Set secure storage directory
+export SCHWAB_TOKEN_STORAGE_DIR="/secure/tokens"
+
+# Set database path
+export SCHWAB_TOKEN_DB_PATH="/secure/tokens.db"
+```
+
+### 2. HSM Configuration (Recommended)
+
+```python
+# Configure HSM for production
+hsm_config = {
+    'hsm_type': 'pkcs11',
+    'hsm_library': '/usr/lib/libpkcs11.so',
+    'slot_id': 0,
+    'key_id': 'production_token_key',
+    'pin': 'your_hsm_pin'
+}
+
+manager = SecureTokenManager(
+    storage_backend=DatabaseStorageBackend('/secure/tokens.db'),
+    hsm_config=hsm_config
+)
+```
+
+### 3. Monitoring Setup
+
+```python
+# Set up monitoring callbacks
+def monitoring_callback(event: TokenEvent):
+    # Send to monitoring system
+    monitoring.send_metric('token_event', {
+        'event_type': event.event_type.value,
+        'user_id': event.user_id,
+        'timestamp': event.timestamp
+    })
+
+manager = SecureTokenManager(event_callbacks=[monitoring_callback])
+```
+
+### 4. Health Checks
+
+```python
+# Regular health checks
+health = manager.health_check()
+if not health['storage_backend_healthy']:
+    alert("Token storage backend unhealthy")
+
+if not health['refresh_thread_alive']:
+    alert("Token refresh thread died")
+```
+
+## 🔧 Troubleshooting
 
 ### Common Issues
 
-#### Token Retrieval Fails
-```python
-# Check if token is blacklisted
-metadata = token_manager.get_token_metadata(token_id)
-if metadata and metadata.blacklisted:
-    print(f"Token {token_id} is blacklisted: {metadata.revocation_reason}")
-
-# Check token age
-if metadata:
-    age_hours = metadata.token_age() / 3600
-    print(f"Token age: {age_hours:.1f} hours")
+**1. Keyring Access Denied**
+```bash
+# On macOS, grant keychain access
+security unlock-keychain login.keychain
 ```
 
-#### Health Check Failures
-```python
-# Check health status
-health = token_manager.health_check()
-print(f"Health status: {health}")
-
-# Check storage backend
-if not health['backend_healthy']:
-    print("Storage backend is unhealthy")
-
-# Check encryption
-if not health['encryption_healthy']:
-    print("Encryption system is unhealthy")
+**2. Encryption Key Issues**
+```bash
+# Generate new encryption key
+python -c "import base64, secrets; print(base64.b64encode(secrets.token_bytes(32)).decode())"
 ```
 
-#### Auto-Refresh Issues
+**3. Storage Backend Failures**
 ```python
-# Check refresh configuration
-print(f"Auto-refresh enabled: {token_manager.enable_auto_refresh}")
-print(f"Refresh threshold: {token_manager.refresh_threshold_hours} hours")
-print(f"Max concurrent refreshes: {token_manager.max_concurrent_refreshes}")
+# Check storage backend health
+health = manager.health_check()
+print(f"Storage healthy: {health['storage_backend_healthy']}")
 
-# Check active refreshes
-health = token_manager.health_check()
-print(f"Active refreshes: {health['active_refreshes']}")
+# Try alternative backend
+fallback_backend = EncryptedFileStorageBackend('./backup_tokens')
+manager = SecureTokenManager(storage_backend=fallback_backend)
 ```
 
-### Recovery Procedures
-
-#### Corrupted Token Recovery
+**4. Token Recovery**
 ```python
-# Recover from backup
-backup_data = get_backup_token_data(token_id)
-success = token_manager.recover_corrupted_token(token_id, backup_data)
+# Enable recovery mode
+manager._corruption_recovery_enabled = True
 
-if success:
+# Manual recovery
+recovered = manager._recover_token('user123')
+if recovered:
     print("Token recovered successfully")
-else:
-    print("Token recovery failed")
 ```
 
-#### Storage Backend Migration
+### Debug Mode
+
 ```python
-# Migrate between storage backends
-old_manager = SecureTokenManager(
-    storage_backend=StorageBackend.ENCRYPTED_FILE,
-    storage_config={'storage_dir': './old_tokens'}
-)
+import logging
 
-new_manager = SecureTokenManager(
-    storage_backend=StorageBackend.SQLITE,
-    storage_config={'db_path': './new_tokens.db'}
-)
+# Enable debug logging
+logging.basicConfig(level=logging.DEBUG)
 
-# Migrate tokens
-for token_id in old_manager.list_tokens():
-    try:
-        token_data = old_manager.retrieve_token(token_id)
-        metadata = old_manager.get_token_metadata(token_id)
-        
-        new_manager.store_token(
-            token_data,
-            metadata.api_key,
-            metadata.user_id,
-            token_id,
-            metadata.tags
-        )
-    except Exception as e:
-        print(f"Failed to migrate token {token_id}: {e}")
+# Create manager with debug
+manager = SecureTokenManager()
 ```
 
-## API Reference
+## 📚 API Reference
 
 ### SecureTokenManager
 
-#### Constructor
+**Constructor:**
 ```python
 SecureTokenManager(
-    storage_backend=StorageBackend.ENCRYPTED_FILE,
-    storage_config=None,
-    encryption_key=None,
-    refresh_threshold_hours=24,
-    max_concurrent_refreshes=5,
-    enable_auto_refresh=True,
-    event_callbacks=None
+    storage_backend: StorageBackend = None,
+    encryption_key: bytes = None,
+    refresh_threshold_hours: int = 24,
+    max_retry_attempts: int = 3,
+    event_callbacks: List[Callable] = None
 )
 ```
 
-#### Methods
-- `store_token(token_data, api_key, user_id=None, token_id=None, tags=None) -> str`
-- `retrieve_token(token_id) -> bytes`
-- `delete_token(token_id) -> bool`
-- `revoke_token(token_id, reason=None) -> bool`
-- `rotate_token(token_id, new_token_data) -> bool`
-- `recover_corrupted_token(token_id, backup_token_data) -> bool`
-- `get_token_metadata(token_id) -> Optional[TokenMetadata]`
-- `list_tokens(user_id=None) -> List[str]`
+**Methods:**
+- `store_token(user_id: str, token_data: Dict[str, Any]) -> bool`
+- `get_token(user_id: str) -> Optional[Dict[str, Any]]`
+- `refresh_token(user_id: str) -> bool`
+- `rotate_token(user_id: str) -> bool`
+- `revoke_token(user_id: str) -> bool`
+- `get_token_health(user_id: str) -> Dict[str, Any]`
+- `list_users() -> List[str]`
 - `health_check() -> Dict[str, Any]`
 - `shutdown()`
 
-### TokenMetadata
-
-#### Attributes
-- `token_id: str`
-- `user_id: Optional[str]`
-- `api_key: str`
-- `creation_timestamp: int`
-- `last_refresh_timestamp: int`
-- `refresh_count: int`
-- `status: TokenStatus`
-- `storage_backend: StorageBackend`
-- `blacklisted: bool`
-- `revocation_reason: Optional[str]`
-- `tags: Set[str]`
-
-### TokenEvent
-
-#### Events
-- `CREATED`: Token created
-- `REFRESHED`: Token refreshed
-- `EXPIRED`: Token expired
-- `REVOKED`: Token revoked
-- `ROTATED`: Token rotated
-- `RECOVERED`: Token recovered
-- `CORRUPTED`: Token corrupted
-
 ### StorageBackend
 
-#### Backends
-- `ENCRYPTED_FILE`: File-based encrypted storage
-- `KEYRING`: System keyring storage
-- `SQLITE`: SQLite database storage
-- `HSM`: Hardware Security Module
+**Abstract base class for storage backends:**
+- `store_token(user_id: str, token_data: Dict[str, Any], encrypted_data: bytes) -> bool`
+- `retrieve_token(user_id: str) -> Optional[bytes]`
+- `delete_token(user_id: str) -> bool`
+- `list_users() -> List[str]`
+- `health_check() -> bool`
 
-## License
+### TokenValidator
 
-This secure token management system is part of the Schwab Python API project and follows the same licensing terms.
+**Token validation and health checking:**
+- `validate_token(token_data: Dict[str, Any]) -> Tuple[bool, str]`
+- `calculate_token_hash(token_data: Dict[str, Any]) -> str`
+- `check_token_health(token_data: Dict[str, Any]) -> Dict[str, Any]`
 
-## Contributing
+## 📄 License
 
-See the main project CONTRIBUTING.md for guidelines on contributing to this secure token management system.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Security
+## 🤝 Contributing
 
-For security issues, please contact the development team through the project's security contact channels.
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Run the test suite
+6. Submit a pull request
+
+### Development Setup
+
+```bash
+# Install development dependencies
+pip install -r enhancements/requirements_secure_tokens.txt
+
+# Install pre-commit hooks
+pre-commit install
+
+# Run tests
+python -m pytest tests/test_secure_tokens.py -v
+
+# Run linting
+black enhancements/secure_tokens.py
+flake8 enhancements/secure_tokens.py
+mypy enhancements/secure_tokens.py
+```
 
 ---
 
-**Agent 6: Security & Token Specialist**  
-*Bulletproof OAuth token lifecycle management for high-availability trading services* 
+**Agent 6: Security & Token Specialist** - Bulletproof token lifecycle management for high-availability trading services. 
