@@ -1,0 +1,14 @@
+name: "Multi-Channel Notification System"
+version: "1.0.0"
+author: "Agent 10"
+description: "Sample notification extension that sends alerts via email, SMS, and webhook"
+type: "notification"
+dependencies: []
+required_permissions: ["publish_events"]
+api_version: "1.0.0"
+min_system_version: "1.0.0"
+max_system_version: "*"
+tags: ["notification", "email", "sms", "webhook"]
+homepage: "https://github.com/schwab-py/sample-extensions"
+repository: "https://github.com/schwab-py/sample-extensions"
+license: "MIT" 

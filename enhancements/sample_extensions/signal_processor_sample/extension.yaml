@@ -1,0 +1,14 @@
+name: "Moving Average Signal Processor"
+version: "1.0.0"
+author: "Agent 10"
+description: "Sample signal processor that generates buy/sell signals based on moving average crossovers"
+type: "signal_processor"
+dependencies: []
+required_permissions: ["read_market_data", "publish_events"]
+api_version: "1.0.0"
+min_system_version: "1.0.0"
+max_system_version: "*"
+tags: ["signal", "technical-analysis", "moving-average"]
+homepage: "https://github.com/schwab-py/sample-extensions"
+repository: "https://github.com/schwab-py/sample-extensions"
+license: "MIT" 

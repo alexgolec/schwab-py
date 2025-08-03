@@ -1,0 +1,14 @@
+name: "Position Size Risk Manager"
+version: "1.0.0"
+author: "Agent 10"
+description: "Sample risk management extension that enforces position size limits and stop-loss rules"
+type: "risk_management"
+dependencies: []
+required_permissions: ["read_account", "write_orders", "publish_events"]
+api_version: "1.0.0"
+min_system_version: "1.0.0"
+max_system_version: "*"
+tags: ["risk", "position-sizing", "stop-loss"]
+homepage: "https://github.com/schwab-py/sample-extensions"
+repository: "https://github.com/schwab-py/sample-extensions"
+license: "MIT" 
