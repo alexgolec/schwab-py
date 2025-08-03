@@ -1,0 +1,30 @@
+# Requirements for Secure Token Management System
+# Agent 6: Security & Token Specialist
+
+# Core cryptography libraries
+cryptography>=3.4.8
+fernet>=1.0.1
+
+# Keyring for secure storage
+keyring>=23.0.0
+
+# System utilities
+psutil>=5.8.0
+
+# Testing dependencies
+pytest>=6.2.5
+pytest-asyncio>=0.15.1
+pytest-cov>=2.12.1
+
+# Optional: HSM integration (for production)
+# pypkcs11>=1.5.0
+
+# Optional: Database backends (beyond SQLite)
+# psycopg2-binary>=2.9.1  # PostgreSQL
+# pymongo>=4.0.0  # MongoDB
+# redis>=4.0.0  # Redis
+
+# Development dependencies
+black>=21.7b0
+flake8>=3.9.0
+mypy>=0.910 
