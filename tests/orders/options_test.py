@@ -514,3 +514,123 @@ class VerticalTemplatesTest(unittest.TestCase):
             3, 30.6).build()))
 
 
+    @no_duplicates
+    def test_short_straddle_open(self):
+        self.assertFalse(has_diff({
+            'orderType': 'NET_CREDIT',
+            'session': 'NORMAL',
+            'duration': 'DAY',
+            'orderStrategyType': 'SINGLE',
+            'price': '30.60',
+            'complexOrderStrategyType': 'STRADDLE',
+            'quantity': 3,
+            'orderLegCollection': [{
+                'instruction': 'SELL_TO_OPEN',
+                'quantity': 3,
+                'instrument': {
+                    'symbol': 'GOOG_012122C2200',
+                    'assetType': 'OPTION',
+                }
+            }, {
+                'instruction': 'SELL_TO_OPEN',
+                'quantity': 3,
+                'instrument': {
+                    'symbol': 'GOOG_012122P2200',
+                    'assetType': 'OPTION',
+                }
+            }]
+        }, short_straddle_open(
+            'GOOG_012122C2200',
+            'GOOG_012122P2200',
+            3, 30.6).build()))
+        
+
+    @no_duplicates
+    def test_short_straddle_close(self):
+        self.assertFalse(has_diff({
+            'orderType': 'NET_DEBIT',
+            'session': 'NORMAL',
+            'duration': 'DAY',
+            'orderStrategyType': 'SINGLE',
+            'price': '30.60',
+            'complexOrderStrategyType': 'STRADDLE',
+            'quantity': 3,
+            'orderLegCollection': [{
+                'instruction': 'BUY_TO_CLOSE',
+                'quantity': 3,
+                'instrument': {
+                    'symbol': 'GOOG_012122C2200',
+                    'assetType': 'OPTION',
+                }
+            }, {
+                'instruction': 'BUY_TO_CLOSE',
+                'quantity': 3,
+                'instrument': {
+                    'symbol': 'GOOG_012122P2200',
+                    'assetType': 'OPTION',
+                }
+            }]
+        }, short_straddle_close(
+            'GOOG_012122C2200',
+            'GOOG_012122P2200',
+            3, 30.6).build()))
+        
+    @no_duplicates
+    def test_long_straddle_open(self):
+        self.assertFalse(has_diff({
+            'orderType': 'NET_DEBIT',
+            'session': 'NORMAL',
+            'duration': 'DAY',
+            'orderStrategyType': 'SINGLE',
+            'price': '30.60',
+            'complexOrderStrategyType': 'STRADDLE',
+            'quantity': 3,
+            'orderLegCollection': [{
+                'instruction': 'BUY_TO_OPEN',
+                'quantity': 3,
+                'instrument': {
+                    'symbol': 'GOOG_012122C2200',
+                    'assetType': 'OPTION',
+                }
+            }, {
+                'instruction': 'BUY_TO_OPEN',
+                'quantity': 3,
+                'instrument': {
+                    'symbol': 'GOOG_012122P2200',
+                    'assetType': 'OPTION',
+                }
+            }]
+        }, long_straddle_open(
+            'GOOG_012122C2200',
+            'GOOG_012122P2200',
+            3, 30.6).build()))
+        
+    @no_duplicates
+    def test_long_straddle_close(self):
+        self.assertFalse(has_diff({
+            'orderType': 'NET_CREDIT',
+            'session': 'NORMAL',
+            'duration': 'DAY',
+            'orderStrategyType': 'SINGLE',
+            'price': '30.60',
+            'complexOrderStrategyType': 'STRADDLE',
+            'quantity': 3,
+            'orderLegCollection': [{
+                'instruction': 'SELL_TO_CLOSE',
+                'quantity': 3,
+                'instrument': {
+                    'symbol': 'GOOG_012122C2200',
+                    'assetType': 'OPTION',
+                }
+            }, {
+                'instruction': 'SELL_TO_CLOSE',
+                'quantity': 3,
+                'instrument': {
+                    'symbol': 'GOOG_012122P2200',
+                    'assetType': 'OPTION',
+                }
+            }]
+        }, long_straddle_close(
+            'GOOG_012122C2200',
+            'GOOG_012122P2200',
+            3, 30.6).build()))
