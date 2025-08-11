@@ -14,6 +14,7 @@ import time
 import warnings
 
 from schwab.orders.generic import OrderBuilder
+from schwab import DEFAULT_BASE_URL
 
 from ..utils import EnumEnforcer
 
@@ -34,13 +35,14 @@ class BaseClient(EnumEnforcer):
     found in the response object's ``json()`` method.'''
 
     def __init__(self, api_key, session, *, enforce_enums=True,
-                 token_metadata=None):
+                 token_metadata=None, base_url=DEFAULT_BASE_URL):
         '''Create a new client with the given API key and session. Set
         `enforce_enums=False` to disable strict input type checking.'''
         super().__init__(enforce_enums)
 
         self.api_key = api_key
         self.session = session
+        self.base_url = base_url
 
         # Logging-related fields
         self.logger = get_logger()

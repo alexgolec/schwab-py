@@ -18,13 +18,19 @@ import webbrowser
 
 from schwab.client import AsyncClient, Client
 from schwab.debug import register_redactions
-
-
-TOKEN_ENDPOINT = 'https://api.schwabapi.com/v1/oauth/token'
+from schwab import DEFAULT_BASE_URL
 
 
 def get_logger():
     return logging.getLogger(__name__)
+
+
+def _token_endpoint(base_url):
+    return base_url + '/v1/oauth/token'
+
+
+def _auth_endpoint(base_url):
+    return base_url + '/v1/oauth/authorize'
 
 
 def __make_update_token_func(token_path):
@@ -170,7 +176,8 @@ __TIME_TIME = time.time
 def client_from_login_flow(api_key, app_secret, callback_url, token_path,
                            asyncio=False, enforce_enums=False, 
                            token_write_func=None, callback_timeout=300.0,
-                           interactive=True, requested_browser=None):
+                           interactive=True, requested_browser=None,
+                           base_url=DEFAULT_BASE_URL):
     '''
     Open a web browser to perform an OAuth webapp login flow and creates a 
     client wrapped around the resulting token. The client will be configured to 
@@ -306,7 +313,7 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
             time.sleep(0.1)
 
         # Open the browser
-        auth_context = get_auth_context(api_key, callback_url)
+        auth_context = get_auth_context(api_key, callback_url, base_url=base_url)
 
         print()
         print('***********************************************************************')
@@ -379,7 +386,7 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
 
         return client_from_received_url(
                 api_key, app_secret, auth_context, received_url, 
-                token_write_func, asyncio, enforce_enums)
+                token_write_func, asyncio, enforce_enums, base_url)
 
 
 ################################################################################
@@ -387,7 +394,7 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
 
 
 def client_from_token_file(token_path, api_key, app_secret, asyncio=False,
-                           enforce_enums=True):
+                           enforce_enums=True, base_url=DEFAULT_BASE_URL):
     '''
     Returns a session from an existing token file. The session will perform
     an auth refresh as needed. It will also update the token on disk whenever
@@ -413,7 +420,7 @@ def client_from_token_file(token_path, api_key, app_secret, asyncio=False,
 
     return client_from_access_functions(
         api_key, app_secret, load, __make_update_token_func(token_path),
-        asyncio=asyncio, enforce_enums=enforce_enums)
+        asyncio=asyncio, enforce_enums=enforce_enums, base_url=base_url)
 
 
 ################################################################################
@@ -422,7 +429,7 @@ def client_from_token_file(token_path, api_key, app_secret, asyncio=False,
 
 def client_from_manual_flow(api_key, app_secret, callback_url, token_path,
                             asyncio=False, token_write_func=None,
-                            enforce_enums=True):
+                            enforce_enums=True, base_url=DEFAULT_BASE_URL):
     '''
     Walks the user through performing an OAuth login flow by manually
     copy-pasting URLs, and returns a client wrapped around the resulting token.
@@ -451,7 +458,7 @@ def client_from_manual_flow(api_key, app_secret, callback_url, token_path,
     get_logger().info('Creating new token with callback URL \'%s\' ' +
                        'and token path \'%s\'', callback_url, token_path)
 
-    auth_context = get_auth_context(api_key, callback_url)
+    auth_context = get_auth_context(api_key, callback_url, base_url=base_url)
 
     print('\n**************************************************************\n')
     print('This is the manual login and token creation flow for schwab-py.')
@@ -492,7 +499,7 @@ def client_from_manual_flow(api_key, app_secret, callback_url, token_path,
 
     return client_from_received_url(
             api_key, app_secret, auth_context, received_url, token_write_func, 
-            asyncio, enforce_enums)
+            asyncio, enforce_enums, base_url)
 
 
 ################################################################################
@@ -501,7 +508,7 @@ def client_from_manual_flow(api_key, app_secret, callback_url, token_path,
 
 def client_from_access_functions(api_key, app_secret, token_read_func,
                                  token_write_func, asyncio=False,
-                                 enforce_enums=True):
+                                 enforce_enums=True, base_url=DEFAULT_BASE_URL):
     '''
     Returns a session from an existing token file, using the accessor methods to
     read and write the token. This is an advanced method for users who do not
@@ -563,11 +570,12 @@ def client_from_access_functions(api_key, app_secret, token_read_func,
         session_class(api_key,
                       client_secret=app_secret,
                       token=token,
-                      token_endpoint=TOKEN_ENDPOINT,
+                      token_endpoint=_token_endpoint(base_url),
                       update_token=oauth_client_update_token,
                       leeway=300),
         token_metadata=metadata,
-        enforce_enums=enforce_enums)
+        enforce_enums=enforce_enums,
+        base_url=base_url)
 
 
 ################################################################################
@@ -577,10 +585,10 @@ def client_from_access_functions(api_key, app_secret, token_read_func,
 AuthContext = collections.namedtuple(
         'AuthContext', ['callback_url', 'authorization_url', 'state'])
 
-def get_auth_context(api_key, callback_url, state=None):
+def get_auth_context(api_key, callback_url, state=None, base_url=DEFAULT_BASE_URL):
     oauth = OAuth2Client(api_key, redirect_uri=callback_url)
     authorization_url, state = oauth.create_authorization_url(
-        'https://api.schwabapi.com/v1/oauth/authorize',
+        _auth_endpoint(base_url),
         state=state)
 
     return AuthContext(callback_url, authorization_url, state)
@@ -588,14 +596,14 @@ def get_auth_context(api_key, callback_url, state=None):
 
 def client_from_received_url(
         api_key, app_secret, auth_context, received_url, token_write_func, 
-        asyncio=False, enforce_enums=True):
+        asyncio=False, enforce_enums=True, base_url=DEFAULT_BASE_URL):
     # XXX: The AuthContext must be serializable, which means the original 
     #      OAuth2Client created in get_auth_context cannot be passed around. 
     #      Instead, we reconstruct it here.
     oauth = OAuth2Client(api_key, redirect_uri=auth_context.callback_url)
 
     token = oauth.fetch_token(
-        TOKEN_ENDPOINT,
+        _token_endpoint(base_url),
         authorization_response=received_url,
         client_id=api_key, auth=(api_key, app_secret),
         state=auth_context.state)
@@ -631,7 +639,8 @@ def client_from_received_url(
                       token=token,
                       update_token=oauth_client_update_token,
                       leeway=300),
-        token_metadata=metadata_manager, enforce_enums=enforce_enums)
+        token_metadata=metadata_manager, enforce_enums=enforce_enums,
+        base_url=base_url)
 
 
 ################################################################################
@@ -666,7 +675,7 @@ def __running_in_notebook():
 def easy_client(api_key, app_secret, callback_url, token_path, asyncio=False, 
                 enforce_enums=True, max_token_age=60*60*24*6.5,
                 callback_timeout=300.0, interactive=True,
-                requested_browser=None):
+                requested_browser=None, base_url=DEFAULT_BASE_URL):
     '''
     Convenient wrapper around :func:`client_from_login_flow` and
     :func:`client_from_token_file`. If ``token_path`` exists, loads the token
@@ -724,7 +733,8 @@ def easy_client(api_key, app_secret, callback_url, token_path, asyncio=False,
     if os.path.isfile(token_path):
         c = client_from_token_file(token_path, api_key, app_secret,
                                    asyncio=asyncio,
-                                   enforce_enums=enforce_enums)
+                                   enforce_enums=enforce_enums,
+                                   base_url=base_url)
         logger.info('Loaded token from file \'%s\'', token_path)
 
         if max_token_age > 0 and c.token_age() >= max_token_age:
@@ -738,7 +748,8 @@ def easy_client(api_key, app_secret, callback_url, token_path, asyncio=False,
     # Detect whether we're running in a notebook
     if __running_in_notebook():
         c = client_from_manual_flow(api_key, app_secret, callback_url, 
-                                    token_path, enforce_enums=enforce_enums)
+                                    token_path, enforce_enums=enforce_enums,
+                                    base_url=base_url)
         logger.info(
             'Returning client fetched using manual flow, writing' +
             'token to \'%s\'', token_path)
@@ -746,7 +757,8 @@ def easy_client(api_key, app_secret, callback_url, token_path, asyncio=False,
         c = client_from_login_flow(
             api_key, app_secret, callback_url, token_path, asyncio=asyncio,
             enforce_enums=enforce_enums, callback_timeout=callback_timeout,
-            requested_browser=requested_browser, interactive=interactive)
+            requested_browser=requested_browser, interactive=interactive,
+            base_url=base_url)
 
         logger.info(
             'Returning client fetched using web browser, writing' +

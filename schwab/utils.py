@@ -136,7 +136,7 @@ class Utils(EnumEnforcer):
             return None
 
         m = re.match(
-                r'https://api.schwabapi.com/trader/v1/accounts/(\w+)/orders/(\d+)',
+                r'https://[^/]+/trader/v1/accounts/(\w+)/orders/(\d+)',
                 location)
 
         if m is None:

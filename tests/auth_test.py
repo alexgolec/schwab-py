@@ -329,7 +329,7 @@ class ClientFromTokenFileTest(unittest.TestCase):
                          auth.client_from_token_file(
                              self.token_path, API_KEY, APP_SECRET))
         client.assert_called_once_with(API_KEY, _, token_metadata=_,
-                                       enforce_enums=_)
+                                       enforce_enums=_, base_url=_)
         sync_session.assert_called_once_with(
             API_KEY,
             client_secret=APP_SECRET,
@@ -374,7 +374,7 @@ class ClientFromTokenFileTest(unittest.TestCase):
                              self.token_path, API_KEY, APP_SECRET,
                              enforce_enums=False))
         client.assert_called_once_with(API_KEY, _, token_metadata=_,
-                                       enforce_enums=False)
+                                       enforce_enums=False, base_url=_)
 
     @no_duplicates
     @patch('schwab.auth.Client')
@@ -389,7 +389,7 @@ class ClientFromTokenFileTest(unittest.TestCase):
                          auth.client_from_token_file(
                              self.token_path, API_KEY, APP_SECRET))
         client.assert_called_once_with(API_KEY, _, token_metadata=_,
-                                       enforce_enums=True)
+                                       enforce_enums=True, base_url=_)
 
 
 class ClientFromAccessFunctionsTest(unittest.TestCase):
@@ -508,7 +508,7 @@ class ClientFromAccessFunctionsTest(unittest.TestCase):
                              token_write_func, enforce_enums=False))
 
         client.assert_called_once_with(
-                API_KEY, _, token_metadata=_, enforce_enums=False)
+                API_KEY, _, token_metadata=_, enforce_enums=False, base_url=_)
 
     @no_duplicates
     @patch('schwab.auth.Client')
@@ -533,7 +533,7 @@ class ClientFromAccessFunctionsTest(unittest.TestCase):
                              token_write_func))
 
         client.assert_called_once_with(
-                API_KEY, _, token_metadata=_, enforce_enums=True)
+                API_KEY, _, token_metadata=_, enforce_enums=True, base_url=_)
 
 
 # Note the client_from_received_url is called internally by the other client 
@@ -755,7 +755,7 @@ class ClientFromManualFlow(unittest.TestCase):
                              enforce_enums=False))
 
         client.assert_called_once_with(API_KEY, _, token_metadata=_,
-                                       enforce_enums=False)
+                                       enforce_enums=False, base_url=_)
 
     @no_duplicates
     @patch('schwab.auth.Client')
@@ -779,7 +779,7 @@ class ClientFromManualFlow(unittest.TestCase):
                              API_KEY, APP_SECRET, CALLBACK_URL, self.token_path))
 
         client.assert_called_once_with(API_KEY, _, token_metadata=_,
-                                       enforce_enums=True)
+                                       enforce_enums=True, base_url=_)
 
 
 class TokenMetadataTest(unittest.TestCase):
@@ -943,7 +943,7 @@ class EasyClientTest(unittest.TestCase):
                 API_KEY, APP_SECRET, CALLBACK_URL, self.token_path,
                 asyncio='asyncio', enforce_enums='enforce_enums',
                 callback_timeout='callback_timeout', interactive='interactive',
-                requested_browser='requested_browser')
+                requested_browser='requested_browser', base_url=_)
 
 
     @no_duplicates
@@ -982,7 +982,7 @@ class EasyClientTest(unittest.TestCase):
 
         client_from_token_file.assert_called_once_with(
                 self.token_path, API_KEY, APP_SECRET,
-                asyncio='asyncio', enforce_enums='enforce_enums')
+                asyncio='asyncio', enforce_enums='enforce_enums', base_url=_)
 
 
     @no_duplicates
