@@ -526,3 +526,6 @@ these fields at their own risk.
 
 .. automethod:: schwab.orders.generic.OrderBuilder.set_activation_price
 .. automethod:: schwab.orders.generic.OrderBuilder.clear_activation_price
+
+.. automethod:: schwab.orders.generic.OrderBuilder.set_price_offset
+.. automethod:: schwab.orders.generic.OrderBuilder.clear_price_offset

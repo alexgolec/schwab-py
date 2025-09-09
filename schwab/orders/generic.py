@@ -70,6 +70,7 @@ class OrderBuilder(EnumEnforcer):
         self._stopType = None
         self._priceLinkBasis = None
         self._priceLinkType = None
+        self._priceOffset = None
         self._price = None
         self._orderLegCollection = None
         self._activationPrice = None
@@ -311,6 +312,14 @@ class OrderBuilder(EnumEnforcer):
         Clear the price link basis.
         '''
         self._priceLinkType = None
+        return self
+
+    def set_price_offset(self, price_offset):
+        self._priceOffset = price_offset
+        return self
+
+    def clear_price_offset(self):
+        self._priceOffset = None
         return self
 
     # Price
