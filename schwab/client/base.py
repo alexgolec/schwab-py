@@ -83,13 +83,13 @@ class BaseClient(EnumEnforcer):
             raise ValueError(error_str)
 
     def _format_date_as_iso(self, var_name, dt):
-        '''Formats datetime or date objects as yyyy-MM-dd'T'HH:mm:ss.SSSZ'''
+        '''Formats datetime or date objects as ISO 8601'''
         self._assert_type(var_name, dt, [self._DATE, self._DATETIME])
 
         if not isinstance(dt, self._DATETIME):
             dt = datetime.datetime(year=dt.year, month=dt.month, day=dt.day)
 
-        return dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+        return dt.isoformat()
 
     def _format_date_as_day(self, var_name, dt):
         '''Formats datetime or date objects as YYYY-MM-DD'''
