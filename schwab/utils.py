@@ -122,7 +122,7 @@ class Utils(EnumEnforcer):
                                      method requires that the order was
                                      successful.
 
-        :raise ValueError: if the order was not succesful or if the order's
+        :raise ValueError: if the order was not successful or if the order's
                            account hash is not equal to the account hash set in this
                            ``Utils`` object.
         '''
