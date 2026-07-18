@@ -629,6 +629,7 @@ def client_from_received_url(
         session_class(api_key,
                       client_secret=app_secret,
                       token=token,
+                      token_endpoint=TOKEN_ENDPOINT,
                       update_token=oauth_client_update_token,
                       leeway=300),
         token_metadata=metadata_manager, enforce_enums=enforce_enums)
