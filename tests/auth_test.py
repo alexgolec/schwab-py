@@ -582,6 +582,18 @@ class ClientFromReceivedUrl(unittest.TestCase):
                 auth=_,
                 state='oauth state')
 
+        # Verify that the returned session can refresh itself when the access
+        # token expires: without token_endpoint, authlib's ensure_active_token
+        # cannot call refresh_token and every request raises InvalidTokenError
+        # ~30 minutes after login.
+        sync_session.assert_called_with(
+                API_KEY,
+                client_secret=APP_SECRET,
+                token=self.raw_token,
+                token_endpoint=_,
+                update_token=_,
+                leeway=_)
+
         self.assertEqual([{
                 'creation_timestamp': MOCK_NOW,
                 'token': self.raw_token
@@ -623,6 +635,16 @@ class ClientFromReceivedUrl(unittest.TestCase):
                 client_id=_,
                 auth=_,
                 state='oauth state')
+
+        # Verify that the returned session can refresh itself when the access
+        # token expires (see the sync variant above).
+        async_session.assert_called_once_with(
+                API_KEY,
+                client_secret=APP_SECRET,
+                token=self.raw_token,
+                token_endpoint=_,
+                update_token=_,
+                leeway=_)
 
         self.assertEqual([{
                 'creation_timestamp': MOCK_NOW,
@@ -693,7 +715,8 @@ class ClientFromManualFlow(unittest.TestCase):
                              token_write_func=dummy_token_write_func))
 
         sync_session.assert_called_with(
-                _, client_secret=APP_SECRET, token=_, update_token=_, leeway=_)
+                _, client_secret=APP_SECRET, token=_, token_endpoint=_,
+                update_token=_, leeway=_)
 
         self.assertEqual([{
             'creation_timestamp': MOCK_NOW,
