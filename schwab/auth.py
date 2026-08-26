@@ -21,6 +21,12 @@ from schwab.debug import register_redactions
 
 
 TOKEN_ENDPOINT = 'https://api.schwabapi.com/v1/oauth/token'
+REVOKE_URL = 'https://api.schwabapi.com/v1/oauth/revoke'
+
+
+class TokenRevokedError(Exception):
+    '''Raised when attempting to load a token that has been marked as revoked.'''
+    pass
 
 
 def get_logger():
@@ -50,15 +56,19 @@ class TokenMetadata:
     Provides the functionality required to maintain and update our view of the
     token's metadata.
     '''
-    def __init__(self, token, creation_timestamp, unwrapped_token_write_func):
+    def __init__(self, token, creation_timestamp, unwrapped_token_write_func,
+                 revoked=False):
         '''
         :param token: The token to wrap in metadata
-        :param creation_timestamp: Timestamp at which this token was initially 
-                                   created. Notably, this timestamp does not 
+        :param creation_timestamp: Timestamp at which this token was initially
+                                   created. Notably, this timestamp does not
                                    change when the token is updated.
         :unwrapped_token_write_func: Function that accepts a non-metadata
-                                     wrapped token and writes it to disk or 
+                                     wrapped token and writes it to disk or
                                      other persistent storage.
+        :param revoked: Whether this token has been revoked server-side. A
+                        revoked token is treated as though it does not exist
+                        when loaded via :func:`easy_client`.
         '''
 
         self.creation_timestamp = creation_timestamp
@@ -69,9 +79,11 @@ class TokenMetadata:
         # appropriate write function.
         self.unwrapped_token_write_func = unwrapped_token_write_func
 
-        # The current token. Updated whenever the wrapped token update function 
+        # The current token. Updated whenever the wrapped token update function
         # is called.
         self.token = token
+
+        self.revoked = revoked
 
     @classmethod
     def from_loaded_token(cls, token, unwrapped_token_write_func):
@@ -88,7 +100,8 @@ class TokenMetadata:
         return TokenMetadata(
                 token['token'],
                 token['creation_timestamp'],
-                unwrapped_token_write_func)
+                unwrapped_token_write_func,
+                revoked=token.get('revoked', False))
 
     def token_age(self):
         '''Returns the number of second elapsed since this token was initially 
@@ -116,7 +129,16 @@ class TokenMetadata:
         return {
             'creation_timestamp': self.creation_timestamp,
             'token': token,
+            'revoked': self.revoked,
         }
+
+    def mark_revoked(self):
+        '''Mark this token as revoked and persist the updated metadata via the
+        unwrapped write function. Subsequent loads will surface the revoked
+        state via :class:`TokenRevokedError`.'''
+        self.revoked = True
+        self.unwrapped_token_write_func(
+                self.wrap_token_in_metadata(self.token))
 
 
 ################################################################################
@@ -541,6 +563,10 @@ def client_from_access_functions(api_key, app_secret, token_read_func,
 
     # Extract metadata and unpack the token, if necessary
     metadata = TokenMetadata.from_loaded_token(token, token_write_func)
+    if metadata.revoked:
+        raise TokenRevokedError(
+                'The loaded token has been marked as revoked. Delete the '
+                'token and create a new one via the login flow.')
     token = metadata.token
 
     # Don't emit token details in debug logs
@@ -722,13 +748,19 @@ def easy_client(api_key, app_secret, callback_url, token_path, asyncio=False,
     c = None
 
     if os.path.isfile(token_path):
-        c = client_from_token_file(token_path, api_key, app_secret,
-                                   asyncio=asyncio,
-                                   enforce_enums=enforce_enums)
-        logger.info('Loaded token from file \'%s\'', token_path)
+        try:
+            c = client_from_token_file(token_path, api_key, app_secret,
+                                       asyncio=asyncio,
+                                       enforce_enums=enforce_enums)
+            logger.info('Loaded token from file \'%s\'', token_path)
 
-        if max_token_age > 0 and c.token_age() >= max_token_age:
-            logger.info('token too old, proactively creating a new one')
+            if max_token_age > 0 and c.token_age() >= max_token_age:
+                logger.info('token too old, proactively creating a new one')
+                c = None
+        except TokenRevokedError:
+            logger.info(
+                'Token at \'%s\' is marked as revoked, creating a new one',
+                token_path)
             c = None
 
     # Return early on success

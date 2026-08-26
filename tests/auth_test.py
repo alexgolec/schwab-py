@@ -63,7 +63,8 @@ class ClientFromLoginFlowTest(unittest.TestCase):
         with open(self.token_path, 'r') as f:
             self.assertEqual({
                 'creation_timestamp': MOCK_NOW,
-                'token': self.raw_token
+                'token': self.raw_token,
+                'revoked': False,
             }, json.load(f))
 
 
@@ -128,7 +129,8 @@ class ClientFromLoginFlowTest(unittest.TestCase):
         with open(self.token_path, 'r') as f:
             self.assertEqual({
                 'creation_timestamp': MOCK_NOW,
-                'token': self.raw_token
+                'token': self.raw_token,
+                'revoked': False,
             }, json.load(f))
 
         mock_prompt.assert_not_called()
@@ -164,7 +166,8 @@ class ClientFromLoginFlowTest(unittest.TestCase):
         with open(self.token_path, 'r') as f:
             self.assertEqual({
                 'creation_timestamp': MOCK_NOW,
-                'token': self.raw_token
+                'token': self.raw_token,
+                'revoked': False,
             }, json.load(f))
 
 
@@ -357,7 +360,8 @@ class ClientFromTokenFileTest(unittest.TestCase):
         with open(self.token_path, 'r') as f:
             self.assertEqual(json.load(f), {
                 'token': updated_token,
-                'creation_timestamp': TOKEN_CREATION_TIMESTAMP
+                'creation_timestamp': TOKEN_CREATION_TIMESTAMP,
+                'revoked': False,
             })
 
     @no_duplicates
@@ -441,7 +445,8 @@ class ClientFromAccessFunctionsTest(unittest.TestCase):
         update_token(self.raw_token)
         self.assertEqual([{
             'creation_timestamp': TOKEN_CREATION_TIMESTAMP,
-            'token': self.raw_token
+            'token': self.raw_token,
+            'revoked': False,
         }], token_writes)
 
     @no_duplicates
@@ -482,7 +487,8 @@ class ClientFromAccessFunctionsTest(unittest.TestCase):
         update_token(self.raw_token)
         self.assertEqual([{
             'creation_timestamp': TOKEN_CREATION_TIMESTAMP,
-            'token': self.raw_token
+            'token': self.raw_token,
+            'revoked': False,
         }], token_writes)
 
     @no_duplicates
@@ -584,7 +590,8 @@ class ClientFromReceivedUrl(unittest.TestCase):
 
         self.assertEqual([{
                 'creation_timestamp': MOCK_NOW,
-                'token': self.raw_token
+                'token': self.raw_token,
+                'revoked': False,
             }], token_capture)
 
 
@@ -626,7 +633,8 @@ class ClientFromReceivedUrl(unittest.TestCase):
 
         self.assertEqual([{
                 'creation_timestamp': MOCK_NOW,
-                'token': self.raw_token
+                'token': self.raw_token,
+                'revoked': False,
             }], token_capture)
 
 
@@ -661,7 +669,8 @@ class ClientFromManualFlow(unittest.TestCase):
         with open(self.token_path, 'r') as f:
             self.assertEqual({
                 'creation_timestamp': MOCK_NOW,
-                'token': self.raw_token
+                'token': self.raw_token,
+                'revoked': False,
             }, json.load(f))
 
     @no_duplicates
@@ -697,7 +706,8 @@ class ClientFromManualFlow(unittest.TestCase):
 
         self.assertEqual([{
             'creation_timestamp': MOCK_NOW,
-            'token': self.raw_token
+            'token': self.raw_token,
+            'revoked': False,
         }], token_writes)
 
     @no_duplicates
@@ -727,7 +737,8 @@ class ClientFromManualFlow(unittest.TestCase):
         with open(self.token_path, 'r') as f:
             self.assertEqual({
                 'creation_timestamp': MOCK_NOW,
-                'token': self.raw_token
+                'token': self.raw_token,
+                'revoked': False,
             }, json.load(f))
 
         print_func.assert_any_call(AnyStringWith('will transmit data over HTTP'))
