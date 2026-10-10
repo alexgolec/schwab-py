@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 import asyncio
 import difflib
 import inspect
-import httpx
+import httpx2
 import json
 
 class AnyStringWith(str):
@@ -120,9 +120,9 @@ class ResyncProxy:
         return getattr(self.cls, key)
 
 
-# TODO: Figure out if httpx supports cleaner response mocking, because this is 
+# TODO: Figure out if httpx2 supports cleaner response mocking, because this is 
 #       pretty janky.
-class MockResponse(httpx.Response):
+class MockResponse(httpx2.Response):
     def __init__(self, json, status_code, headers=None):
         resp_args = {
             'status_code': status_code,
@@ -130,7 +130,7 @@ class MockResponse(httpx.Response):
         }
         if headers:
             resp_args['headers'] = headers
-        httpx.Response.__init__(
+        httpx2.Response.__init__(
                 self, **resp_args)
 
 

@@ -8,6 +8,7 @@ from .utils import (
 from unittest.mock import patch, ANY, MagicMock
 from unittest.mock import ANY as _
 
+import httpx2
 import json
 import os
 import requests
@@ -20,6 +21,15 @@ APP_SECRET = '0x5EC07'
 TOKEN_CREATION_TIMESTAMP = 1613745000
 MOCK_NOW = 1613745082
 CALLBACK_URL = 'https://redirect.url.com'
+
+
+class HttpLibraryTest(unittest.TestCase):
+
+    def test_oauth_sessions_are_httpx2_clients(self):
+        # Responses and errors from the sessions must match the httpx2 types
+        # that schwab-py and its users check against.
+        self.assertTrue(issubclass(auth.OAuth2Client, httpx2.Client))
+        self.assertTrue(issubclass(auth.AsyncOAuth2Client, httpx2.AsyncClient))
 
 
 class ClientFromLoginFlowTest(unittest.TestCase):

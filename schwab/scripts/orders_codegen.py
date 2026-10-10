@@ -1,5 +1,5 @@
 import argparse
-import httpx
+import httpx2
 import json
 
 from schwab.auth import client_from_token_file
@@ -30,7 +30,7 @@ def latest_order_main(sys_args):
     # If the account ID is specified, find the corresponding account hash
     if args.account_id is not None:
         r = client.get_account_numbers()
-        assert r.status_code == httpx.codes.OK
+        assert r.status_code == httpx2.codes.OK
 
         for val in r.json():
             if val['accountNumber'] == str(args.account_id):
@@ -48,7 +48,7 @@ def latest_order_main(sys_args):
     # Fetch orders
     def get_orders(method):
         r = method()
-        if r.status_code != httpx.codes.OK:
+        if r.status_code != httpx2.codes.OK:
             print(('Returned HTTP status code {}. This is most often caused ' +
                    'by an invalid account ID or hash.').format(r.status_code))
             return None

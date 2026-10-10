@@ -1,4 +1,4 @@
-import httpx
+import httpx2
 import unittest
 
 from schwab.orders.generic import *
@@ -554,7 +554,7 @@ class OrderBuilderTest(unittest.TestCase):
     def test_add_child_order_strategy_httpx_response(self):
         with self.assertRaisesRegex(
                 ValueError, 'Child order cannot be a response'):
-            self.order_builder.add_child_order_strategy(httpx.Response(200))
+            self.order_builder.add_child_order_strategy(httpx2.Response(200))
 
     ##########################################################################
     # OrderLegCollection

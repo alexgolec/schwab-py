@@ -2,7 +2,7 @@ from authlib.integrations.httpx_client import AsyncOAuth2Client, OAuth2Client
 
 import collections
 import contextlib
-import httpx
+import httpx2
 import json
 import logging
 import multiprocess
@@ -296,11 +296,11 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
                             'ignore',
                             category=urllib3.exceptions.InsecureRequestWarning)
 
-                    resp = httpx.get(
+                    resp = httpx2.get(
                             'https://127.0.0.1:{}/schwab-py-internal/status'.format(
                                 callback_port), verify=False)
                 break
-            except httpx.ConnectError as e:
+            except httpx2.ConnectError as e:
                 pass
 
             time.sleep(0.1)
