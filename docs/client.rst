@@ -30,7 +30,7 @@ this will likely cause issues with the underlying OAuth2 session management**
           token_path='/tmp/token.json')
 
   resp = c.get_price_history_every_day('AAPL')
-  assert resp.status_code == httpx.codes.OK
+  assert resp.status_code == httpx2.codes.OK
   history = resp.json()
 
 Note we we create a new client using the ``auth`` package as described in
@@ -56,7 +56,7 @@ of slightly increased application complexity.
               asyncio=True)
 
       resp = await c.get_price_history_every_day('AAPL')
-      assert resp.status_code == httpx.codes.OK
+      assert resp.status_code == httpx2.codes.OK
       history = resp.json()
 
   if __name__ == '__main__':
@@ -89,15 +89,23 @@ Return Values
 +++++++++++++
 
 All methods return a response object generated under the hood by the
-`HTTPX <https://www.python-httpx.org/quickstart/#response-content>`__ module. 
-For a full listing of what's possible, read that module's documentation. Most if
-not all users can simply use the following pattern:
+`HTTPX2 <https://httpx2.pydantic.dev/quickstart/#response-content>`__ module,
+the maintained successor to HTTPX. For a full listing of what's possible, read
+that module's documentation. Most if not all users can simply use the following
+pattern:
 
 .. code-block:: python
 
   r = client.some_endpoint()
-  assert r.status_code == httpx.codes.OK, r.raise_for_status()
+  assert r.status_code == httpx2.codes.OK, r.raise_for_status()
   data = r.json()
+
+Responses are ``httpx2.Response`` objects, and failed requests raise
+``httpx2`` `exceptions <https://httpx2.pydantic.dev/exceptions/>`__. Code that
+checks these types or catches these exceptions must use ``httpx2`` rather than
+``httpx``: the two packages define distinct classes. See the `HTTPX2 migration
+guide <https://httpx2.pydantic.dev/migration/>`__ if your application still
+uses ``httpx`` elsewhere.
 
 The API indicates errors using the response status code, and this pattern will 
 raise the appropriate exception if the response is not a success. The data can 
@@ -138,7 +146,7 @@ Here is an example of how to fetch an account hash and use it to place an order:
 .. code-block:: python
 
   import atexit
-  import httpx
+  import httpx2
   from selenium import webdriver
 
   from schwab.auth import easy_client
@@ -157,7 +165,7 @@ Here is an example of how to fetch an account hash and use it to place an order:
           webdriver_func=make_webdriver)
 
   resp = c.get_account_numbers()
-  assert resp.status_code == httpx.codes.OK
+  assert resp.status_code == httpx2.codes.OK
 
   # The response has the following structure. If you have multiple linked
   # accounts, you'll need to inspect this object to find the hash you want:
@@ -177,7 +185,7 @@ Here is an example of how to fetch an account hash and use it to place an order:
 Timeout Management
 ++++++++++++++++++
 
-Timeouts for HTTP calls are managed under the hood by the ``httpx`` library.  
+Timeouts for HTTP calls are managed under the hood by the ``httpx2`` library. 
 ``schwab-py`` defaults to 30 seconds, which experience has shown should be more 
 than enough to allow even the slowest API calls to complete. A different timeout 
 specification can be set using this method:

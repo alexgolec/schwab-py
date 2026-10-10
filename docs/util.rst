@@ -31,7 +31,7 @@ ID can then be used to monitor or modify the order as described in the
   # Assume client and order already exist and are valid
   account_id = ...  # Fetched from account_information
   r = client.place_order(account_hash, order)
-  assert r.status_code == httpx.codes.OK, r.raise_for_status()
+  assert r.status_code == httpx2.codes.OK, r.raise_for_status()
   order_id = Utils(client, account_hash).extract_order_id(r)
   assert order_id is not None
 

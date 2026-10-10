@@ -109,11 +109,11 @@ class BaseClient(EnumEnforcer):
         '''Sets the timeout configuration for this client. Applies to all HTTP 
         calls.
 
-        :param timeout: ``httpx`` timeout configuration. Passed directly to 
-                        underlying ``httpx`` library. See
-                        `here <https://www.python-httpx.org/advanced/
-                        #setting-a-default-timeout-on-a-client>`__ for
-                        examples.'''
+        :param timeout: ``httpx2`` timeout configuration, either a number of
+                        seconds or an ``httpx2.Timeout``. Passed directly to
+                        the underlying ``httpx2`` library. See
+                        `here <https://httpx2.pydantic.dev/advanced/
+                        timeouts/>`__ for examples.'''
         self.session.timeout = timeout
 
     def token_age(self):

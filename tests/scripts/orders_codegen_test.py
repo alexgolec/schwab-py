@@ -1,5 +1,5 @@
 import callee
-import httpx
+import httpx2
 import subprocess
 import unittest
 from unittest.mock import call, MagicMock, patch
@@ -46,7 +46,7 @@ class LatestOrderTest(unittest.TestCase):
         mock_client = MagicMock()
         mock_client_from_token_file.return_value = mock_client
         mock_client.get_orders_for_all_linked_accounts.return_value \
-                = httpx.Response(200, json=orders)
+                = httpx2.Response(200, json=orders)
 
         self.assertEqual(self.main(), 0)
 
@@ -79,7 +79,7 @@ class LatestOrderTest(unittest.TestCase):
         mock_client = MagicMock()
         mock_client_from_token_file.return_value = mock_client
         mock_client.get_orders_for_all_linked_accounts.return_value \
-                = httpx.Response(200, json=orders)
+                = httpx2.Response(200, json=orders)
 
         self.assertEqual(self.main(), 0)
 
@@ -110,7 +110,7 @@ class LatestOrderTest(unittest.TestCase):
         mock_client = MagicMock()
         mock_client_from_token_file.return_value = mock_client
         mock_client.get_orders_for_all_linked_accounts.return_value \
-                = httpx.Response(200, json=orders)
+                = httpx2.Response(200, json=orders)
 
         self.assertEqual(self.main(), -1)
 
@@ -148,14 +148,14 @@ class LatestOrderTest(unittest.TestCase):
 
         mock_client = MagicMock()
         mock_client_from_token_file.return_value = mock_client
-        mock_client.get_account_numbers.return_value = httpx.Response(
+        mock_client.get_account_numbers.return_value = httpx2.Response(
                 200,
                 json=[{
                     'accountNumber': '123456',
                     'hashValue': 'hash-value',
                 }])
         mock_client.get_orders_for_account.return_value \
-                = httpx.Response(200, json=orders)
+                = httpx2.Response(200, json=orders)
 
         self.assertEqual(self.main(), 0)
 
@@ -195,14 +195,14 @@ class LatestOrderTest(unittest.TestCase):
 
         mock_client = MagicMock()
         mock_client_from_token_file.return_value = mock_client
-        mock_client.get_account_numbers.return_value = httpx.Response(
+        mock_client.get_account_numbers.return_value = httpx2.Response(
                 200,
                 json=[{
                     'accountNumber': '90009',
                     'hashValue': 'hash-value',
                 }])
         mock_client.get_orders_for_account.return_value \
-                = httpx.Response(200, json=orders)
+                = httpx2.Response(200, json=orders)
 
         self.assertEqual(self.main(), -1)
 
@@ -235,14 +235,14 @@ class LatestOrderTest(unittest.TestCase):
 
         mock_client = MagicMock()
         mock_client_from_token_file.return_value = mock_client
-        mock_client.get_account_numbers.return_value = httpx.Response(
+        mock_client.get_account_numbers.return_value = httpx2.Response(
                 200,
                 json=[{
                     'accountNumber': '123456',
                     'hashValue': 'hash-value',
                 }])
         mock_client.get_orders_for_account.return_value \
-                = httpx.Response(200, json=orders)
+                = httpx2.Response(200, json=orders)
 
         self.assertEqual(self.main(), 0)
 
@@ -272,14 +272,14 @@ class LatestOrderTest(unittest.TestCase):
 
         mock_client = MagicMock()
         mock_client_from_token_file.return_value = mock_client
-        mock_client.get_account_numbers.return_value = httpx.Response(
+        mock_client.get_account_numbers.return_value = httpx2.Response(
                 200,
                 json=[{
                     'accountNumber': '123456',
                     'hashValue': 'hash-value',
                 }])
         mock_client.get_orders_for_account.return_value \
-                = httpx.Response(200, json={'error': 'invalid'})
+                = httpx2.Response(200, json={'error': 'invalid'})
 
         self.assertEqual(self.main(), -1)
 
@@ -318,7 +318,7 @@ class LatestOrderTest(unittest.TestCase):
         mock_client = MagicMock()
         mock_client_from_token_file.return_value = mock_client
         mock_client.get_orders_for_account.return_value \
-                = httpx.Response(200, json=orders)
+                = httpx2.Response(200, json=orders)
 
         self.assertEqual(self.main(), 0)
 
@@ -349,7 +349,7 @@ class LatestOrderTest(unittest.TestCase):
         mock_client = MagicMock()
         mock_client_from_token_file.return_value = mock_client
         mock_client.get_orders_for_all_linked_accounts.return_value \
-                = httpx.Response(400)
+                = httpx2.Response(400)
 
         self.assertEqual(self.main(), -1)
 
@@ -379,13 +379,13 @@ class LatestOrderTest(unittest.TestCase):
 
         mock_client = MagicMock()
         mock_client_from_token_file.return_value = mock_client
-        mock_client.get_account_numbers.return_value = httpx.Response(
+        mock_client.get_account_numbers.return_value = httpx2.Response(
                 200,
                 json=[{
                     'accountNumber': '123456',
                     'hashValue': 'hash-value',
                 }])
-        mock_client.get_orders_for_account.return_value = httpx.Response(400)
+        mock_client.get_orders_for_account.return_value = httpx2.Response(400)
 
         self.assertEqual(self.main(), -1)
 
@@ -421,7 +421,7 @@ class LatestOrderTest(unittest.TestCase):
         mock_client = MagicMock()
         mock_client_from_token_file.return_value = mock_client
         mock_client.get_orders_for_account.return_value \
-                = httpx.Response(200, json=orders)
+                = httpx2.Response(200, json=orders)
 
         self.assertEqual(self.main(), 0)
 
@@ -462,7 +462,7 @@ class LatestOrderTest(unittest.TestCase):
         mock_client = MagicMock()
         mock_client_from_token_file.return_value = mock_client
         mock_client.get_orders_for_account.return_value \
-                = httpx.Response(200, json=orders)
+                = httpx2.Response(200, json=orders)
 
         self.assertEqual(self.main(), 0)
 
