@@ -57,6 +57,7 @@ dev = [
     "coverage",
     "pytest",
     "pytz",
+    "requests",
 ]
 docs = [
     "sphinx",
