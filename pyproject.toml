@@ -1,0 +1,94 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "schwab-py"
+dynamic = ["version"]
+description = "Unofficial API wrapper for the Schwab HTTP API"
+readme = "README.rst"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+    { name = "Alex Golec", email = "bottomless.septic.tank@gmail.com" },
+]
+keywords = [
+    "finance",
+    "trading",
+    "equities",
+    "bonds",
+    "options",
+    "research",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Developers",
+    "Development Status :: 1 - Planning",
+    "Natural Language :: English",
+    "Topic :: Office/Business :: Financial :: Investment",
+]
+dependencies = [
+    "authlib>=1.6.0",
+    "certifi>=2025.6.15",
+    "flask",
+    "httpx>=0.28.1",
+    "multiprocess",
+    "psutil",
+    "python-dateutil",
+    "urllib3",
+    "websockets",
+]
+
+[project.urls]
+Documentation = "https://schwab-py.readthedocs.io/en/latest/"
+Source = "https://github.com/alexgolec/schwab-py"
+Tracker = "https://github.com/alexgolec/schwab-py/issues"
+
+[project.scripts]
+"schwab-generate-token.py" = "schwab.scripts.generate_token:main"
+"schwab-order-codegen.py" = "schwab.scripts.orders_codegen:main"
+
+[dependency-groups]
+dev = [
+    "autopep8",
+    "callee",
+    "colorama",
+    "coverage",
+    "pytest",
+    "pytz",
+]
+docs = [
+    "sphinx",
+    "sphinx-rtd-theme",
+]
+
+[tool.hatch.version]
+path = "schwab/version.py"
+pattern = "^version = '(?P<version>[^']+)'$"
+
+[tool.hatch.build.targets.wheel]
+packages = ["schwab"]
+
+[tool.pytest.ini_options]
+python_files = "*test*.py"
+testpaths = "tests"
+norecursedirs = ["schwab", "build", "dist", "docs", "htmlcov"]
+filterwarnings = [
+    "ignore::urllib3.exceptions.SystemTimeWarning",
+    "ignore::urllib3.exceptions.InsecureRequestWarning",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["schwab"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "except ImportError",
+    "def __repr__",
+    "raise NotImplementedError",
+    "raise DeprecationWarning",
+    "deprecate",
+]
