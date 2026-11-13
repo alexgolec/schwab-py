@@ -46,6 +46,8 @@ Source = "https://github.com/alexgolec/schwab-py"
 Tracker = "https://github.com/alexgolec/schwab-py/issues"
 
 [project.scripts]
+schwab-generate-token = "schwab.scripts.generate_token:main"
+schwab-order-codegen = "schwab.scripts.orders_codegen:main"
 "schwab-generate-token.py" = "schwab.scripts.generate_token:main"
 "schwab-order-codegen.py" = "schwab.scripts.orders_codegen:main"
 

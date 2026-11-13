@@ -84,13 +84,13 @@ calling each when appropriate:
 .. autofunction:: schwab.auth.easy_client
 
 If you don't want to create a client and just want to fetch a token, you can use
-the ``schwab-generate-token.py`` script that's installed with the library. This 
+the ``schwab-generate-token`` script that's installed with the library. This 
 method is particularly useful if you want to create your token on one machine 
 and use it on another.
 
 .. code-block:: bash
 
-  usage: schwab-generate-token.py [-h] --token_file TOKEN_FILE --api_key API_KEY --app_secret APP_SECRET --callback_url CALLBACK_URL [--browser BROWSER]
+  usage: schwab-generate-token [-h] --token_file TOKEN_FILE --api_key API_KEY --app_secret APP_SECRET --callback_url CALLBACK_URL [--browser BROWSER]
 
   Fetch a new token and write it to a file
 

@@ -479,5 +479,5 @@ class ScriptInvocationTest(unittest.TestCase):
 
     def test_get_help(self):
         output = subprocess.check_output(
-                'schwab-order-codegen.py --help',
+                'schwab-order-codegen --help',
                 shell=True, text=True)
