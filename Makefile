@@ -12,9 +12,7 @@ coverage:
 dist: clean
 	uv build
 
-# TODO: Reinstate tests before releasing
-#release: clean test dist
-release: clean dist
+release: clean test dist
 	uv publish
 
 clean:
