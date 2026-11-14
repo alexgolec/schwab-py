@@ -7,7 +7,7 @@ name = "schwab-py"
 dynamic = ["version"]
 description = "Unofficial API wrapper for the Schwab HTTP API"
 readme = "README.rst"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = "MIT"
 authors = [
     { name = "Alex Golec", email = "bottomless.septic.tank@gmail.com" },

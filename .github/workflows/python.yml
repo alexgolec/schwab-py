@@ -10,7 +10,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: [windows-latest, ubuntu-latest, macos-latest]
-        python: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        python: ["3.11", "3.12", "3.13", "3.14", "3.15"]
     runs-on: ${{ matrix.platform }}
 
     steps:
@@ -23,14 +23,14 @@ jobs:
       run: uv run --python ${{ matrix.python }} coverage run -p -m pytest tests/
 
     - name: Report coverage
-      if: matrix.python == '3.10' && matrix.platform == 'ubuntu-latest'
+      if: matrix.python == '3.11' && matrix.platform == 'ubuntu-latest'
       run: |
-        uv run --python 3.10 coverage combine
-        uv run --python 3.10 coverage report
-        uv run --python 3.10 coverage xml
+        uv run --python 3.11 coverage combine
+        uv run --python 3.11 coverage report
+        uv run --python 3.11 coverage xml
 
     - name: Upload coverage to Codecov
-      if: matrix.python == '3.10' && matrix.platform == 'ubuntu-latest'
+      if: matrix.python == '3.11' && matrix.platform == 'ubuntu-latest'
       uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -39,7 +39,7 @@ jobs:
         name: GitHub
 
     - name: Check built distributions
-      if: matrix.python == '3.10' && matrix.platform == 'ubuntu-latest'
+      if: matrix.python == '3.11' && matrix.platform == 'ubuntu-latest'
       run: |
         uv build
         uvx twine check dist/*
