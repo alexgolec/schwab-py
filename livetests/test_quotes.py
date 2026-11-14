@@ -106,6 +106,35 @@ def test_get_quotes_fields_fundamental(live_client):
     assert isinstance(fundamental['divYield'], (int, float))
 
 
+def test_get_quotes_fields_extended(live_client):
+    resp = live_client.get_quotes(
+            ['AAPL'],
+            fields=[schwab.client.Client.Quote.Fields.EXTENDED])
+
+    assert resp.status_code == 200
+    entry = resp.json()['AAPL']
+    assert 'extended' in entry
+    assert 'quote' not in entry
+    assert 'reference' not in entry
+
+    now_ms = int(datetime.datetime.now(
+        datetime.timezone.utc).timestamp() * 1000)
+    extended = entry['extended']
+    for price_key in ('bidPrice', 'askPrice', 'lastPrice', 'mark'):
+        price = extended[price_key]
+        assert isinstance(price, (int, float))
+        assert price >= 0
+    for time_key in ('quoteTime', 'tradeTime'):
+        ts = extended[time_key]
+        assert isinstance(ts, int)
+        # The API uses 0 as a sentinel for missing extended-session data
+        assert ts == 0 or _EPOCH_2020_MS <= ts <= now_ms
+    for size_key in ('bidSize', 'askSize', 'lastSize', 'totalVolume'):
+        size = extended[size_key]
+        assert isinstance(size, int)
+        assert size >= 0
+
+
 def test_get_quotes_fields_and_indicative(live_client):
     resp = live_client.get_quotes(
             ['AAPL'],
