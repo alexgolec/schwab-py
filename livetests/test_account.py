@@ -2,8 +2,10 @@ import schwab
 
 
 def test_get_account_numbers(live_client):
-    numbers = live_client.get_account_numbers()
+    resp = live_client.get_account_numbers()
 
+    assert resp.status_code == 200
+    numbers = resp.json()
     assert isinstance(numbers, list)
     assert len(numbers) > 0
     for entry in numbers:
@@ -12,8 +14,10 @@ def test_get_account_numbers(live_client):
 
 
 def test_get_accounts(live_client):
-    accounts = live_client.get_accounts()
+    resp = live_client.get_accounts()
 
+    assert resp.status_code == 200
+    accounts = resp.json()
     assert isinstance(accounts, list)
     assert len(accounts) > 0
     for account in accounts:
@@ -23,20 +27,23 @@ def test_get_accounts(live_client):
 
 
 def test_get_account_by_hash(live_client):
-    numbers = live_client.get_account_numbers()
+    numbers = live_client.get_account_numbers().json()
     entry = numbers[0]
 
-    account = live_client.get_account(entry['hashValue'])
-    sa = account['securitiesAccount']
+    resp = live_client.get_account(entry['hashValue'])
 
+    assert resp.status_code == 200
+    sa = resp.json()['securitiesAccount']
     assert sa['accountNumber'] == entry['accountNumber']
     assert sa['type'] in ('CASH', 'MARGIN')
 
 
 def test_get_accounts_with_fields(live_client):
-    accounts = live_client.get_accounts(
+    resp = live_client.get_accounts(
             fields=[schwab.client.Client.Account.Fields.POSITIONS])
 
+    assert resp.status_code == 200
+    accounts = resp.json()
     assert isinstance(accounts, list)
     assert len(accounts) > 0
     for account in accounts:
