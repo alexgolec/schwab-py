@@ -152,3 +152,6 @@ docs-build/
 # uv-managed environment
 .venv/
 uv.lock
+
+# Live test credentials — never commit real values
+livetests/schwab-credentials.env
