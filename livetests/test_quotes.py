@@ -50,7 +50,7 @@ def _check_reference(entry):
     assert reference['exchangeName']
 
 
-def test_get_quote(live_client):
+def test_get_equity_quote(live_client):
     resp = live_client.get_quote('AAPL')
 
     assert resp.status_code == 200
@@ -60,7 +60,7 @@ def test_get_quote(live_client):
     _check_reference(quotes['AAPL'])
 
 
-def test_get_quotes_multiple_symbols(live_client):
+def test_get_equity_quotes_multiple_symbols(live_client):
     resp = live_client.get_quotes(['AAPL', 'MSFT'])
 
     assert resp.status_code == 200
@@ -70,7 +70,7 @@ def test_get_quotes_multiple_symbols(live_client):
         _check_quote_entry(symbol, quotes[symbol])
 
 
-def test_get_quotes_string_input(live_client):
+def test_get_equity_quotes_string_input(live_client):
     resp = live_client.get_quotes('AAPL')
 
     assert resp.status_code == 200
@@ -79,7 +79,7 @@ def test_get_quotes_string_input(live_client):
     _check_quote_entry('AAPL', quotes['AAPL'])
 
 
-def test_get_quote_fields_filter(live_client):
+def test_get_equity_quote_fields_filter(live_client):
     resp = live_client.get_quote(
             'AAPL', fields=[schwab.client.Client.Quote.Fields.QUOTE])
 
@@ -90,7 +90,7 @@ def test_get_quote_fields_filter(live_client):
     assert 'extended' not in entry
 
 
-def test_get_quotes_fields_fundamental(live_client):
+def test_get_equity_quotes_fields_fundamental(live_client):
     resp = live_client.get_quotes(
             ['AAPL'],
             fields=[schwab.client.Client.Quote.Fields.FUNDAMENTAL])
@@ -106,7 +106,7 @@ def test_get_quotes_fields_fundamental(live_client):
     assert isinstance(fundamental['divYield'], (int, float))
 
 
-def test_get_quotes_fields_extended(live_client):
+def test_get_equity_quotes_fields_extended(live_client):
     resp = live_client.get_quotes(
             ['AAPL'],
             fields=[schwab.client.Client.Quote.Fields.EXTENDED])
@@ -135,7 +135,7 @@ def test_get_quotes_fields_extended(live_client):
         assert size >= 0
 
 
-def test_get_quotes_fields_and_indicative(live_client):
+def test_get_equity_quotes_fields_and_indicative(live_client):
     resp = live_client.get_quotes(
             ['AAPL'],
             fields=[schwab.client.Client.Quote.Fields.QUOTE],
@@ -146,7 +146,7 @@ def test_get_quotes_fields_and_indicative(live_client):
     assert 'quote' in entry
 
 
-def test_get_quote_invalid_symbol(live_client):
+def test_get_equity_quote_invalid_symbol(live_client):
     resp = live_client.get_quote('NOT_A_SYMBOL')
 
     assert resp.status_code == 404
