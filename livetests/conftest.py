@@ -1,4 +1,5 @@
 import os
+import pathlib
 
 import pytest
 
@@ -9,7 +10,7 @@ _CREDENTIALS_FILE = os.path.join(
         os.path.dirname(__file__), 'schwab-credentials.env')
 
 _REQUIRED = ('SCHWAB_API_KEY', 'SCHWAB_APP_SECRET', 'SCHWAB_CALLBACK_URL')
-_OPTIONAL = ('SCHWAB_BROWSER', 'SCHWAB_CALLBACK_TIMEOUT')
+_OPTIONAL = ('SCHWAB_BROWSER', 'SCHWAB_CALLBACK_TIMEOUT', 'RETAINED_TOKEN_PATH')
 
 
 def _load_credentials():
@@ -52,14 +53,25 @@ def schwab_credentials():
             None if browser in (None, '', 'None') else browser,
         'callback_timeout':
             float(values.get('SCHWAB_CALLBACK_TIMEOUT') or 300),
+        'retained_token_path': values.get('RETAINED_TOKEN_PATH') or None,
     }
 
 
 @pytest.fixture(scope='session')
 def live_client(schwab_credentials, tmp_path_factory):
     '''Performs one real Schwab login for the entire test run. Requires
-    interactive browser access.'''
-    token_path = tmp_path_factory.mktemp('schwab-live') / 'token.json'
+    interactive browser access.
+
+    When the RETAINED_TOKEN_PATH environment variable (or the same key in
+    schwab-credentials.env) points at a filename, the token is loaded from
+    and written to that file so it can be reused across runs; it is not
+    deleted at teardown. Otherwise a temporary token is used and deleted.'''
+    retained_path = schwab_credentials['retained_token_path']
+    if retained_path:
+        token_path = pathlib.Path(retained_path).expanduser()
+        token_path.parent.mkdir(parents=True, exist_ok=True)
+    else:
+        token_path = tmp_path_factory.mktemp('schwab-live') / 'token.json'
 
     try:
         client = schwab.auth.easy_client(
@@ -78,4 +90,5 @@ def live_client(schwab_credentials, tmp_path_factory):
 
     yield client
 
-    token_path.unlink(missing_ok=True)
+    if not retained_path:
+        token_path.unlink(missing_ok=True)
