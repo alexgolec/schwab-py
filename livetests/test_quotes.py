@@ -5,8 +5,15 @@ import pytest
 import schwab
 
 
+_Fields = schwab.client.Client.Quote.Fields
+
+
 _EPOCH_2020_MS = int(datetime.datetime(
     2020, 1, 1, tzinfo=datetime.timezone.utc).timestamp() * 1000)
+
+
+def _sections(entry):
+    return {k for k, v in entry.items() if isinstance(v, dict)}
 
 
 def _now_ms():
@@ -210,6 +217,22 @@ def test_get_equity_quote_invalid_symbol(live_client):
     assert resp.status_code == 404
 
 
+
+@pytest.mark.parametrize('field,expected', [
+    (_Fields.QUOTE, set(['quote'])),
+    (_Fields.FUNDAMENTAL, set(['fundamental'])),
+    (_Fields.EXTENDED, set(['extended'])),
+    (_Fields.REFERENCE, set(['reference'])),
+    (_Fields.REGULAR, set(['regular'])),
+    (_Fields.ALL, set(['extended', 'fundamental', 'quote', 'reference', 'regular']))
+])
+def test_equity_fields_matrix(live_client, field, expected):
+    resp = live_client.get_quotes(['AAPL'], fields=[field])
+    assert resp.status_code == 200
+    entry = resp.json()['AAPL']
+    assert _sections(entry) == expected
+
+
 ################################################################################
 # Index
 
@@ -241,6 +264,22 @@ def test_index_via_get_quote(live_client):
     assert resp.status_code == 200
     entry = resp.json()['$SPX']
     assert entry['assetMainType'] == 'INDEX'
+
+
+
+@pytest.mark.parametrize('field,expected', [
+    (_Fields.QUOTE, set(['quote'])),
+    (_Fields.FUNDAMENTAL, set(['fundamental'])),
+    (_Fields.EXTENDED, set()),
+    (_Fields.REFERENCE, set(['reference'])),
+    (_Fields.REGULAR, set()),
+    (_Fields.ALL, set(['fundamental', 'quote', 'reference']))
+])
+def test_index_fields_matrix(live_client, field, expected):
+    resp = live_client.get_quotes(['$SPX'], fields=[field])
+    assert resp.status_code == 200
+    entry = resp.json()['$SPX']
+    assert _sections(entry) == expected
 
 
 ################################################################################
@@ -284,6 +323,22 @@ def test_futures_quote_format(live_client):
     _check_time(quote['settleTime'])
 
 
+
+@pytest.mark.parametrize('field,expected', [
+    (_Fields.QUOTE, set(['quote'])),
+    (_Fields.FUNDAMENTAL, set()),
+    (_Fields.EXTENDED, set()),
+    (_Fields.REFERENCE, set(['reference'])),
+    (_Fields.REGULAR, set()),
+    (_Fields.ALL, set(['quote', 'reference']))
+])
+def test_futures_fields_matrix(live_client, field, expected):
+    resp = live_client.get_quotes(['/ES'], fields=[field])
+    assert resp.status_code == 200
+    entry = next(iter(resp.json().values()))
+    assert _sections(entry) == expected
+
+
 ################################################################################
 # Forex
 
@@ -311,6 +366,22 @@ def test_forex_requires_slash_separator(live_client):
 
     assert resp.status_code == 200
     assert 'EURUSD' in resp.json()['errors']['invalidSymbols']
+
+
+
+@pytest.mark.parametrize('field,expected', [
+    (_Fields.QUOTE, set(['quote'])),
+    (_Fields.FUNDAMENTAL, set()),
+    (_Fields.EXTENDED, set()),
+    (_Fields.REFERENCE, set(['reference'])),
+    (_Fields.REGULAR, set()),
+    (_Fields.ALL, set(['quote', 'reference']))
+])
+def test_forex_fields_matrix(live_client, field, expected):
+    resp = live_client.get_quotes(['EUR/USD'], fields=[field])
+    assert resp.status_code == 200
+    entry = resp.json()['EUR/USD']
+    assert _sections(entry) == expected
 
 
 ################################################################################
@@ -358,6 +429,23 @@ def test_option_symbol_in_path(live_client):
     assert entry['assetMainType'] == 'OPTION'
 
 
+
+@pytest.mark.parametrize('field,expected', [
+    (_Fields.QUOTE, set(['quote'])),
+    (_Fields.FUNDAMENTAL, set()),
+    (_Fields.EXTENDED, set()),
+    (_Fields.REGULAR, set(['regular'])),
+    (_Fields.REFERENCE, set(['reference'])),
+    (_Fields.ALL, set(['quote', 'reference', 'regular']))
+])
+def test_option_fields_matrix(live_client, field, expected):
+    symbol = _option_symbol(live_client)
+    resp = live_client.get_quotes([symbol], fields=[field])
+    assert resp.status_code == 200
+    entry = resp.json()[symbol]
+    assert _sections(entry) == expected
+
+
 ################################################################################
 # Mutual fund
 
@@ -376,3 +464,18 @@ def test_mutual_fund_quote_format(live_client):
     _check_price(quote['nAV'], positive=True)
     _check_price(quote['closePrice'], positive=True)
     _check_time(quote['tradeTime'])
+
+@pytest.mark.parametrize('field,expected', [
+    (_Fields.QUOTE, set(['quote'])),
+    (_Fields.FUNDAMENTAL, set(['fundamental'])),
+    (_Fields.EXTENDED, set()),
+    (_Fields.REFERENCE, set(['reference'])),
+    (_Fields.REGULAR, set()),
+    (_Fields.ALL, set(['fundamental', 'quote', 'reference']))
+])
+def test_mutual_fund_fields_matrix(live_client, field, expected):
+    resp = live_client.get_quotes(['SWPPX'], fields=[field])
+    assert resp.status_code == 200
+    entry = resp.json()['SWPPX']
+    assert _sections(entry) == expected
+
