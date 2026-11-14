@@ -2,7 +2,7 @@ test:
 	uv run pytest tests/
 
 test-live:
-	uv run pytest livetests -sv
+	uv run pytest livetests -sv -rs
 
 fix:
 	uv run autopep8 --in-place -r -a schwab
