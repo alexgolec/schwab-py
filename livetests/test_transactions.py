@@ -106,3 +106,58 @@ def test_get_transactions_symbol_filter(live_client):
 
     assert resp.status_code == 200
     assert isinstance(resp.json(), list)
+
+
+def test_get_transactions_max_span_boundary(live_client):
+    now = datetime.datetime.now(datetime.timezone.utc)
+    resp = live_client.get_transactions(
+            _account_hash(live_client),
+            start_date=now - datetime.timedelta(days=365),
+            end_date=now)
+
+    assert resp.status_code == 200
+    assert isinstance(resp.json(), list)
+
+
+def test_get_transactions_span_too_wide(live_client):
+    now = datetime.datetime.now(datetime.timezone.utc)
+    resp = live_client.get_transactions(
+            _account_hash(live_client),
+            start_date=now - datetime.timedelta(days=366),
+            end_date=now)
+
+    assert resp.status_code == 400
+    assert 'more than a year' in resp.json()['message']
+
+
+def test_get_transactions_old_window_accepted(live_client):
+    now = datetime.datetime.now(datetime.timezone.utc)
+    resp = live_client.get_transactions(
+            _account_hash(live_client),
+            start_date=now - datetime.timedelta(days=400),
+            end_date=now - datetime.timedelta(days=40))
+
+    assert resp.status_code == 200
+    assert isinstance(resp.json(), list)
+
+
+def test_get_transactions_inverted_range(live_client):
+    now = datetime.datetime.now(datetime.timezone.utc)
+    resp = live_client.get_transactions(
+            _account_hash(live_client),
+            start_date=now,
+            end_date=now - datetime.timedelta(days=30))
+
+    assert resp.status_code == 400
+    assert 'startDate must not be after endDate' in resp.json()['message']
+
+
+def test_get_transactions_future_end_date(live_client):
+    now = datetime.datetime.now(datetime.timezone.utc)
+    resp = live_client.get_transactions(
+            _account_hash(live_client),
+            start_date=now - datetime.timedelta(days=30),
+            end_date=now + datetime.timedelta(days=10))
+
+    assert resp.status_code == 200
+    assert isinstance(resp.json(), list)

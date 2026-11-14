@@ -371,9 +371,10 @@ class BaseClient(EnumEnforcer):
         :param account_hash: Account hash corresponding to the account whose 
                              transactions should be returned.
         :param start_date: Only transactions after this date will be returned.
-                           Date must be within 60 days of the current date. If 
-                           this parameter is not set, it will be set to 60 days 
-                           prior to now.
+                           The API requires that ``end_date - start_date`` not
+                           exceed one year, but imposes no limit on how long
+                           ago the dates themselves may be. If this parameter
+                           is not set, it will be set to 60 days prior to now.
                            Accepts ``datetime.date`` and ``datetime.datetime``.
         :param end_date: Only transactions before this date will be returned. If 
                          this parameter is not set, it will be set to the 
