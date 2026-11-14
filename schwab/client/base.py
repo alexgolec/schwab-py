@@ -258,17 +258,19 @@ class BaseClient(EnumEnforcer):
         which to filter.
 
         :param max_results: The maximum number of orders to retrieve.
+                            Maximum 5000.
         :param from_entered_datetime: Specifies that no orders entered before
-                                      this time should be returned. Date must
-                                      be within 60 days from today's date.
+                                      this time should be returned. The API
+                                      requires that to_entered_datetime minus
+                                      from_entered_datetime not exceed one
+                                      year, but imposes no limit on how long
+                                      ago the dates themselves may be.
                                       ``toEnteredTime`` must also be set.
         :param to_entered_datetime: Specifies that no orders entered after this
                                     time should be returned. ``fromEnteredTime``
                                     must also be set.
         :param status: Restrict query to orders with this status. See
                        :class:`Order.Status` for options.
-        :param statuses: Restrict query to orders with any of these statuses.
-                         See :class:`Order.Status` for options.
         '''
         path = '/trader/v1/accounts/{}/orders'.format(account_hash)
         return self._get_request(path, self._make_order_query(
@@ -287,9 +289,13 @@ class BaseClient(EnumEnforcer):
         which to filter.
 
         :param max_results: The maximum number of orders to retrieve.
+                            Maximum 5000.
         :param from_entered_datetime: Specifies that no orders entered before
-                                      this time should be returned. Date must
-                                      be within 60 days from today's date.
+                                      this time should be returned. The API
+                                      requires that to_entered_datetime minus
+                                      from_entered_datetime not exceed one
+                                      year, but imposes no limit on how long
+                                      ago the dates themselves may be.
                                       ``toEnteredTime`` must also be set.
         :param to_entered_datetime: Specifies that no orders entered after this
                                     time should be returned. ``fromEnteredTime``
