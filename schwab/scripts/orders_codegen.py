@@ -1,6 +1,7 @@
 import argparse
 import httpx
 import json
+import sys
 
 from schwab.auth import client_from_token_file
 from schwab.contrib.orders import construct_repeat_order, code_for_builder
@@ -103,3 +104,7 @@ def latest_order_main(sys_args):
         print('No recent orders found')
 
     return 0
+
+
+def main():
+    return latest_order_main(sys.argv[1:])

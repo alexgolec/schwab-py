@@ -300,7 +300,7 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
                             'https://127.0.0.1:{}/schwab-py-internal/status'.format(
                                 callback_port), verify=False)
                 break
-            except httpx.ConnectError as e:
+            except (httpx.ConnectError, httpx.ConnectTimeout) as e:
                 pass
 
             time.sleep(0.1)

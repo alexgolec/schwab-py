@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import call, MagicMock, patch
 
 from ..utils import AnyStringWith, no_duplicates
-from schwab.scripts.orders_codegen import latest_order_main
+from schwab.scripts.orders_codegen import latest_order_main, main
 
 class LatestOrderTest(unittest.TestCase):
 
@@ -479,5 +479,12 @@ class ScriptInvocationTest(unittest.TestCase):
 
     def test_get_help(self):
         output = subprocess.check_output(
-                'schwab-order-codegen.py --help',
+                'schwab-order-codegen --help',
                 shell=True, text=True)
+
+    @patch('schwab.scripts.orders_codegen.latest_order_main')
+    @patch('schwab.scripts.orders_codegen.sys')
+    def test_main_forwards_sys_argv(self, mock_sys, mock_main):
+        mock_sys.argv = ['schwab-order-codegen', '--help']
+        main()
+        mock_main.assert_called_once_with(['--help'])

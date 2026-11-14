@@ -11,24 +11,14 @@ contribute.
 Setting up the Dev Environment
 ------------------------------
 
-Dependencies are listed in the `requirements.txt` file. These development 
-requirements are distinct from the requirements listed in `setup.py` and include 
-some additional packages around testing, documentation generation, etc.
-
-Before you install anything, I highly recommend setting up a `virtualenv` so you 
-don't pollute your system installation directories:
+This project uses `uv <https://docs.astral.sh/uv/>`_ to manage dependencies 
+and the development environment. Once uv is installed, create a virtual 
+environment and install the project (in editable mode) together with the 
+development dependencies:
 
 .. code-block:: shell
 
-  pip install virtualenv
-  virtualenv -v virtualenv
-  source virtualenv/bin/activate
-
-Next, install project requirements:
-
-.. code-block:: shell
-
-  pip install ".[dev]"
+  uv sync
 
 Finally, verify everything works by running tests:
 
@@ -38,15 +28,10 @@ Finally, verify everything works by running tests:
 
 At this point you can make your changes.
 
-Note that if you are using a virtual environment and switch to a new terminal
-your virtual environment will not be active in the new terminal,
-and you need to run the activate command again.
-If you want to disable the loaded virtual environment in the same terminal window,
-use the command:
-
-.. code-block:: shell
-
-  deactivate
+Note that ``uv run`` and ``make`` execute commands inside the project 
+environment automatically, so there is no need to activate the virtual 
+environment yourself. If you prefer to activate it anyway, it lives in 
+``.venv/`` in the project directory.
 
 ----------------------
 Development Guidelines
@@ -78,4 +63,4 @@ Documentation is built using `Sphinx <https://www.sphinx-doc.org/en/master/>`__:
 
 .. code-block:: shell
 
-  sphinx-build docs/ docs-build
+  uv run --group docs sphinx-build docs/ docs-build

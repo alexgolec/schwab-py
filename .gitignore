@@ -148,3 +148,7 @@ tags
 virtualenv
 
 docs-build/
+
+# uv-managed environment
+.venv/
+uv.lock
