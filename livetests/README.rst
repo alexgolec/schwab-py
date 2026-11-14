@@ -48,6 +48,23 @@ Schwab login page, and wait for you to log in. Schwab then redirects to
 the local callback server the test started on this machine, and the token
 is written to a temporary directory and deleted when the run finishes.
 
+-------------------------
+Reusing a token between runs
+-------------------------
+
+To avoid logging in on every run, point ``RETAINED_TOKEN_PATH`` at a
+filename. The first run performs the browser login and writes the token
+there; later runs load it until it expires, at which point you'll be asked
+to log in again and the file is rewritten:
+
+.. code-block:: shell
+
+  RETAINED_TOKEN_PATH=~/.schwab-test-token.json make test-live
+
+This can also be set in ``schwab-credentials.env``. Note the file contains
+a live refresh token — it is *not* covered by this repo's gitignore rules,
+so keep it outside the repository and treat it like a password.
+
 .. warning::
 
   These tests use real credentials and create real tokens. Never commit
