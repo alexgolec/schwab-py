@@ -460,6 +460,7 @@ class BaseClient(EnumEnforcer):
             EXTENDED = 'extended'
             REFERENCE = 'reference'
             REGULAR = 'regular'
+            ALL = 'all'
 
     def get_quote(self, symbol, *, fields=None):
         '''
