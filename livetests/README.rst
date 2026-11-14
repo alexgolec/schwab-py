@@ -31,7 +31,9 @@ Copy the credentials template and fill it in:
 
 ``schwab-credentials.env`` is gitignored, so your credentials can never be
 committed. Environment variables of the same names override the file
-values, e.g. ``SCHWAB_API_KEY=... make test-live``.
+values, e.g. ``SCHWAB_API_KEY=... make test-live``. The suite *fails* if
+required credentials are missing, so a broken configuration can never
+masquerade as a passing run.
 
 ----------------
 Running

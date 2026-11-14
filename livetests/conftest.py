@@ -38,7 +38,7 @@ def schwab_credentials():
 
     missing = [key for key in _REQUIRED if not values.get(key)]
     if missing:
-        pytest.skip(
+        pytest.fail(
                 'missing Schwab credentials ({}): copy '
                 'livetests/schwab-credentials.env.template to '
                 'livetests/schwab-credentials.env and fill it in, or set '
@@ -73,13 +73,20 @@ def live_client(schwab_credentials, tmp_path_factory):
     else:
         token_path = tmp_path_factory.mktemp('schwab-live') / 'token.json'
 
-    client = schwab.auth.easy_client(
-            schwab_credentials['api_key'],
-            schwab_credentials['app_secret'],
-            schwab_credentials['callback_url'],
-            str(token_path),
-            callback_timeout=schwab_credentials['callback_timeout'],
-            requested_browser=schwab_credentials['requested_browser'])
+    try:
+        client = schwab.auth.easy_client(
+                schwab_credentials['api_key'],
+                schwab_credentials['app_secret'],
+                schwab_credentials['callback_url'],
+                str(token_path),
+                callback_timeout=schwab_credentials['callback_timeout'],
+                requested_browser=schwab_credentials['requested_browser'])
+    except OSError as e:
+        if 'stdin' in str(e):
+            pytest.fail(
+                    'the easy_client login flow requires interactive stdin; '
+                    'rerun with -s (e.g. make test-live)')
+        raise
 
     yield client
 
