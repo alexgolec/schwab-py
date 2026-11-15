@@ -297,26 +297,22 @@ position reaches certain levels. In those cases, the price of an order can drop
 below the specified price as a result of movements in multiple legs of the 
 trade. 
 
-.. _number_truncation:
 
-~~~~~~~~~~~~~~~~~~
-Note on Truncation
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
+Note on Prices
+~~~~~~~~~~~~~~~~~
 
-**Important Note:** Under the hood, the Schwab API expects price as a string, 
-whereas ``schwab-py`` allows setting prices as a floating point number for 
-convenience.  The passed value is then converted to a string under the hood, 
-which involves some truncation logic:
+**Important Note:** The Schwab API expects prices as strings, and
+``schwab-py`` passes them through unchanged. Prices must be passed as
+strings: ``set_price``, ``set_stop_price``, and the order templates raise
+``ValueError`` on ``float``, ``int``, and other non-string values. Formatting
+— decimal places, padding, and so on — is entirely the caller's
+responsibility.
 
- * If the price has absolute value less than one, truncate  (not round!) to 
-   four decimal places. For example, `0.186992` will become `0.1869`.
- * For all other values, truncate to two decimal places. The above example would 
-   become `0.18`. 
-
-This behavior is meant as a sane heuristic, and there are almost certainly 
-situations where it is not the correct thing to do. You can sidestep this entire 
-process by passing your price as a string, although be forewarned that Schwab 
-may reject your order or even interpret it in unexpected ways. 
+Strings that do not parse as numbers are passed through unvalidated and left
+for Schwab to reject, although strings that parse to non-finite values
+(``'nan'``, ``'inf'``, ``'-inf'``, overflow values like ``'1e999'``) are
+refused with ``ValueError`` since they can never represent a real price.
 
 .. automethod:: schwab.orders.generic.OrderBuilder.set_price
 .. automethod:: schwab.orders.generic.OrderBuilder.copy_price
