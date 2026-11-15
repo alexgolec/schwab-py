@@ -36,6 +36,5 @@ _warnings.warn(
         '(see https://schwab-py.readthedocs.io/en/latest/v2.html for '
         'the transition plan and migration notes). The release will '
         'also include library interface changes: to stay on the 1.x '
-        'line, pin '
-        '"schwab-py<2.0" in your package manager.',
+        'line, pin "schwab-py<2.0" in your package manager.',
         V2DeprecationWarning)
