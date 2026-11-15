@@ -304,10 +304,15 @@ def test_instrument_by_cusip(live_client):
     assert instruments[0]['cusip'] == '037833100'
 
 
-def test_instrument_by_cusip_not_found(live_client):
-    '''An unknown CUSIP fails with HTTP 400 whose embedded error
-    status reads '404' — transport status and error title disagree,
-    and both are pinned here.'''
-    resp = live_client.get_instrument_by_cusip('999999999')
+@pytest.mark.parametrize('cusip', ['999999999', '912810TM6',
+                                   '037833CU2'])
+def test_instrument_by_cusip_not_found(live_client, cusip):
+    '''The CUSIP endpoint 404s on unknown or unsupported
+    identifiers with HTTP 400 whose embedded error status reads
+    '404'. This includes bond CUSIPs: although the API schema
+    defines a Bond instrument type, neither a Treasury
+    ('912810TM6') nor a corporate bond ('037833CU2', an AAPL
+    issue) resolves — bonds are unreachable through this API.'''
+    resp = live_client.get_instrument_by_cusip(cusip)
     assert resp.status_code == 400
     assert resp.json()['errors'][0]['status'] == '404'
