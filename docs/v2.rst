@@ -65,16 +65,6 @@ updating:
   annotations will fail against our return values. Use ``httpx2.Response``.
 * The ``httpx`` logger is renamed ``httpx2``; update logging configuration
   accordingly.
-* TLS certificate verification now uses the operating system's trust store via
-  ``truststore`` rather than ``certifi``. This generally improves compatibility
-  with enterprise proxies, but environments relying on certifi-specific CA
-  bundles may behave differently.
-* The ``User-Agent`` header now reports ``python-httpx2`` instead of
-  ``python-httpx``.
-
-Users whose applications also use ``httpx`` directly can opt into
-``httpx2.alias_httpx()`` at application startup to unify the two namespaces;
-see the httpx2 documentation for details. Libraries should not call it.
 
 AI Disclosure
 -------------
