@@ -113,6 +113,28 @@ def test_index_chain_multi_root(live_client):
     assert multi > 0
 
 
+@pytest.mark.parametrize('symbol', ['$VIX', '$RUT'])
+def test_index_symbols_chain(live_client, symbol):
+    '''Index option chains beyond $SPX work: $VIX and $RUT return
+    isIndex chains with populated maps.'''
+    data = _chain(live_client, symbol=symbol, strike_count=1)
+    assert data['isIndex'] is True
+    assert len(data['callExpDateMap']) > 0
+
+
+def test_spx_settlement_split(live_client):
+    '''$SPX's two roots differ by settlement: SPX monthlies are
+    AM-settled ('A'), SPXW weeklies PM-settled ('P'), both
+    European-exercise — the classic SPX/SPXW split enshrined.'''
+    data = _chain(live_client, symbol='$SPX', strike_count=2)
+    by_root = {}
+    for _, contract in _all_contracts(data):
+        by_root.setdefault(contract['optionRoot'], set()).add(
+                (contract['settlementType'], contract['exerciseType']))
+    assert by_root['SPX'] == {('A', 'E')}
+    assert by_root['SPXW'] == {('P', 'E')}
+
+
 def test_spy_bounded_request(live_client):
     '''SPY responds to a bounded chain request normally. Its
     unbounded chain is too large for the gateway — repeated
@@ -156,6 +178,55 @@ def test_contract_field_format(live_client):
         assert contract['inTheMoney'] == expected_itm
         count += 1
     assert count > 0
+
+
+def test_underlying_price_is_quote_last(live_client):
+    '''The chain's underlyingPrice equals the quotes endpoint's
+    lastPrice for the same symbol — the last trade, not the mark
+    or close.'''
+    quote = live_client.get_quotes(['AAPL']).json()
+    last = quote['AAPL']['quote']['lastPrice']
+    data = _chain(live_client, strike_count=1)
+    assert data['underlyingPrice'] == last
+
+
+def test_break_even_arithmetic(live_client):
+    '''breakEven is strike + mark for calls and strike - mark for
+    puts, computed against the UNROUNDED mark: it can land a cent
+    away from the rounded mark's arithmetic (mark 4.22 with
+    theoretical 4.225 breaks even at 361.725 -> 361.73).'''
+    data = _chain(live_client, strike_count=2)
+    for side, contract in _all_contracts(data):
+        expected = contract['strikePrice'] + contract['mark'] \
+                if side == 'CALL' \
+                else contract['strikePrice'] - contract['mark']
+        assert contract['breakEven'] == pytest.approx(
+                expected, abs=0.011)
+
+
+def test_deliverables(live_client):
+    '''Standard contracts carry a populated optionDeliverablesList
+    of 100 shares of the underlying, plus the human-readable
+    deliverableNote '100 AAPL'.'''
+    data = _chain(live_client, strike_count=1)
+    for _, contract in _all_contracts(data):
+        assert contract['deliverableNote'] == '100 AAPL'
+        deliverables = contract['optionDeliverablesList']
+        assert len(deliverables) == 1
+        deliverable = deliverables[0]
+        assert deliverable['symbol'] == 'AAPL'
+        assert deliverable['assetType'] == 'STOCK'
+        assert deliverable['deliverableUnits'] == 100.0
+
+
+def test_neg999_paired_sentinels(live_client):
+    '''Every contract with the -999.0 volatility sentinel also has
+    -999.0 theoreticalOptionValue — the missing-data marker comes
+    in pairs, flagging contracts with no usable market.'''
+    data = _chain(live_client, strike_count=3)
+    for _, contract in _all_contracts(data):
+        if contract['volatility'] == -999.0:
+            assert contract['theoreticalOptionValue'] == -999.0
 
 
 ################################################################################
@@ -220,6 +291,13 @@ def test_strike_count_bounds(live_client):
     default = _chain(live_client)
     assert sum(len(s) for s in full['callExpDateMap'].values()) \
             == sum(len(s) for s in default['callExpDateMap'].values())
+
+
+def test_strike_count_fractional(live_client):
+    '''The server validates numeric parameter format even though it
+    ignores numeric values: a fractional strikeCount is a 400.'''
+    resp = live_client.get_option_chain('AAPL', strike_count=3.7)
+    assert resp.status_code == 400
 
 
 def test_strike_count_negative(live_client):
@@ -563,6 +641,93 @@ def _leg_width(strat):
                - strat['primaryLeg']['strikePrice'])
 
 
+@pytest.mark.parametrize('contract_type', [
+        _O.ContractType.CALL, _O.ContractType.PUT])
+def test_strategy_contract_type(live_client, contract_type):
+    '''contractType works on strategy chains: CALL returns only
+    call-leg spreads, PUT only put-leg spreads — the filter
+    applies to leg side, not just the grid.'''
+    data = _chain(live_client, strategy=_O.Strategy.VERTICAL,
+                  interval=5, contract_type=contract_type)
+    expected = 'C' if contract_type is _O.ContractType.CALL else 'P'
+    strats = list(_strategies(data))
+    assert len(strats) > 0
+    for strat in strats:
+        assert strat['primaryLeg']['putCallInd'] == expected
+        assert strat['secondaryLeg']['putCallInd'] == expected
+
+
+def test_strategy_truncation_is_put_biased(live_client):
+    '''Truncation takes a put-sorted prefix: the default VERTICAL
+    response's 1000 capped strategies are all put spreads.'''
+    data = _chain(live_client, strategy=_O.Strategy.VERTICAL)
+    assert data['isChainTruncated'] is True
+    strats = list(_strategies(data))
+    assert len(strats) == 1000
+    for strat in strats:
+        assert strat['primaryLeg']['putCallInd'] == 'P'
+
+
+def test_strategy_strike_anchors_either_leg(live_client):
+    '''strike on a strategy chain anchors spreads at EITHER leg:
+    a strike filter returns every spread touching it — both
+    (X,X+w) and (X-w,X) pairs — not just one leg position.'''
+    data = _chain(live_client, strategy=_O.Strategy.VERTICAL,
+                  interval=5, strike=275)
+    strats = list(_strategies(data))
+    assert len(strats) > 0
+    saw_lower = saw_upper = False
+    for strat in strats:
+        strikes = {strat['primaryLeg']['strikePrice'],
+                   strat['secondaryLeg']['strikePrice']}
+        assert 275.0 in strikes
+        saw_lower |= strat['primaryLeg']['strikePrice'] == 275.0
+        saw_upper |= strat['secondaryLeg']['strikePrice'] == 275.0
+    assert saw_lower and saw_upper
+
+
+def test_strategy_filters_compose(live_client):
+    '''strikeRange, the date window and expMonth all filter
+    strategy lists just as they filter the grid — each yields a
+    narrower, still well-formed monthlyStrategyList.'''
+    for kwargs in (
+            {'strike_range': _O.StrikeRange.OUT_OF_THE_MONEY},
+            {'exp_month': _O.ExpirationMonth.DECEMBER}):
+        data = _chain(live_client, strategy=_O.Strategy.VERTICAL,
+                      interval=5, **kwargs)
+        assert len(list(_strategies(data))) > 0
+
+    full = _chain(live_client, strike_count=1)
+    exp_dates = sorted(
+            datetime.date.fromisoformat(_exp_key_date(k))
+            for k in full['callExpDateMap'])
+    data = _chain(live_client, strategy=_O.Strategy.VERTICAL,
+                  interval=5, from_date=exp_dates[0],
+                  to_date=exp_dates[min(3, len(exp_dates) - 1)])
+    assert len(list(_strategies(data))) > 0
+
+
+def test_strategy_strike_count_ignored(live_client):
+    '''strikeCount does NOT apply to strategy chains: a bounded
+    VERTICAL request returns the identical strategy count with and
+    without it — count limits grid strikes, not strategy
+    generation.'''
+    kwargs = {'strategy': _O.Strategy.VERTICAL, 'interval': 2.5}
+    bounded = _chain(live_client, strike_count=1, **kwargs)
+    unbounded = _chain(live_client, **kwargs)
+    assert sum(1 for _ in _strategies(bounded)) \
+            == sum(1 for _ in _strategies(unbounded))
+
+
+def test_strategy_include_underlying_quote(live_client):
+    '''includeUnderlyingQuote populates the strategy response's
+    underlying slot too — the flag applies to whichever response
+    shape the request produces.'''
+    data = _chain(live_client, strategy=_O.Strategy.VERTICAL,
+                  interval=5, include_underlying_quote=True)
+    assert data['underlying']['symbol'] == 'AAPL'
+
+
 def test_strategy_truncation_cap(live_client):
     '''The strategy list is capped at 1000 entries server-side and
     isChainTruncated reports the cap was hit: a default VERTICAL
@@ -778,6 +943,17 @@ def test_symbol_form_rejected(live_client, symbol):
     case-folding or trimming happens server-side.'''
     resp = live_client.get_option_chain(symbol)
     assert resp.status_code == 400
+
+
+def test_symbol_share_class_slash(live_client):
+    ''''BRK/B' resolves to a real chain while 'BRK.B' and 'BRKB'
+    are 400s: only the slash spelling works for this share
+    class.'''
+    data = _chain(live_client, symbol='BRK/B', strike_count=1)
+    assert len(data['callExpDateMap']) > 0
+    for bad in ('BRK.B', 'BRKB'):
+        resp = live_client.get_option_chain(bad)
+        assert resp.status_code == 400
 
 
 @pytest.mark.parametrize('symbol', ['/ES', 'EUR/USD'])
