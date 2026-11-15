@@ -114,177 +114,334 @@ def _check_strategy(data, symbols, *, order_type, quantity,
 ################################################################################
 # Equity templates
 
-_EQUITY_CASES = [
-    ('buy_market',
-     lambda: equities.equity_buy_market('AAPL', 3),
-     'MARKET', None,
-     [('BUY', 'AAPL', 'EQUITY', 'OPENING')]),
-    ('buy_limit',
-     lambda: equities.equity_buy_limit('AAPL', 3, '350.00'),
-     'LIMIT', 350.0,
-     [('BUY', 'AAPL', 'EQUITY', 'OPENING')]),
-    ('sell_market',
-     lambda: equities.equity_sell_market('AAPL', 3),
-     'MARKET', None,
-     [('SELL', 'AAPL', 'EQUITY', 'CLOSING')]),
-    ('sell_limit',
-     lambda: equities.equity_sell_limit('AAPL', 3, '400.00'),
-     'LIMIT', 400.0,
-     [('SELL', 'AAPL', 'EQUITY', 'CLOSING')]),
-    ('sell_short_market',
-     lambda: equities.equity_sell_short_market('AAPL', 3),
-     'MARKET', None,
-     [('SELL_SHORT', 'AAPL', 'EQUITY', 'OPENING')]),
-    ('sell_short_limit',
-     lambda: equities.equity_sell_short_limit('AAPL', 3, '400.00'),
-     'LIMIT', 400.0,
-     [('SELL_SHORT', 'AAPL', 'EQUITY', 'OPENING')]),
-    ('buy_to_cover_market',
-     lambda: equities.equity_buy_to_cover_market('AAPL', 3),
-     'MARKET', None,
-     [('BUY_TO_COVER', 'AAPL', 'EQUITY', 'CLOSING')]),
-    ('buy_to_cover_limit',
-     lambda: equities.equity_buy_to_cover_limit('AAPL', 3, '350.00'),
-     'LIMIT', 350.0,
-     [('BUY_TO_COVER', 'AAPL', 'EQUITY', 'CLOSING')]),
-]
+def test_equity_buy_market(live_client, account_hash):
+    '''equity_buy_market produces a MARKET BUY leg echoed with
+    positionEffect OPENING, no price, and a market orderValue.'''
+    data = _preview(live_client, account_hash,
+                    equities.equity_buy_market('AAPL', 3))
+    _check_strategy(data, {}, order_type='MARKET', quantity=3.0,
+                    legs=[('BUY', 'AAPL', 'EQUITY', 'OPENING')])
 
 
-@pytest.mark.parametrize('case', _EQUITY_CASES,
-        ids=[c[0] for c in _EQUITY_CASES])
-def test_equity_template(
-        live_client, account_hash, case):
-    '''Every equity template previews to an echo matching its
-    inputs: order type, price, quantity, instruction, symbol, and
-    the positionEffect the server derives from the instruction.'''
-    _, make, order_type, price, legs = case
-    data = _preview(live_client, account_hash, make())
-    _check_strategy(
-            data, {}, order_type=order_type, quantity=3.0,
-            price=price, legs=legs)
+def test_equity_buy_limit(live_client, account_hash):
+    '''equity_buy_limit echoes LIMIT BUY with the price and
+    orderValue = price x quantity.'''
+    data = _preview(live_client, account_hash,
+                    equities.equity_buy_limit('AAPL', 3, '350.00'))
+    _check_strategy(data, {}, order_type='LIMIT', quantity=3.0,
+                    price=350.0,
+                    legs=[('BUY', 'AAPL', 'EQUITY', 'OPENING')])
+
+
+def test_equity_sell_market(live_client, account_hash):
+    '''equity_sell_market produces a MARKET SELL leg echoed with
+    positionEffect CLOSING.'''
+    data = _preview(live_client, account_hash,
+                    equities.equity_sell_market('AAPL', 3))
+    _check_strategy(data, {}, order_type='MARKET', quantity=3.0,
+                    legs=[('SELL', 'AAPL', 'EQUITY', 'CLOSING')])
+
+
+def test_equity_sell_limit(live_client, account_hash):
+    '''equity_sell_limit echoes LIMIT SELL with the price,
+    positionEffect CLOSING.'''
+    data = _preview(live_client, account_hash,
+                    equities.equity_sell_limit('AAPL', 3, '400.00'))
+    _check_strategy(data, {}, order_type='LIMIT', quantity=3.0,
+                    price=400.0,
+                    legs=[('SELL', 'AAPL', 'EQUITY', 'CLOSING')])
+
+
+def test_equity_sell_short_market(live_client, account_hash):
+    '''equity_sell_short_market produces a MARKET SELL_SHORT
+    leg echoed with positionEffect OPENING — the server treats a
+    short sale as an opening trade.'''
+    data = _preview(live_client, account_hash,
+                    equities.equity_sell_short_market('AAPL', 3))
+    _check_strategy(data, {}, order_type='MARKET', quantity=3.0,
+                    legs=[('SELL_SHORT', 'AAPL', 'EQUITY',
+                           'OPENING')])
+
+
+def test_equity_sell_short_limit(live_client, account_hash):
+    '''equity_sell_short_limit echoes LIMIT SELL_SHORT with
+    positionEffect OPENING.'''
+    data = _preview(live_client, account_hash,
+                    equities.equity_sell_short_limit(
+                        'AAPL', 3, '400.00'))
+    _check_strategy(data, {}, order_type='LIMIT', quantity=3.0,
+                    price=400.0,
+                    legs=[('SELL_SHORT', 'AAPL', 'EQUITY',
+                           'OPENING')])
+
+
+def test_equity_buy_to_cover_market(live_client, account_hash):
+    '''equity_buy_to_cover_market produces a MARKET
+    BUY_TO_COVER leg echoed with positionEffect CLOSING.'''
+    data = _preview(live_client, account_hash,
+                    equities.equity_buy_to_cover_market('AAPL', 3))
+    _check_strategy(data, {}, order_type='MARKET', quantity=3.0,
+                    legs=[('BUY_TO_COVER', 'AAPL', 'EQUITY',
+                           'CLOSING')])
+
+
+def test_equity_buy_to_cover_limit(live_client, account_hash):
+    '''equity_buy_to_cover_limit echoes LIMIT BUY_TO_COVER
+    with the price and positionEffect CLOSING.'''
+    data = _preview(live_client, account_hash,
+                    equities.equity_buy_to_cover_limit(
+                        'AAPL', 3, '350.00'))
+    _check_strategy(data, {}, order_type='LIMIT', quantity=3.0,
+                    price=350.0,
+                    legs=[('BUY_TO_COVER', 'AAPL', 'EQUITY',
+                           'CLOSING')])
 
 
 ################################################################################
 # Single-option templates
 
-_OPTION_CASES = [
-    ('buy_to_open_market',
-     lambda s: options.option_buy_to_open_market(s['call_lo'], 2),
-     'MARKET', None,
-     [('BUY_TO_OPEN', 'call_lo', 'OPTION', 'OPENING')]),
-    ('buy_to_open_limit',
-     lambda s: options.option_buy_to_open_limit(s['call_lo'], 2, '5.00'),
-     'LIMIT', 5.0,
-     [('BUY_TO_OPEN', 'call_lo', 'OPTION', 'OPENING')]),
-    ('sell_to_open_market',
-     lambda s: options.option_sell_to_open_market(s['call_lo'], 2),
-     'MARKET', None,
-     [('SELL_TO_OPEN', 'call_lo', 'OPTION', 'OPENING')]),
-    ('sell_to_open_limit',
-     lambda s: options.option_sell_to_open_limit(s['call_lo'], 2, '5.00'),
-     'LIMIT', 5.0,
-     [('SELL_TO_OPEN', 'call_lo', 'OPTION', 'OPENING')]),
-    ('buy_to_close_market',
-     lambda s: options.option_buy_to_close_market(s['call_lo'], 2),
-     'MARKET', None,
-     [('BUY_TO_CLOSE', 'call_lo', 'OPTION', 'CLOSING')]),
-    ('buy_to_close_limit',
-     lambda s: options.option_buy_to_close_limit(s['call_lo'], 2, '5.00'),
-     'LIMIT', 5.0,
-     [('BUY_TO_CLOSE', 'call_lo', 'OPTION', 'CLOSING')]),
-    ('sell_to_close_market',
-     lambda s: options.option_sell_to_close_market(s['call_lo'], 2),
-     'MARKET', None,
-     [('SELL_TO_CLOSE', 'call_lo', 'OPTION', 'CLOSING')]),
-    ('sell_to_close_limit',
-     lambda s: options.option_sell_to_close_limit(s['call_lo'], 2, '5.00'),
-     'LIMIT', 5.0,
-     [('SELL_TO_CLOSE', 'call_lo', 'OPTION', 'CLOSING')]),
-]
+def test_option_buy_to_open_market(
+        live_client, account_hash, option_symbols):
+    '''option_buy_to_open_market produces a MARKET BUY_TO_OPEN
+    leg echoed with positionEffect OPENING against the live option
+    symbol.'''
+    data = _preview(live_client, account_hash,
+                    options.option_buy_to_open_market(
+                        option_symbols['call_lo'], 2))
+    _check_strategy(data, option_symbols, order_type='MARKET',
+                    quantity=2.0,
+                    legs=[('BUY_TO_OPEN', 'call_lo', 'OPTION',
+                           'OPENING')])
 
 
-@pytest.mark.parametrize('case', _OPTION_CASES,
-        ids=[c[0] for c in _OPTION_CASES])
-def test_option_template(
-        live_client, account_hash, option_symbols, case):
-    '''Every single-option template previews to an echo matching
-    its inputs — including the orderValue arithmetic of
-    price x quantity x 100.'''
-    _, make, order_type, price, legs = case
-    data = _preview(live_client, account_hash, make(option_symbols))
-    _check_strategy(
-            data, option_symbols, order_type=order_type,
-            quantity=2.0, price=price, legs=legs)
+def test_option_buy_to_open_limit(
+        live_client, account_hash, option_symbols):
+    '''option_buy_to_open_limit echoes LIMIT BUY_TO_OPEN with
+    the price and orderValue = price x quantity x 100.'''
+    data = _preview(live_client, account_hash,
+                    options.option_buy_to_open_limit(
+                        option_symbols['call_lo'], 2, '5.00'))
+    _check_strategy(data, option_symbols, order_type='LIMIT',
+                    quantity=2.0, price=5.0,
+                    legs=[('BUY_TO_OPEN', 'call_lo', 'OPTION',
+                           'OPENING')])
+
+
+def test_option_sell_to_open_market(
+        live_client, account_hash, option_symbols):
+    '''option_sell_to_open_market produces a MARKET
+    SELL_TO_OPEN leg echoed with positionEffect OPENING.'''
+    data = _preview(live_client, account_hash,
+                    options.option_sell_to_open_market(
+                        option_symbols['call_lo'], 2))
+    _check_strategy(data, option_symbols, order_type='MARKET',
+                    quantity=2.0,
+                    legs=[('SELL_TO_OPEN', 'call_lo', 'OPTION',
+                           'OPENING')])
+
+
+def test_option_sell_to_open_limit(
+        live_client, account_hash, option_symbols):
+    '''option_sell_to_open_limit echoes LIMIT SELL_TO_OPEN
+    with the price and positionEffect OPENING.'''
+    data = _preview(live_client, account_hash,
+                    options.option_sell_to_open_limit(
+                        option_symbols['call_lo'], 2, '5.00'))
+    _check_strategy(data, option_symbols, order_type='LIMIT',
+                    quantity=2.0, price=5.0,
+                    legs=[('SELL_TO_OPEN', 'call_lo', 'OPTION',
+                           'OPENING')])
+
+
+def test_option_buy_to_close_market(
+        live_client, account_hash, option_symbols):
+    '''option_buy_to_close_market produces a MARKET
+    BUY_TO_CLOSE leg echoed with positionEffect CLOSING.'''
+    data = _preview(live_client, account_hash,
+                    options.option_buy_to_close_market(
+                        option_symbols['call_lo'], 2))
+    _check_strategy(data, option_symbols, order_type='MARKET',
+                    quantity=2.0,
+                    legs=[('BUY_TO_CLOSE', 'call_lo', 'OPTION',
+                           'CLOSING')])
+
+
+def test_option_buy_to_close_limit(
+        live_client, account_hash, option_symbols):
+    '''option_buy_to_close_limit echoes LIMIT BUY_TO_CLOSE
+    with the price and positionEffect CLOSING.'''
+    data = _preview(live_client, account_hash,
+                    options.option_buy_to_close_limit(
+                        option_symbols['call_lo'], 2, '5.00'))
+    _check_strategy(data, option_symbols, order_type='LIMIT',
+                    quantity=2.0, price=5.0,
+                    legs=[('BUY_TO_CLOSE', 'call_lo', 'OPTION',
+                           'CLOSING')])
+
+
+def test_option_sell_to_close_market(
+        live_client, account_hash, option_symbols):
+    '''option_sell_to_close_market produces a MARKET
+    SELL_TO_CLOSE leg echoed with positionEffect CLOSING.'''
+    data = _preview(live_client, account_hash,
+                    options.option_sell_to_close_market(
+                        option_symbols['call_lo'], 2))
+    _check_strategy(data, option_symbols, order_type='MARKET',
+                    quantity=2.0,
+                    legs=[('SELL_TO_CLOSE', 'call_lo', 'OPTION',
+                           'CLOSING')])
+
+
+def test_option_sell_to_close_limit(
+        live_client, account_hash, option_symbols):
+    '''option_sell_to_close_limit echoes LIMIT SELL_TO_CLOSE
+    with the price and positionEffect CLOSING.'''
+    data = _preview(live_client, account_hash,
+                    options.option_sell_to_close_limit(
+                        option_symbols['call_lo'], 2, '5.00'))
+    _check_strategy(data, option_symbols, order_type='LIMIT',
+                    quantity=2.0, price=5.0,
+                    legs=[('SELL_TO_CLOSE', 'call_lo', 'OPTION',
+                           'CLOSING')])
 
 
 ################################################################################
 # Vertical templates
 
-_VERTICAL_CASES = [
-    ('bull_call_open',
-     lambda s: options.bull_call_vertical_open(
-         s['call_lo'], s['call_hi'], 2, '1.50'),
-     [('BUY_TO_OPEN', 'call_lo', 'OPTION', 'OPENING'),
-      ('SELL_TO_OPEN', 'call_hi', 'OPTION', 'OPENING')],
-     1.50),
-    ('bull_call_close',
-     lambda s: options.bull_call_vertical_close(
-         s['call_lo'], s['call_hi'], 2, '1.50'),
-     [('SELL_TO_CLOSE', 'call_lo', 'OPTION', 'CLOSING'),
-      ('BUY_TO_CLOSE', 'call_hi', 'OPTION', 'CLOSING')],
-     1.50),
-    ('bear_call_open',
-     lambda s: options.bear_call_vertical_open(
-         s['call_lo'], s['call_hi'], 2, '1.50'),
-     [('SELL_TO_OPEN', 'call_lo', 'OPTION', 'OPENING'),
-      ('BUY_TO_OPEN', 'call_hi', 'OPTION', 'OPENING')],
-     1.50),
-    ('bear_call_close',
-     lambda s: options.bear_call_vertical_close(
-         s['call_lo'], s['call_hi'], 2, '1.50'),
-     [('BUY_TO_CLOSE', 'call_lo', 'OPTION', 'CLOSING'),
-      ('SELL_TO_CLOSE', 'call_hi', 'OPTION', 'CLOSING')],
-     1.50),
-    ('bull_put_open',
-     lambda s: options.bull_put_vertical_open(
-         s['put_lo'], s['put_hi'], 2, '1.50'),
-     [('BUY_TO_OPEN', 'put_lo', 'OPTION', 'OPENING'),
-      ('SELL_TO_OPEN', 'put_hi', 'OPTION', 'OPENING')],
-     1.50),
-    ('bull_put_close',
-     lambda s: options.bull_put_vertical_close(
-         s['put_lo'], s['put_hi'], 2, '1.50'),
-     [('SELL_TO_CLOSE', 'put_lo', 'OPTION', 'CLOSING'),
-      ('BUY_TO_CLOSE', 'put_hi', 'OPTION', 'CLOSING')],
-     1.50),
-    ('bear_put_open',
-     lambda s: options.bear_put_vertical_open(
-         s['put_lo'], s['put_hi'], 2, '1.50'),
-     [('SELL_TO_OPEN', 'put_lo', 'OPTION', 'OPENING'),
-      ('BUY_TO_OPEN', 'put_hi', 'OPTION', 'OPENING')],
-     1.50),
-    ('bear_put_close',
-     lambda s: options.bear_put_vertical_close(
-         s['put_lo'], s['put_hi'], 2, '1.50'),
-     [('BUY_TO_CLOSE', 'put_lo', 'OPTION', 'CLOSING'),
-      ('SELL_TO_CLOSE', 'put_hi', 'OPTION', 'CLOSING')],
-     1.50),
-]
+def test_bull_call_vertical_open(
+        live_client, account_hash, option_symbols):
+    '''bull_call_vertical_open previews as a LIMIT order under
+    strategy VERTICAL — NET_DEBIT normalizes to LIMIT — buying the
+    lower call and selling the higher, both legs OPENING.'''
+    data = _preview(live_client, account_hash,
+                    options.bull_call_vertical_open(
+                        option_symbols['call_lo'],
+                        option_symbols['call_hi'], 2, '1.50'))
+    _check_strategy(data, option_symbols, order_type='LIMIT',
+                    strategy='VERTICAL', quantity=2.0, price=1.5,
+                    legs=[('BUY_TO_OPEN', 'call_lo', 'OPTION',
+                           'OPENING'),
+                          ('SELL_TO_OPEN', 'call_hi', 'OPTION',
+                           'OPENING')])
 
 
-@pytest.mark.parametrize('case', _VERTICAL_CASES,
-        ids=[c[0] for c in _VERTICAL_CASES])
-def test_vertical_template(
-        live_client, account_hash, option_symbols, case):
-    '''Every vertical template previews to a LIMIT echo under
-    strategy 'VERTICAL' — NET_DEBIT and NET_CREDIT both normalize
-    to LIMIT — with both legs' instructions, symbols and derived
-    positionEffects matching the template's construction.'''
-    _, make, legs, price = case
-    data = _preview(live_client, account_hash, make(option_symbols))
-    _check_strategy(
-            data, option_symbols, order_type='LIMIT', quantity=2.0,
-            strategy='VERTICAL', price=price, legs=legs)
+def test_bull_call_vertical_close(
+        live_client, account_hash, option_symbols):
+    '''bull_call_vertical_close previews as LIMIT/VERTICAL —
+    NET_CREDIT normalizes too — selling the long call and buying
+    back the short, both legs CLOSING.'''
+    data = _preview(live_client, account_hash,
+                    options.bull_call_vertical_close(
+                        option_symbols['call_lo'],
+                        option_symbols['call_hi'], 2, '1.50'))
+    _check_strategy(data, option_symbols, order_type='LIMIT',
+                    strategy='VERTICAL', quantity=2.0, price=1.5,
+                    legs=[('SELL_TO_CLOSE', 'call_lo', 'OPTION',
+                           'CLOSING'),
+                          ('BUY_TO_CLOSE', 'call_hi', 'OPTION',
+                           'CLOSING')])
+
+
+def test_bear_call_vertical_open(
+        live_client, account_hash, option_symbols):
+    '''bear_call_vertical_open previews as LIMIT/VERTICAL,
+    selling the lower call and buying the higher for protection,
+    both legs OPENING.'''
+    data = _preview(live_client, account_hash,
+                    options.bear_call_vertical_open(
+                        option_symbols['call_lo'],
+                        option_symbols['call_hi'], 2, '1.50'))
+    _check_strategy(data, option_symbols, order_type='LIMIT',
+                    strategy='VERTICAL', quantity=2.0, price=1.5,
+                    legs=[('SELL_TO_OPEN', 'call_lo', 'OPTION',
+                           'OPENING'),
+                          ('BUY_TO_OPEN', 'call_hi', 'OPTION',
+                           'OPENING')])
+
+
+def test_bear_call_vertical_close(
+        live_client, account_hash, option_symbols):
+    '''bear_call_vertical_close previews as LIMIT/VERTICAL,
+    buying back the short call and selling the long, both legs
+    CLOSING.'''
+    data = _preview(live_client, account_hash,
+                    options.bear_call_vertical_close(
+                        option_symbols['call_lo'],
+                        option_symbols['call_hi'], 2, '1.50'))
+    _check_strategy(data, option_symbols, order_type='LIMIT',
+                    strategy='VERTICAL', quantity=2.0, price=1.5,
+                    legs=[('BUY_TO_CLOSE', 'call_lo', 'OPTION',
+                           'CLOSING'),
+                          ('SELL_TO_CLOSE', 'call_hi', 'OPTION',
+                           'CLOSING')])
+
+
+def test_bull_put_vertical_open(
+        live_client, account_hash, option_symbols):
+    '''bull_put_vertical_open previews as LIMIT/VERTICAL,
+    buying the lower put and selling the higher — the put mirror
+    of the bull call, both legs OPENING.'''
+    data = _preview(live_client, account_hash,
+                    options.bull_put_vertical_open(
+                        option_symbols['put_lo'],
+                        option_symbols['put_hi'], 2, '1.50'))
+    _check_strategy(data, option_symbols, order_type='LIMIT',
+                    strategy='VERTICAL', quantity=2.0, price=1.5,
+                    legs=[('BUY_TO_OPEN', 'put_lo', 'OPTION',
+                           'OPENING'),
+                          ('SELL_TO_OPEN', 'put_hi', 'OPTION',
+                           'OPENING')])
+
+
+def test_bull_put_vertical_close(
+        live_client, account_hash, option_symbols):
+    '''bull_put_vertical_close previews as LIMIT/VERTICAL,
+    selling the long put and buying back the short, both legs
+    CLOSING.'''
+    data = _preview(live_client, account_hash,
+                    options.bull_put_vertical_close(
+                        option_symbols['put_lo'],
+                        option_symbols['put_hi'], 2, '1.50'))
+    _check_strategy(data, option_symbols, order_type='LIMIT',
+                    strategy='VERTICAL', quantity=2.0, price=1.5,
+                    legs=[('SELL_TO_CLOSE', 'put_lo', 'OPTION',
+                           'CLOSING'),
+                          ('BUY_TO_CLOSE', 'put_hi', 'OPTION',
+                           'CLOSING')])
+
+
+def test_bear_put_vertical_open(
+        live_client, account_hash, option_symbols):
+    '''bear_put_vertical_open previews as LIMIT/VERTICAL,
+    selling the lower put and buying the higher for protection,
+    both legs OPENING.'''
+    data = _preview(live_client, account_hash,
+                    options.bear_put_vertical_open(
+                        option_symbols['put_lo'],
+                        option_symbols['put_hi'], 2, '1.50'))
+    _check_strategy(data, option_symbols, order_type='LIMIT',
+                    strategy='VERTICAL', quantity=2.0, price=1.5,
+                    legs=[('SELL_TO_OPEN', 'put_lo', 'OPTION',
+                           'OPENING'),
+                          ('BUY_TO_OPEN', 'put_hi', 'OPTION',
+                           'OPENING')])
+
+
+def test_bear_put_vertical_close(
+        live_client, account_hash, option_symbols):
+    '''bear_put_vertical_close previews as LIMIT/VERTICAL,
+    buying back the short put and selling the long, both legs
+    CLOSING.'''
+    data = _preview(live_client, account_hash,
+                    options.bear_put_vertical_close(
+                        option_symbols['put_lo'],
+                        option_symbols['put_hi'], 2, '1.50'))
+    _check_strategy(data, option_symbols, order_type='LIMIT',
+                    strategy='VERTICAL', quantity=2.0, price=1.5,
+                    legs=[('BUY_TO_CLOSE', 'put_lo', 'OPTION',
+                           'CLOSING'),
+                          ('SELL_TO_CLOSE', 'put_hi', 'OPTION',
+                           'CLOSING')])
 
 
 ################################################################################
