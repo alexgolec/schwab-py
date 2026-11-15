@@ -85,28 +85,35 @@ def _option_symbol(live_client):
     return next(iter(call_map[first_date].values()))[0]['symbol']
 
 
-@pytest.mark.parametrize('expected_type', [
-        'EQUITY', 'ETF', 'MUTUAL_FUND', 'INDEX', 'FOREX', 'FUTURE',
-        'OPTION'])
-def test_symbol_search_asset_types(live_client, expected_type):
+@pytest.mark.parametrize('symbol,expected_type', [
+        ('AAPL', 'EQUITY'),
+        ('SPY', 'ETF'),
+        ('SWPPX', 'MUTUAL_FUND'),
+        ('$SPX', 'INDEX'),
+        ('EUR/USD', 'FOREX'),
+        ('/ES', 'FUTURE'),
+])
+def test_symbol_search_asset_types(live_client, symbol,
+                                   expected_type):
     '''Exhaustive assetType coverage: every supported type resolves
     with its own assetType value — including ETF, which quotes
-    reports under assetMainType EQUITY. Options are pulled live
-    from the chain and futures resolve via the '/ES' root.'''
-    symbols = {
-            'EQUITY': 'AAPL',
-            'ETF': 'SPY',
-            'MUTUAL_FUND': 'SWPPX',
-            'INDEX': '$SPX',
-            'FOREX': 'EUR/USD',
-            'FUTURE': '/ES',
-            'OPTION': _option_symbol(live_client),
-    }
+    reports under assetMainType EQUITY, and FUTURE, which resolves
+    via the '/ES' root rather than a contract month.'''
     instruments = _instruments(
-            live_client, symbols[expected_type],
-            _P.SYMBOL_SEARCH)['instruments']
+            live_client, symbol, _P.SYMBOL_SEARCH)['instruments']
     assert len(instruments) == 1
     assert instruments[0]['assetType'] == expected_type
+
+
+def test_symbol_search_option_asset_type(live_client):
+    '''Options resolve with assetType OPTION. The symbol is pulled
+    live from AAPL's chain because parametrization happens before
+    fixtures run — a hardcoded OCC symbol would expire.'''
+    instruments = _instruments(
+            live_client, _option_symbol(live_client),
+            _P.SYMBOL_SEARCH)['instruments']
+    assert len(instruments) == 1
+    assert instruments[0]['assetType'] == 'OPTION'
 
 
 def test_symbol_search_mixed_asset_types(live_client):
