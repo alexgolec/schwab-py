@@ -366,13 +366,20 @@ def test_day_full_history(live_client):
     '''Daily data has no candle-count cap: requesting from 1971
     returns Schwab's entire AAPL history, which begins at the
     1985-01-02 session (10k+ candles). Asserts the first candle's
-    exact timestamp as an anchor for full-history reach.'''
+    exact timestamp and split-adjusted OHLCV as an anchor for
+    full-history reach.'''
     resp = live_client.get_price_history_every_day(
             'AAPL', start_datetime=_dt(1971, 1, 1), end_datetime=_now())
 
     assert resp.status_code == 200
     candles = resp.json()['candles']
-    assert candles[0]['datetime'] == _ms(_dt(1985, 1, 2)) + 6 * 3600000
+    first = candles[0]
+    assert first['datetime'] == _ms(_dt(1985, 1, 2)) + 6 * 3600000
+    assert first['open'] == 0.1300225
+    assert first['high'] == 0.1300225
+    assert first['low'] == 0.12444215
+    assert first['close'] == 0.12444215
+    assert first['volume'] == 175302400
 
 
 def test_day_default_no_dates(live_client):
@@ -394,7 +401,9 @@ def test_week_deterministic_week(live_client):
     '''A fixed historical window returns deterministic weekly data:
     AAPL's Jan 13-17 2025 trading week collapses into exactly one
     candle stamped at the Monday 06:00-UTC session open. Asserts the
-    count, the timestamp, and generic candle format.'''
+    count, the timestamp, and the candle's exact OHLCV — which is a
+    correct aggregation of that week's five daily candles (Monday's
+    open, Friday's close, the week's extremes, summed volume).'''
     resp = live_client.get_price_history_every_week(
             'AAPL', start_datetime=_dt(2025, 1, 13),
             end_datetime=_dt(2025, 1, 18))
@@ -404,8 +413,14 @@ def test_week_deterministic_week(live_client):
     assert data['empty'] is False
     candles = data['candles']
     assert len(candles) == 1
-    _check_candle(candles[0])
-    assert candles[0]['datetime'] == _ms(_dt(2025, 1, 13)) + 6 * 3600000
+
+    candle = candles[0]
+    assert candle['datetime'] == _ms(_dt(2025, 1, 13)) + 6 * 3600000
+    assert candle['open'] == 233.53
+    assert candle['high'] == 238.96
+    assert candle['low'] == 228.03
+    assert candle['close'] == 229.98
+    assert candle['volume'] == 269145341
 
 
 def test_week_gap_structure(live_client):
@@ -426,13 +441,20 @@ def test_week_full_history(live_client):
     '''Weekly data has no candle-count cap either: requesting from
     1971 returns all of AAPL's history, whose first weekly bucket is
     stamped 1984-12-31 (the Monday of the week containing
-    1985-01-02). Asserts that exact anchor timestamp.'''
+    1985-01-02). Asserts that bucket's exact timestamp and
+    split-adjusted OHLCV.'''
     resp = live_client.get_price_history_every_week(
             'AAPL', start_datetime=_dt(1971, 1, 1), end_datetime=_now())
 
     assert resp.status_code == 200
     candles = resp.json()['candles']
-    assert candles[0]['datetime'] == _ms(_dt(1984, 12, 31)) + 6 * 3600000
+    first = candles[0]
+    assert first['datetime'] == _ms(_dt(1984, 12, 31)) + 6 * 3600000
+    assert first['open'] == 0.1300225
+    assert first['high'] == 0.1300225
+    assert first['low'] == 0.12444215
+    assert first['close'] == 0.126674275
+    assert first['volume'] == 479180800
 
 
 def test_week_default_no_dates(live_client):
