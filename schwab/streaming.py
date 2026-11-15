@@ -12,7 +12,7 @@ import logging
 import schwab
 import urllib.parse
 
-import websockets.legacy.client as ws_client
+import websockets.asyncio.client as ws_client
 
 from .utils import EnumEnforcer, LazyLog
 
@@ -359,7 +359,7 @@ class StreamClient(EnumEnforcer):
                                        to the websocket ``connect`` call. Useful 
                                        for setting timeouts and other connection 
                                        parameters. See `the official 
-                                       documentation <https://websockets.readthedocs.io/en/stable/reference/client.html#websockets.client.connect>`__
+                                       documentation <https://websockets.readthedocs.io/en/stable/reference/asyncio/client.html#websockets.asyncio.client.connect>`__
                                        for details.
         '''
 

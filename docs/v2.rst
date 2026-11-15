@@ -66,6 +66,26 @@ updating:
 * The ``httpx`` logger is renamed ``httpx2``; update logging configuration
   accordingly.
 
+Websocket implementation updated
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Streaming now uses ``websockets.asyncio`` (the maintained implementation)
+instead of the deprecated ``websockets.legacy``. This is transparent for most
+users, but arguments passed via ``websocket_connect_args`` to
+:func:`schwab.auth.easy_client` are forwarded verbatim to
+``websockets.asyncio.client.connect``, whose signature differs from the legacy
+``connect``:
+
+* ``extra_headers`` is renamed ``additional_headers``
+* ``create_protocol`` is renamed ``create_connection`` with a different
+  signature
+* ``read_limit`` is removed
+
+New options are also available, including ``proxy``, ``reconnect_delays``,
+and ``process_exception``. See the `websockets asyncio client documentation
+<https://websockets.readthedocs.io/en/stable/reference/asyncio/client.html#websockets.asyncio.client.connect>`__
+for the full signature.
+
 AI Disclosure
 -------------
 
