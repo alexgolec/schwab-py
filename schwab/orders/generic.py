@@ -5,7 +5,7 @@ from enum import Enum
 from schwab.orders import common
 from schwab.utils import EnumEnforcer
 
-import httpx
+import httpx2
 
 
 def _build_object(obj):
@@ -395,7 +395,7 @@ class OrderBuilder(EnumEnforcer):
 
     # ChildOrderStrategies
     def add_child_order_strategy(self, child_order_strategy):
-        if isinstance(child_order_strategy, httpx.Response):
+        if isinstance(child_order_strategy, httpx2.Response):
             raise ValueError(
                     'Child order cannot be a response. See here for ' +
                     'details: https://schwab-api.readthedocs.io/en/latest/' +

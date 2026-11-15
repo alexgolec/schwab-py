@@ -48,6 +48,24 @@ Compatibility Changes
 
 This section lists the substantive differences between ``1.x`` and ``2.0``.
 
+``httpx`` replaced with ``httpx2``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+All HTTP is now performed by `httpx2 <https://www.python-httpx.org>`__, the
+actively maintained successor to ``httpx``. Response objects, status codes,
+timeouts, and client configuration are API-compatible, so most users will
+notice no difference. However, ``httpx`` and ``httpx2`` define *separate* class
+hierarchies, so code that references ``httpx`` types directly will need
+updating:
+
+* ``except httpx.HTTPError`` (and other ``httpx`` exception types) will **not**
+  catch errors raised by this library. Update exception handling to use
+  ``httpx2`` exceptions.
+* ``isinstance(response, httpx.Response)`` checks and ``httpx.Response`` type
+  annotations will fail against our return values. Use ``httpx2.Response``.
+* The ``httpx`` logger is renamed ``httpx2``; update logging configuration
+  accordingly.
+
 AI Disclosure
 -------------
 

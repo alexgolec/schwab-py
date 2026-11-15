@@ -50,7 +50,7 @@ your issues in the `Discord server <https://discord.gg/BEr6y6Xqyv>`__. See
           token_path='/tmp/token.json')
 
   resp = c.get_price_history_every_day('AAPL')
-  assert resp.status_code == httpx.codes.OK
+  assert resp.status_code == httpx2.codes.OK
   history = resp.json()
 
 

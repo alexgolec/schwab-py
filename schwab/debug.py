@@ -1,5 +1,5 @@
 import atexit
-import httpx
+import httpx2
 import json
 import logging
 import sys
@@ -50,7 +50,7 @@ def register_redactions_from_response(resp):
     Convenience method that calls ``register_redactions`` if resp represents a
     successful response. Note this method assumes that resp has a JSON contents.
     '''
-    if resp.status_code == httpx.codes.OK:
+    if resp.status_code == httpx2.codes.OK:
         try:
             register_redactions(resp.json())
         except json.decoder.JSONDecodeError:

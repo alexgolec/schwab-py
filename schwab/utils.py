@@ -4,7 +4,6 @@ module.'''
 import datetime
 import dateutil.parser
 import enum
-import httpx
 import inspect
 import re
 

@@ -5,7 +5,7 @@ from enum import Enum
 import asyncio
 import copy
 import datetime
-import httpx
+import httpx2
 import inspect
 import json
 import logging
@@ -370,7 +370,7 @@ class StreamClient(EnumEnforcer):
         # asynchronous, so work around by awaiting the response if necessary
         if inspect.iscoroutine(r):
             r = await r
-        assert r.status_code == httpx.codes.OK, r.raise_for_status()
+        assert r.status_code == httpx2.codes.OK, r.raise_for_status()
         r = r.json()
 
         await self._init_from_preferences(
