@@ -70,11 +70,21 @@ def _old_window_is_empty(fn, live_client):
 # every_minute
 
 def test_minute_old_window_empty(live_client):
+    '''Minute candles have a limited retention horizon, and requests
+    entirely beyond it return an explicit empty result rather than
+    truncated data. Requests Jan 13-18 2025 and asserts the response
+    is empty=true with zero candles.'''
     _old_window_is_empty(live_client.get_price_history_every_minute,
                          live_client)
 
 
 def test_minute_recent_window_structure(live_client):
+    '''Inside retention, a minute window returns well-formed candles
+    at exactly one-minute spacing. Requests a relative window from
+    10 days ago to 5 days ago, checks every candle's OHLCV format,
+    and asserts all consecutive gaps are whole multiples of 60000ms
+    with the smallest gap being exactly the granularity (no
+    sub-minute spacing, thin minutes skipped rather than empty).'''
     resp = live_client.get_price_history_every_minute(
             'AAPL', start_datetime=_days_ago(10),
             end_datetime=_days_ago(5))
@@ -83,7 +93,11 @@ def test_minute_recent_window_structure(live_client):
 
 
 def test_minute_candle_cap(live_client):
-    # Requests wider than retention return the most recent 40,000
+    '''Minute responses are hard-capped at 40,000 candles: a window
+    wider than what 40,000 minutes of trading fills returns exactly
+    40,000 candles ending at the present, i.e. the most recent data,
+    not the start of the requested window. Requests a year of data
+    and asserts the exact count plus a recent final candle.'''
     resp = live_client.get_price_history_every_minute(
             'AAPL', start_datetime=_days_ago(365), end_datetime=_now())
     candles = _check_minute_response(resp, 60000)
@@ -92,6 +106,10 @@ def test_minute_candle_cap(live_client):
 
 
 def test_minute_default_no_dates(live_client):
+    '''With no dates the helper normalizes start to 1971 and end to
+    ~now, which produces the same cap-bound response as an explicit
+    very wide window. Calls with no arguments and asserts the exact
+    40,000-candle result.'''
     resp = live_client.get_price_history_every_minute('AAPL')
     candles = _check_minute_response(resp, 60000)
     assert len(candles) == 40000
@@ -101,11 +119,18 @@ def test_minute_default_no_dates(live_client):
 # every_five_minutes
 
 def test_five_minute_old_window_empty(live_client):
+    '''Five-minute data older than the retention horizon returns an
+    explicit empty result. Requests Jan 13-18 2025 and asserts
+    empty=true with zero candles.'''
     _old_window_is_empty(
             live_client.get_price_history_every_five_minutes, live_client)
 
 
 def test_five_minute_recent_window_structure(live_client):
+    '''Inside retention, a five-minute window returns well-formed
+    candles at exactly five-minute spacing. Requests a relative
+    10-to-5-days-ago window and asserts all gaps are multiples of
+    300000ms with the smallest gap equal to the granularity.'''
     resp = live_client.get_price_history_every_five_minutes(
             'AAPL', start_datetime=_days_ago(10),
             end_datetime=_days_ago(5))
@@ -113,6 +138,9 @@ def test_five_minute_recent_window_structure(live_client):
 
 
 def test_five_minute_candle_cap(live_client):
+    '''The 40,000-candle cap applies to five-minute data as well:
+    a year-long window returns exactly 40,000 of the most recent
+    candles, not the requested window's oldest.'''
     resp = live_client.get_price_history_every_five_minutes(
             'AAPL', start_datetime=_days_ago(365), end_datetime=_now())
     candles = _check_minute_response(resp, 300000)
@@ -120,6 +148,9 @@ def test_five_minute_candle_cap(live_client):
 
 
 def test_five_minute_default_no_dates(live_client):
+    '''Default date normalization (1971 to ~now) produces the same
+    cap-bound response as an explicit wide window. Calls with no
+    arguments and asserts exactly 40,000 candles.'''
     resp = live_client.get_price_history_every_five_minutes('AAPL')
     candles = _check_minute_response(resp, 300000)
     assert len(candles) == 40000
@@ -129,11 +160,18 @@ def test_five_minute_default_no_dates(live_client):
 # every_ten_minutes
 
 def test_ten_minute_old_window_empty(live_client):
+    '''Ten-minute data older than the retention horizon returns an
+    explicit empty result. Requests Jan 13-18 2025 and asserts
+    empty=true with zero candles.'''
     _old_window_is_empty(
             live_client.get_price_history_every_ten_minutes, live_client)
 
 
 def test_ten_minute_recent_window_structure(live_client):
+    '''Inside retention, a ten-minute window returns well-formed
+    candles at exactly ten-minute spacing. Requests a relative
+    10-to-5-days-ago window and asserts all gaps are multiples of
+    600000ms with the smallest gap equal to the granularity.'''
     resp = live_client.get_price_history_every_ten_minutes(
             'AAPL', start_datetime=_days_ago(10),
             end_datetime=_days_ago(5))
@@ -141,7 +179,11 @@ def test_ten_minute_recent_window_structure(live_client):
 
 
 def test_ten_minute_year_window_coverage(live_client):
-    # A 1y window fits under the cap: full coverage, not truncated
+    '''Ten-minute data is retention-bound rather than cap-bound:
+    Schwab retains ~9 months of it, which fits under 40,000 candles,
+    so a one-year window returns everything retained rather than
+    exactly 40,000 most-recent candles. Asserts a non-empty result
+    strictly below the cap.'''
     resp = live_client.get_price_history_every_ten_minutes(
             'AAPL', start_datetime=_days_ago(365), end_datetime=_now())
     candles = _check_minute_response(resp, 600000)
@@ -149,8 +191,9 @@ def test_ten_minute_year_window_coverage(live_client):
 
 
 def test_ten_minute_default_no_dates(live_client):
-    # Retention-bound rather than cap-bound: everything Schwab
-    # has (~9 months back), which is under 40,000 candles
+    '''With no dates the helper requests 1971 to ~now, but ten-minute
+    retention only reaches ~9 months back, so the response contains
+    everything retained and stays under the 40,000 cap.'''
     resp = live_client.get_price_history_every_ten_minutes('AAPL')
     candles = _check_minute_response(resp, 600000)
     assert len(candles) < 40000
@@ -160,12 +203,19 @@ def test_ten_minute_default_no_dates(live_client):
 # every_fifteen_minutes
 
 def test_fifteen_minute_old_window_empty(live_client):
+    '''Fifteen-minute data older than the retention horizon returns
+    an explicit empty result. Requests Jan 13-18 2025 and asserts
+    empty=true with zero candles.'''
     _old_window_is_empty(
             live_client.get_price_history_every_fifteen_minutes,
             live_client)
 
 
 def test_fifteen_minute_recent_window_structure(live_client):
+    '''Inside retention, a fifteen-minute window returns well-formed
+    candles at exactly fifteen-minute spacing. Requests a relative
+    10-to-5-days-ago window and asserts all gaps are multiples of
+    900000ms with the smallest gap equal to the granularity.'''
     resp = live_client.get_price_history_every_fifteen_minutes(
             'AAPL', start_datetime=_days_ago(10),
             end_datetime=_days_ago(5))
@@ -173,6 +223,11 @@ def test_fifteen_minute_recent_window_structure(live_client):
 
 
 def test_fifteen_minute_year_window_coverage(live_client):
+    '''Fifteen-minute data is retention-bound rather than cap-bound:
+    the ~9 months retained fits under 40,000 candles, so a one-year
+    window returns everything retained rather than a truncated,
+    exactly-40,000 response. Asserts non-empty and strictly below
+    the cap.'''
     resp = live_client.get_price_history_every_fifteen_minutes(
             'AAPL', start_datetime=_days_ago(365), end_datetime=_now())
     candles = _check_minute_response(resp, 900000)
@@ -180,6 +235,10 @@ def test_fifteen_minute_year_window_coverage(live_client):
 
 
 def test_fifteen_minute_default_no_dates(live_client):
+    '''With no dates the helper requests 1971 to ~now, but
+    fifteen-minute retention only reaches ~9 months back, so the
+    response contains everything retained and stays under the
+    40,000 cap.'''
     resp = live_client.get_price_history_every_fifteen_minutes('AAPL')
     candles = _check_minute_response(resp, 900000)
     assert len(candles) < 40000
@@ -189,12 +248,19 @@ def test_fifteen_minute_default_no_dates(live_client):
 # every_thirty_minutes
 
 def test_thirty_minute_old_window_empty(live_client):
+    '''Thirty-minute data older than the retention horizon returns
+    an explicit empty result. Requests Jan 13-18 2025 and asserts
+    empty=true with zero candles.'''
     _old_window_is_empty(
             live_client.get_price_history_every_thirty_minutes,
             live_client)
 
 
 def test_thirty_minute_recent_window_structure(live_client):
+    '''Inside retention, a thirty-minute window returns well-formed
+    candles at exactly thirty-minute spacing. Requests a relative
+    10-to-5-days-ago window and asserts all gaps are multiples of
+    1800000ms with the smallest gap equal to the granularity.'''
     resp = live_client.get_price_history_every_thirty_minutes(
             'AAPL', start_datetime=_days_ago(10),
             end_datetime=_days_ago(5))
@@ -202,6 +268,11 @@ def test_thirty_minute_recent_window_structure(live_client):
 
 
 def test_thirty_minute_year_window_coverage(live_client):
+    '''Thirty-minute data is retention-bound rather than cap-bound:
+    the ~9 months retained fits under 40,000 candles, so a one-year
+    window returns everything retained rather than a truncated,
+    exactly-40,000 response. Asserts non-empty and strictly below
+    the cap.'''
     resp = live_client.get_price_history_every_thirty_minutes(
             'AAPL', start_datetime=_days_ago(365), end_datetime=_now())
     candles = _check_minute_response(resp, 1800000)
@@ -209,6 +280,10 @@ def test_thirty_minute_year_window_coverage(live_client):
 
 
 def test_thirty_minute_default_no_dates(live_client):
+    '''With no dates the helper requests 1971 to ~now, but
+    thirty-minute retention only reaches ~9 months back, so the
+    response contains everything retained and stays under the
+    40,000 cap.'''
     resp = live_client.get_price_history_every_thirty_minutes('AAPL')
     candles = _check_minute_response(resp, 1800000)
     assert len(candles) < 40000
@@ -218,6 +293,11 @@ def test_thirty_minute_default_no_dates(live_client):
 # every_day
 
 def test_day_deterministic_week(live_client):
+    '''A fixed historical window returns deterministic daily data:
+    AAPL's Mon Jan 13 through Fri Jan 17 2025 is exactly five
+    candles. Asserts the count, the first candle's exact OHLCV and
+    06:00-UTC session timestamp, and generic candle format on the
+    remaining days.'''
     resp = live_client.get_price_history_every_day(
             'AAPL', start_datetime=_dt(2025, 1, 13),
             end_datetime=_dt(2025, 1, 18))
@@ -241,30 +321,42 @@ def test_day_deterministic_week(live_client):
 
 
 def test_day_gap_structure(live_client):
+    '''Daily candles are spaced in whole-day session units with no
+    candles on weekends or holidays, but timestamps are *not* clean
+    multiples of 24h: the DST transition shifts the session boundary
+    by an hour, producing e.g. a 73-hour Friday-to-Monday gap.
+    Requests the last 90 days and asserts every gap is within an
+    hour of an N-day multiple for N in {1,3,4}.'''
     resp = live_client.get_price_history_every_day(
             'AAPL', start_datetime=_days_ago(90), end_datetime=_now())
     candles = resp.json()['candles']
     day_ms = 86400000
     for gap in _gaps(candles):
-        # Gaps are N trading-session days apart, N in {1,3,4}
-        # (weekends, holiday weekends), plus or minus an hour for
-        # DST transitions in the candle timestamps themselves
+        # N session days apart (weekends, holiday weekends), plus or
+        # minus an hour for DST transitions in the timestamps
         assert abs(gap % day_ms) <= 3600000 or \
                 abs(gap % day_ms - day_ms) <= 3600000
         assert 23 * 3600000 <= gap <= 97 * 3600000
 
 
 def test_day_full_history(live_client):
+    '''Daily data has no candle-count cap: requesting from 1971
+    returns Schwab's entire AAPL history, which begins at the
+    1985-01-02 session (10k+ candles). Asserts the first candle's
+    exact timestamp as an anchor for full-history reach.'''
     resp = live_client.get_price_history_every_day(
             'AAPL', start_datetime=_dt(1971, 1, 1), end_datetime=_now())
 
     assert resp.status_code == 200
     candles = resp.json()['candles']
-    # Schwab's AAPL daily data begins 1985-01-02
     assert candles[0]['datetime'] == _ms(_dt(1985, 1, 2)) + 6 * 3600000
 
 
 def test_day_default_no_dates(live_client):
+    '''With no dates the helper normalizes start to 1971 and end to
+    ~now, so a bare call returns the same full history: the first
+    candle is the 1985-01-02 session, identical to an explicit
+    1971 start.'''
     resp = live_client.get_price_history_every_day('AAPL')
 
     assert resp.status_code == 200
@@ -276,6 +368,10 @@ def test_day_default_no_dates(live_client):
 # every_week
 
 def test_week_deterministic_week(live_client):
+    '''A fixed historical window returns deterministic weekly data:
+    AAPL's Jan 13-17 2025 trading week collapses into exactly one
+    candle stamped at the Monday 06:00-UTC session open. Asserts the
+    count, the timestamp, and generic candle format.'''
     resp = live_client.get_price_history_every_week(
             'AAPL', start_datetime=_dt(2025, 1, 13),
             end_datetime=_dt(2025, 1, 18))
@@ -290,6 +386,10 @@ def test_week_deterministic_week(live_client):
 
 
 def test_week_gap_structure(live_client):
+    '''Weekly candles are spaced ~7 days apart with no skipped weeks
+    in the covered span, subject to the same DST hour shift as daily
+    candles. Requests the last year and asserts every gap is within
+    6 hours of one week.'''
     resp = live_client.get_price_history_every_week(
             'AAPL', start_datetime=_days_ago(365), end_datetime=_now())
     candles = resp.json()['candles']
@@ -300,6 +400,10 @@ def test_week_gap_structure(live_client):
 
 
 def test_week_full_history(live_client):
+    '''Weekly data has no candle-count cap either: requesting from
+    1971 returns all of AAPL's history, whose first weekly bucket is
+    stamped 1984-12-31 (the Monday of the week containing
+    1985-01-02). Asserts that exact anchor timestamp.'''
     resp = live_client.get_price_history_every_week(
             'AAPL', start_datetime=_dt(1971, 1, 1), end_datetime=_now())
 
@@ -309,6 +413,10 @@ def test_week_full_history(live_client):
 
 
 def test_week_default_no_dates(live_client):
+    '''With no dates the helper normalizes start to 1971 and end to
+    ~now, so a bare call returns the same full weekly history: the
+    first candle is the 1984-12-31 bucket, identical to an explicit
+    1971 start.'''
     resp = live_client.get_price_history_every_week('AAPL')
 
     assert resp.status_code == 200
