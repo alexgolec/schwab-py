@@ -110,7 +110,7 @@ def enable_bug_report_logging():
     _enable_bug_report_logging()
 
 
-def _enable_bug_report_logging(output=sys.stderr, loggers=None):
+def _enable_bug_report_logging(output=None, loggers=None):
     '''
     Module-internal version of :func:`enable_bug_report_logging`, intended for
     use in tests.
@@ -139,13 +139,19 @@ def _enable_bug_report_logging(output=sys.stderr, loggers=None):
         logger.addHandler(handler)
 
     def write_logs():
-        print(file=output)
-        print(' ### BEGIN REDACTED LOGS ###', file=output)
-        print(file=output)
+        # Resolve the output stream at exit time: a stream captured at
+        # registration (e.g. pytest's capture replacing sys.stderr) may
+        # already be closed by the time this handler runs.
+        out = sys.stderr if output is None else output
+        if getattr(out, 'closed', False):
+            return
+        print(file=out)
+        print(' ### BEGIN REDACTED LOGS ###', file=out)
+        print(file=out)
 
         for msg in handler.messages:
             msg = schwab.LOG_REDACTOR.redact(msg)
-            print(msg, file=output)
+            print(msg, file=out)
     atexit.register(write_logs)
 
     get_logger().debug('schwab-api version %s', schwab.__version__)
