@@ -1,5 +1,4 @@
 import datetime
-import zoneinfo
 
 import pytest
 
@@ -343,25 +342,26 @@ def test_futures_fields_matrix(live_client, field, expected):
 ################################################################################
 # Forex
 
-def _forex_market_is_open():
-    '''Forex trades continuously from Sunday 17:00 ET to Friday
-    17:00 ET. Everything else is the closed-book weekend window.'''
-    now = datetime.datetime.now(zoneinfo.ZoneInfo('America/New_York'))
-    if now.weekday() == 5:  # Saturday
-        return False
-    if now.weekday() == 6 and now.hour < 17:  # Sunday before open
-        return False
-    if now.weekday() == 4 and now.hour >= 17:  # Friday after close
-        return False
-    return True
+def _forex_market_is_open(live_client):
+    '''Asks the market-hours API whether the forex market is open.
+    Skips the calling test if the status cannot be determined, since
+    neither session contract can be verified without it.'''
+    resp = live_client.get_market_hours(
+            [live_client.MarketHours.Market.FOREX])
+    if resp.status_code != 200:
+        pytest.skip('could not determine forex market status from '
+                    f'the market-hours API (status '
+                    f'{resp.status_code})')
+    return resp.json()['forex']['forex']['isOpen']
 
 
 def test_forex_quote_format_market_open(live_client):
     '''While the forex market is open the EUR/USD book is populated:
-    bid/ask are positive, timestamps are real epoch-millis. Skips
-    when the market is closed, where
+    bid/ask are positive, timestamps are real epoch-millis. Session
+    state comes from the market-hours API's isOpen flag; skips when
+    the market is closed, where
     test_forex_quote_format_market_closed applies instead.'''
-    if not _forex_market_is_open():
+    if not _forex_market_is_open(live_client):
         pytest.skip('forex market is closed (weekend); the '
                     'closed-book contract is covered by '
                     'test_forex_quote_format_market_closed')
@@ -390,9 +390,10 @@ def test_forex_quote_format_market_closed(live_client):
     '''On a closed book (weekend) the EUR/USD quote is not omitted
     or errored: every book field is present but zeroed out, with 0
     sentinels on timestamps. Only closePrice stays populated with
-    the last close. Skips while the market is open, where
+    the last close. Session state comes from the market-hours API's
+    isOpen flag; skips while the market is open, where
     test_forex_quote_format_market_open applies instead.'''
-    if _forex_market_is_open():
+    if _forex_market_is_open(live_client):
         pytest.skip('forex market is open; the open-book contract '
                     'is covered by '
                     'test_forex_quote_format_market_open')
