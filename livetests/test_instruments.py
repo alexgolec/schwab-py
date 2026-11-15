@@ -75,13 +75,74 @@ def test_symbol_search_invalid_symbols_dropped(live_client):
             _P.SYMBOL_SEARCH) == {}
 
 
-def test_symbol_search_covers_other_asset_types(live_client):
-    '''Lookup is not equity-only: the mutual fund SWPPX resolves
-    with assetType MUTUAL_FUND.'''
+def _option_symbol(live_client):
+    '''Pulls a live OCC option symbol from AAPL's option chain, so
+    the test never depends on an expiration that has passed.'''
+    resp = live_client.get_option_chain('AAPL')
+    assert resp.status_code == 200
+    call_map = resp.json()['callExpDateMap']
+    first_date = next(iter(call_map))
+    return next(iter(call_map[first_date].values()))[0]['symbol']
+
+
+@pytest.mark.parametrize('expected_type', [
+        'EQUITY', 'ETF', 'MUTUAL_FUND', 'INDEX', 'FOREX', 'FUTURE',
+        'OPTION'])
+def test_symbol_search_asset_types(live_client, expected_type):
+    '''Exhaustive assetType coverage: every supported type resolves
+    with its own assetType value — including ETF, which quotes
+    reports under assetMainType EQUITY. Options are pulled live
+    from the chain and futures resolve via the '/ES' root.'''
+    symbols = {
+            'EQUITY': 'AAPL',
+            'ETF': 'SPY',
+            'MUTUAL_FUND': 'SWPPX',
+            'INDEX': '$SPX',
+            'FOREX': 'EUR/USD',
+            'FUTURE': '/ES',
+            'OPTION': _option_symbol(live_client),
+    }
     instruments = _instruments(
-            live_client, 'SWPPX', _P.SYMBOL_SEARCH)['instruments']
+            live_client, symbols[expected_type],
+            _P.SYMBOL_SEARCH)['instruments']
     assert len(instruments) == 1
-    assert instruments[0]['assetType'] == 'MUTUAL_FUND'
+    assert instruments[0]['assetType'] == expected_type
+
+
+def test_symbol_search_mixed_asset_types(live_client):
+    '''A request mixing asset types returns one instrument per
+    symbol, each carrying its own assetType — there is no
+    per-request type constraint.'''
+    instruments = _instruments(
+            live_client, ['AAPL', 'SWPPX', '$SPX', 'EUR/USD'],
+            _P.SYMBOL_SEARCH)['instruments']
+    by_symbol = {i['symbol']: i['assetType'] for i in instruments}
+    assert by_symbol == {
+            'AAPL': 'EQUITY', 'SWPPX': 'MUTUAL_FUND',
+            '$SPX': 'INDEX', 'EUR/USD': 'FOREX'}
+
+
+@pytest.mark.parametrize('symbol', ['912810TM6', 'BAC.PR.B', '/ESZ26'])
+def test_symbol_search_unsupported_symbol_forms(live_client, symbol):
+    '''Forms outside the searchable universe return the bare {}:
+    a bond CUSIP, a preferred-share ticker, and a specific futures
+    contract month (roots like '/ES' resolve; contract months do
+    not).'''
+    assert _instruments(
+            live_client, symbol, _P.SYMBOL_SEARCH) == {}
+
+
+def test_symbol_search_futures_root_resolution(live_client):
+    '''The '/ES' futures root resolves to the active contract with
+    a ':XCME' venue suffix — the returned symbol differs from the
+    requested one, mirroring quote-side root resolution.'''
+    instruments = _instruments(
+            live_client, '/ES', _P.SYMBOL_SEARCH)['instruments']
+    assert len(instruments) == 1
+    entry = instruments[0]
+    assert entry['assetType'] == 'FUTURE'
+    assert entry['symbol'].startswith('/ES')
+    assert ':XCME' in entry['symbol']
 
 
 def test_symbol_search_no_match_empty_object(live_client):
