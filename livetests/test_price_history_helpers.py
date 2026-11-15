@@ -53,38 +53,47 @@ def _days_ago(n):
     return _now() - datetime.timedelta(days=n)
 
 
-_OLD_WINDOW_START = _dt(2025, 1, 13)
-_OLD_WINDOW_END = _dt(2025, 1, 18)
-
-
-def _old_window_is_empty(fn, live_client):
-    resp = fn('AAPL', start_datetime=_OLD_WINDOW_START,
-              end_datetime=_OLD_WINDOW_END)
+def _old_window_is_empty(fn, live_client, start_days_ago, end_days_ago):
+    '''Requests a window entirely older than a granularity's measured
+    retention horizon and asserts the API's out-of-retention contract:
+    HTTP 200 with empty=true and zero candles.'''
+    resp = fn('AAPL', start_datetime=_days_ago(start_days_ago),
+              end_datetime=_days_ago(end_days_ago))
     assert resp.status_code == 200
     data = resp.json()
     assert data['empty'] is True
     assert data['candles'] == []
 
 
+# Measured retention horizons (Nov 2026 probing):
+#   1-minute:    ~48 days    (60-55d ago empty; data back to ~52d)
+#   5-30 minute: ~9 months   (320-280d ago empty; data back to ~265d)
+#   day/week:    effectively unlimited (full history since 1985/1984)
+_MINUTE_RETENTION_WINDOW = (70, 60)      # comfortably beyond ~48d
+_COARSE_RETENTION_WINDOW = (320, 280)    # comfortably beyond ~9mo
+
+
 ################################################################################
 # every_minute
 
 def test_minute_old_window_empty(live_client):
-    '''Minute candles have a limited retention horizon, and requests
-    entirely beyond it return an explicit empty result rather than
-    truncated data. Requests Jan 13-18 2025 and asserts the response
-    is empty=true with zero candles.'''
+    '''One-minute retention is ~48 days. A window entirely beyond it
+    (here 60-70 days ago, measured empty while data exists back to
+    ~52 days) returns empty=true with zero candles rather than an
+    error or truncated data. A window that only partially overlaps
+    the horizon instead returns just the overlapping portion.'''
     _old_window_is_empty(live_client.get_price_history_every_minute,
-                         live_client)
+                         live_client, *_MINUTE_RETENTION_WINDOW)
 
 
 def test_minute_recent_window_structure(live_client):
-    '''Inside retention, a minute window returns well-formed candles
-    at exactly one-minute spacing. Requests a relative window from
-    10 days ago to 5 days ago, checks every candle's OHLCV format,
-    and asserts all consecutive gaps are whole multiples of 60000ms
-    with the smallest gap being exactly the granularity (no
-    sub-minute spacing, thin minutes skipped rather than empty).'''
+    '''Inside the ~48-day retention horizon, a minute window returns
+    well-formed candles at exactly one-minute spacing. Requests a
+    relative window from 10 days ago to 5 days ago, checks every
+    candle's OHLCV format, and asserts all consecutive gaps are
+    whole multiples of 60000ms with the smallest gap being exactly
+    the granularity (no sub-minute spacing, thin minutes skipped
+    rather than empty).'''
     resp = live_client.get_price_history_every_minute(
             'AAPL', start_datetime=_days_ago(10),
             end_datetime=_days_ago(5))
@@ -119,18 +128,20 @@ def test_minute_default_no_dates(live_client):
 # every_five_minutes
 
 def test_five_minute_old_window_empty(live_client):
-    '''Five-minute data older than the retention horizon returns an
-    explicit empty result. Requests Jan 13-18 2025 and asserts
-    empty=true with zero candles.'''
+    '''Five-minute retention is ~9 months. A window entirely beyond
+    it (here 280-320 days ago, measured empty while data exists
+    back to ~265 days) returns empty=true with zero candles.'''
     _old_window_is_empty(
-            live_client.get_price_history_every_five_minutes, live_client)
+            live_client.get_price_history_every_five_minutes,
+            live_client, *_COARSE_RETENTION_WINDOW)
 
 
 def test_five_minute_recent_window_structure(live_client):
-    '''Inside retention, a five-minute window returns well-formed
-    candles at exactly five-minute spacing. Requests a relative
-    10-to-5-days-ago window and asserts all gaps are multiples of
-    300000ms with the smallest gap equal to the granularity.'''
+    '''Inside the ~9-month retention horizon, a five-minute window
+    returns well-formed candles at exactly five-minute spacing.
+    Requests a relative 10-to-5-days-ago window and asserts all gaps
+    are multiples of 300000ms with the smallest gap equal to the
+    granularity.'''
     resp = live_client.get_price_history_every_five_minutes(
             'AAPL', start_datetime=_days_ago(10),
             end_datetime=_days_ago(5))
@@ -160,18 +171,20 @@ def test_five_minute_default_no_dates(live_client):
 # every_ten_minutes
 
 def test_ten_minute_old_window_empty(live_client):
-    '''Ten-minute data older than the retention horizon returns an
-    explicit empty result. Requests Jan 13-18 2025 and asserts
-    empty=true with zero candles.'''
+    '''Ten-minute retention is ~9 months. A window entirely beyond
+    it (here 280-320 days ago, measured empty while data exists
+    back to ~265 days) returns empty=true with zero candles.'''
     _old_window_is_empty(
-            live_client.get_price_history_every_ten_minutes, live_client)
+            live_client.get_price_history_every_ten_minutes,
+            live_client, *_COARSE_RETENTION_WINDOW)
 
 
 def test_ten_minute_recent_window_structure(live_client):
-    '''Inside retention, a ten-minute window returns well-formed
-    candles at exactly ten-minute spacing. Requests a relative
-    10-to-5-days-ago window and asserts all gaps are multiples of
-    600000ms with the smallest gap equal to the granularity.'''
+    '''Inside the ~9-month retention horizon, a ten-minute window
+    returns well-formed candles at exactly ten-minute spacing.
+    Requests a relative 10-to-5-days-ago window and asserts all gaps
+    are multiples of 600000ms with the smallest gap equal to the
+    granularity.'''
     resp = live_client.get_price_history_every_ten_minutes(
             'AAPL', start_datetime=_days_ago(10),
             end_datetime=_days_ago(5))
@@ -180,10 +193,10 @@ def test_ten_minute_recent_window_structure(live_client):
 
 def test_ten_minute_year_window_coverage(live_client):
     '''Ten-minute data is retention-bound rather than cap-bound:
-    Schwab retains ~9 months of it, which fits under 40,000 candles,
-    so a one-year window returns everything retained rather than
-    exactly 40,000 most-recent candles. Asserts a non-empty result
-    strictly below the cap.'''
+    Schwab retains ~9 months of it (measured back to ~265 days),
+    which fits under 40,000 candles, so a one-year window returns
+    everything retained rather than exactly 40,000 most-recent
+    candles. Asserts a non-empty result strictly below the cap.'''
     resp = live_client.get_price_history_every_ten_minutes(
             'AAPL', start_datetime=_days_ago(365), end_datetime=_now())
     candles = _check_minute_response(resp, 600000)
@@ -203,19 +216,20 @@ def test_ten_minute_default_no_dates(live_client):
 # every_fifteen_minutes
 
 def test_fifteen_minute_old_window_empty(live_client):
-    '''Fifteen-minute data older than the retention horizon returns
-    an explicit empty result. Requests Jan 13-18 2025 and asserts
-    empty=true with zero candles.'''
+    '''Fifteen-minute retention is ~9 months. A window entirely
+    beyond it (here 280-320 days ago, measured empty while data
+    exists back to ~265 days) returns empty=true with zero candles.'''
     _old_window_is_empty(
             live_client.get_price_history_every_fifteen_minutes,
-            live_client)
+            live_client, *_COARSE_RETENTION_WINDOW)
 
 
 def test_fifteen_minute_recent_window_structure(live_client):
-    '''Inside retention, a fifteen-minute window returns well-formed
-    candles at exactly fifteen-minute spacing. Requests a relative
-    10-to-5-days-ago window and asserts all gaps are multiples of
-    900000ms with the smallest gap equal to the granularity.'''
+    '''Inside the ~9-month retention horizon, a fifteen-minute window
+    returns well-formed candles at exactly fifteen-minute spacing.
+    Requests a relative 10-to-5-days-ago window and asserts all gaps
+    are multiples of 900000ms with the smallest gap equal to the
+    granularity.'''
     resp = live_client.get_price_history_every_fifteen_minutes(
             'AAPL', start_datetime=_days_ago(10),
             end_datetime=_days_ago(5))
@@ -224,10 +238,10 @@ def test_fifteen_minute_recent_window_structure(live_client):
 
 def test_fifteen_minute_year_window_coverage(live_client):
     '''Fifteen-minute data is retention-bound rather than cap-bound:
-    the ~9 months retained fits under 40,000 candles, so a one-year
-    window returns everything retained rather than a truncated,
-    exactly-40,000 response. Asserts non-empty and strictly below
-    the cap.'''
+    the ~9 months retained (measured back to ~265 days) fits under
+    40,000 candles, so a one-year window returns everything retained
+    rather than a truncated, exactly-40,000 response. Asserts
+    non-empty and strictly below the cap.'''
     resp = live_client.get_price_history_every_fifteen_minutes(
             'AAPL', start_datetime=_days_ago(365), end_datetime=_now())
     candles = _check_minute_response(resp, 900000)
@@ -248,19 +262,20 @@ def test_fifteen_minute_default_no_dates(live_client):
 # every_thirty_minutes
 
 def test_thirty_minute_old_window_empty(live_client):
-    '''Thirty-minute data older than the retention horizon returns
-    an explicit empty result. Requests Jan 13-18 2025 and asserts
-    empty=true with zero candles.'''
+    '''Thirty-minute retention is ~9 months. A window entirely beyond
+    it (here 280-320 days ago, measured empty while data exists back
+    to ~265 days) returns empty=true with zero candles.'''
     _old_window_is_empty(
             live_client.get_price_history_every_thirty_minutes,
-            live_client)
+            live_client, *_COARSE_RETENTION_WINDOW)
 
 
 def test_thirty_minute_recent_window_structure(live_client):
-    '''Inside retention, a thirty-minute window returns well-formed
-    candles at exactly thirty-minute spacing. Requests a relative
-    10-to-5-days-ago window and asserts all gaps are multiples of
-    1800000ms with the smallest gap equal to the granularity.'''
+    '''Inside the ~9-month retention horizon, a thirty-minute window
+    returns well-formed candles at exactly thirty-minute spacing.
+    Requests a relative 10-to-5-days-ago window and asserts all gaps
+    are multiples of 1800000ms with the smallest gap equal to the
+    granularity.'''
     resp = live_client.get_price_history_every_thirty_minutes(
             'AAPL', start_datetime=_days_ago(10),
             end_datetime=_days_ago(5))
@@ -269,10 +284,10 @@ def test_thirty_minute_recent_window_structure(live_client):
 
 def test_thirty_minute_year_window_coverage(live_client):
     '''Thirty-minute data is retention-bound rather than cap-bound:
-    the ~9 months retained fits under 40,000 candles, so a one-year
-    window returns everything retained rather than a truncated,
-    exactly-40,000 response. Asserts non-empty and strictly below
-    the cap.'''
+    the ~9 months retained (measured back to ~265 days) fits under
+    40,000 candles, so a one-year window returns everything retained
+    rather than a truncated, exactly-40,000 response. Asserts
+    non-empty and strictly below the cap.'''
     resp = live_client.get_price_history_every_thirty_minutes(
             'AAPL', start_datetime=_days_ago(365), end_datetime=_now())
     candles = _check_minute_response(resp, 1800000)
