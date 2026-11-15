@@ -678,8 +678,9 @@ class BaseClient(EnumEnforcer):
     # Option Expiration Chain
 
     def get_option_expiration_chain(self, symbol):
-        '''Preferences for the logged in account, including all linked
-        accounts.'''
+        '''Get the list of option expiration dates available for a
+        symbol, including each expiration's type, settlement type,
+        and days to expiration.'''
         path = '/marketdata/v1/expirationchain'
         return self._get_request(path, {'symbol': symbol})
 
