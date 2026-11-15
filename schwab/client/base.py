@@ -1060,8 +1060,9 @@ class BaseClient(EnumEnforcer):
         '''Retrieve market hours for specified markets
 
         :param markets: Markets for which to return trading hours.
-        :param date: Date for which to return market hours. Accepts values up to 
-                     one year from today. Accepts ``datetime.date``.
+        :param date: Date for which to return market hours. Accepts dates from 
+                     up to 7 days in the past to one year in the future. 
+                     Accepts ``datetime.date``.
         '''
         markets = self.convert_enum_iterable(markets, self.MarketHours.Market)
 
