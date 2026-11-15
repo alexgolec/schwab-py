@@ -192,12 +192,6 @@ class OrderBuilderTest(unittest.TestCase):
             'stopPrice': 'invalid'
         }, self.order_builder.build()))
 
-    @no_duplicates
-    def test_stop_price_negative(self):
-        self.order_builder.set_stop_price('-1.31')
-        self.assertFalse(has_diff({
-            'stopPrice': '-1.31'
-        }, self.order_builder.build()))
 
     @no_duplicates
     def test_stop_price_zero(self):
@@ -218,6 +212,13 @@ class OrderBuilderTest(unittest.TestCase):
         for bad in ('nan', 'NaN', 'inf', '-inf', 'Infinity', '1e999'):
             with self.assertRaisesRegex(
                     ValueError, 'stop_price must be a finite number'):
+                self.order_builder.set_stop_price(bad)
+
+    @no_duplicates
+    def test_stop_price_rejects_negative_strings(self):
+        for bad in ('-1.31', '-0.50', '-1e3'):
+            with self.assertRaisesRegex(
+                    ValueError, 'stop_price must not be negative'):
                 self.order_builder.set_stop_price(bad)
 
     @no_duplicates
@@ -402,12 +403,6 @@ class OrderBuilderTest(unittest.TestCase):
             'price': 'invalid'
         }, self.order_builder.build()))
 
-    @no_duplicates
-    def test_price_negative(self):
-        self.order_builder.set_price('-1.23')
-        self.assertFalse(has_diff({
-            'price': '-1.23'
-        }, self.order_builder.build()))
 
     @no_duplicates
     def test_price_zero(self):
@@ -428,6 +423,13 @@ class OrderBuilderTest(unittest.TestCase):
         for bad in ('nan', 'NaN', 'inf', '-inf', 'Infinity', '1e999'):
             with self.assertRaisesRegex(
                     ValueError, 'price must be a finite number'):
+                self.order_builder.set_price(bad)
+
+    @no_duplicates
+    def test_price_rejects_negative_strings(self):
+        for bad in ('-1.23', '-0.50', '-1e3'):
+            with self.assertRaisesRegex(
+                    ValueError, 'price must not be negative'):
                 self.order_builder.set_price(bad)
 
     @no_duplicates

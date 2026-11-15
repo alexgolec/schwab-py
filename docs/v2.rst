@@ -99,8 +99,11 @@ themselves — e.g., ``f'{price:.2f}'``.
 Strings that do not parse as numbers continue to pass through unvalidated,
 but strings that parse to non-finite values (``'nan'``, ``'inf'``,
 ``'-inf'``, overflow values like ``'1e999'``) now raise ``ValueError`` since
-they can never represent a real price. ``copy_price`` and
-``copy_stop_price`` still bypass validation as before.
+they can never represent a real price. Negative numeric strings also raise
+``ValueError``: the Schwab API silently strips the sign from ``price`` and
+``stopPrice`` fields, so a negative input would otherwise produce an order
+with the sign inverted. ``copy_price`` and ``copy_stop_price`` still bypass
+validation as before.
 
 AI Disclosure
 -------------

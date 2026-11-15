@@ -311,8 +311,15 @@ responsibility.
 
 Strings that do not parse as numbers are passed through unvalidated and left
 for Schwab to reject, although strings that parse to non-finite values
-(``'nan'``, ``'inf'``, ``'-inf'``, overflow values like ``'1e999'``) are
-refused with ``ValueError`` since they can never represent a real price.
+(``'nan'``, ``'inf'``, ``'-inf'``, overflow values like ``'1e999'``) or to
+negative values are refused with ``ValueError``. Negative prices are refused
+because the Schwab API silently strips the sign from ``price`` and
+``stopPrice`` fields — ``'-350.00'`` is processed as ``350.0`` with no error
+— so a negative value can never produce the intended order.
+
+Note this applies only to the ``price`` and ``stopPrice`` fields. Offset
+fields such as ``stopPriceOffset`` are not prices, and negative offsets are
+meaningful on some order types (e.g. buy-side trailing stops).
 
 .. automethod:: schwab.orders.generic.OrderBuilder.set_price
 .. automethod:: schwab.orders.generic.OrderBuilder.copy_price
