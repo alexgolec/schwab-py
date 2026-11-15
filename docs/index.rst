@@ -18,7 +18,7 @@
   :maxdepth: 2
   :caption: Contents:
 
-  tda-transition
+  v2
   getting-started
   auth
   client
