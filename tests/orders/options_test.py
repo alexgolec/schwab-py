@@ -156,7 +156,7 @@ class OptionTemplatesTest(unittest.TestCase):
                     'assetType': 'OPTION',
                 }
             }]
-        }, option_buy_to_open_limit('GOOG_012122P2200', 10, 32.5).build()))
+        }, option_buy_to_open_limit('GOOG_012122P2200', 10, '32.50').build()))
 
     # Sell to open
 
@@ -193,7 +193,7 @@ class OptionTemplatesTest(unittest.TestCase):
                     'assetType': 'OPTION',
                 }
             }]
-        }, option_sell_to_open_limit('GOOG_012122P2200', 10, 32.5).build()))
+        }, option_sell_to_open_limit('GOOG_012122P2200', 10, '32.50').build()))
 
     # Buy to close
 
@@ -230,7 +230,7 @@ class OptionTemplatesTest(unittest.TestCase):
                     'assetType': 'OPTION',
                 }
             }]
-        }, option_buy_to_close_limit('GOOG_012122P2200', 10, 32.5).build()))
+        }, option_buy_to_close_limit('GOOG_012122P2200', 10, '32.50').build()))
 
     # Sell to close
 
@@ -267,7 +267,7 @@ class OptionTemplatesTest(unittest.TestCase):
                     'assetType': 'OPTION',
                 }
             }]
-        }, option_sell_to_close_limit('GOOG_012122P2200', 10, 32.5).build()))
+        }, option_sell_to_close_limit('GOOG_012122P2200', 10, '32.50').build()))
 
 
 
@@ -301,7 +301,7 @@ class VerticalTemplatesTest(unittest.TestCase):
         }, bull_call_vertical_open(
             'GOOG_012122C2200',
             'GOOG_012122C2400',
-            3, 30.6).build()))
+            3, '30.60').build()))
 
     @no_duplicates
     def test_bull_call_vertical_close(self):
@@ -331,7 +331,7 @@ class VerticalTemplatesTest(unittest.TestCase):
         }, bull_call_vertical_close(
             'GOOG_012122C2200',
             'GOOG_012122C2400',
-            3, 30.6).build()))
+            3, '30.60').build()))
 
     @no_duplicates
     def test_bear_call_vertical_open(self):
@@ -361,7 +361,7 @@ class VerticalTemplatesTest(unittest.TestCase):
         }, bear_call_vertical_open(
             'GOOG_012122C2200',
             'GOOG_012122C2400',
-            3, 30.6).build()))
+            3, '30.60').build()))
 
     @no_duplicates
     def test_bear_call_vertical_close(self):
@@ -391,7 +391,7 @@ class VerticalTemplatesTest(unittest.TestCase):
         }, bear_call_vertical_close(
             'GOOG_012122C2200',
             'GOOG_012122C2400',
-            3, 30.6).build()))
+            3, '30.60').build()))
 
     @no_duplicates
     def test_bull_put_vertical_open(self):
@@ -421,7 +421,7 @@ class VerticalTemplatesTest(unittest.TestCase):
         }, bull_put_vertical_open(
             'GOOG_012122P2200',
             'GOOG_012122P2400',
-            3, 30.6).build()))
+            3, '30.60').build()))
 
     @no_duplicates
     def test_bull_put_vertical_close(self):
@@ -451,7 +451,7 @@ class VerticalTemplatesTest(unittest.TestCase):
         }, bull_put_vertical_close(
             'GOOG_012122P2200',
             'GOOG_012122P2400',
-            3, 30.6).build()))
+            3, '30.60').build()))
 
     @no_duplicates
     def test_bear_put_vertical_open(self):
@@ -481,7 +481,7 @@ class VerticalTemplatesTest(unittest.TestCase):
         }, bear_put_vertical_open(
             'GOOG_012122P2200',
             'GOOG_012122P2400',
-            3, 30.6).build()))
+            3, '30.60').build()))
 
     @no_duplicates
     def test_bear_put_vertical_close(self):
@@ -511,6 +511,6 @@ class VerticalTemplatesTest(unittest.TestCase):
         }, bear_put_vertical_close(
             'GOOG_012122P2200',
             'GOOG_012122P2400',
-            3, 30.6).build()))
+            3, '30.60').build()))
 
 

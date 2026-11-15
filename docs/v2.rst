@@ -86,6 +86,22 @@ and ``process_exception``. See the `websockets asyncio client documentation
 <https://websockets.readthedocs.io/en/stable/reference/asyncio/client.html#websockets.asyncio.client.connect>`__
 for the full signature.
 
+Prices must be strings
+~~~~~~~~~~~~~~~~~~~~~~
+
+``OrderBuilder.set_price``, ``OrderBuilder.set_stop_price``, and the order
+templates that call them now require prices as strings. Passing ``float``
+(or any other non-string value) raises ``ValueError``; the deprecated
+``truncate_float`` conversion path is removed, along with the warning it
+emitted. Callers previously relying on float conversion must format prices
+themselves — e.g., ``f'{price:.2f}'``.
+
+Strings that do not parse as numbers continue to pass through unvalidated,
+but strings that parse to non-finite values (``'nan'``, ``'inf'``,
+``'-inf'``, overflow values like ``'1e999'``) now raise ``ValueError`` since
+they can never represent a real price. ``copy_price`` and
+``copy_stop_price`` still bypass validation as before.
+
 AI Disclosure
 -------------
 

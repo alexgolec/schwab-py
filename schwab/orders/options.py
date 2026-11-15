@@ -1,5 +1,7 @@
 import datetime
 
+from decimal import Decimal, InvalidOperation
+
 from schwab.orders.generic import OrderBuilder
 
 
@@ -87,15 +89,15 @@ class OptionSymbol:
         assert(isinstance(self.expiration_date, datetime.date))
 
         strike = None
-        try:
-            strike = float(strike_price_as_string)
-        except ValueError:
-            pass
-        if (strike is None or not isinstance(strike_price_as_string, str)
-                or strike <= 0):
+        if isinstance(strike_price_as_string, str):
+            try:
+                strike = Decimal(strike_price_as_string)
+            except InvalidOperation:
+                pass
+        if strike is None or not strike.is_finite() or strike <= 0:
             raise ValueError(
                 'strike price must be a string representing a positive ' +
-                'float')
+                'number')
 
         # Remove extraneous zeroes at the end
         strike_copy = strike_price_as_string
@@ -149,7 +151,7 @@ class OptionSymbol:
             self.underlying_symbol,
             self.expiration_date.strftime('%y%m%d'),
             self.contract_type,
-            int(float(self.strike_price) * 1000)
+            int(Decimal(self.strike_price) * 1000)
         )
 
 

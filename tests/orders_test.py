@@ -40,7 +40,7 @@ class BuilderTemplates(unittest.TestCase):
                     'assetType': 'EQUITY',
                 }
             }]
-        }, equity_buy_limit('GOOG', 10, 199.99).build()))
+        }, equity_buy_limit('GOOG', 10, '199.99').build()))
 
     def test_equity_sell_market(self):
         self.assertFalse(has_diff({
@@ -73,7 +73,7 @@ class BuilderTemplates(unittest.TestCase):
                     'assetType': 'EQUITY',
                 }
             }]
-        }, equity_sell_limit('GOOG', 10, 199.99).build()))
+        }, equity_sell_limit('GOOG', 10, '199.99').build()))
 
     def test_equity_sell_short_market(self):
         self.assertFalse(has_diff({
@@ -106,7 +106,7 @@ class BuilderTemplates(unittest.TestCase):
                     'assetType': 'EQUITY',
                 }
             }]
-        }, equity_sell_short_limit('GOOG', 10, 199.99).build()))
+        }, equity_sell_short_limit('GOOG', 10, '199.99').build()))
 
     def test_equity_buy_to_cover_market(self):
         self.assertFalse(has_diff({
@@ -139,4 +139,4 @@ class BuilderTemplates(unittest.TestCase):
                     'assetType': 'EQUITY',
                 }
             }]
-        }, equity_buy_to_cover_limit('GOOG', 10, 199.99).build()))
+        }, equity_buy_to_cover_limit('GOOG', 10, '199.99').build()))

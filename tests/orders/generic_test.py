@@ -177,7 +177,7 @@ class OrderBuilderTest(unittest.TestCase):
 
     @no_duplicates
     def test_stop_price_success(self):
-        self.order_builder.set_stop_price(42.90)
+        self.order_builder.set_stop_price('42.90')
         self.assertFalse(has_diff({
             'stopPrice': '42.90'
         }, self.order_builder.build()))
@@ -194,31 +194,31 @@ class OrderBuilderTest(unittest.TestCase):
 
     @no_duplicates
     def test_stop_price_negative(self):
-        self.order_builder.set_stop_price(-1.31)
+        self.order_builder.set_stop_price('-1.31')
         self.assertFalse(has_diff({
             'stopPrice': '-1.31'
         }, self.order_builder.build()))
 
     @no_duplicates
     def test_stop_price_zero(self):
-        self.order_builder.set_stop_price(0)
+        self.order_builder.set_stop_price('0.00')
         self.assertFalse(has_diff({
             'stopPrice': '0.00'
         }, self.order_builder.build()))
 
     @no_duplicates
-    def test_stop_price_do_not_round_up(self):
-        self.order_builder.set_stop_price(1.99999)
-        self.assertFalse(has_diff({
-            'stopPrice': '1.99'
-        }, self.order_builder.build()))
+    def test_stop_price_rejects_non_strings(self):
+        for bad in (1.99999, 0, -1.31, None):
+            with self.assertRaisesRegex(
+                    ValueError, 'stop_price must be passed as a string'):
+                self.order_builder.set_stop_price(bad)
 
     @no_duplicates
-    def test_stop_price_do_round_down(self):
-        self.order_builder.set_stop_price(2.00001)
-        self.assertFalse(has_diff({
-            'stopPrice': '2.00'
-        }, self.order_builder.build()))
+    def test_stop_price_rejects_non_finite_strings(self):
+        for bad in ('nan', 'NaN', 'inf', '-inf', 'Infinity', '1e999'):
+            with self.assertRaisesRegex(
+                    ValueError, 'stop_price must be a finite number'):
+                self.order_builder.set_stop_price(bad)
 
     @no_duplicates
     def test_copy_stop_price(self):
@@ -387,7 +387,7 @@ class OrderBuilderTest(unittest.TestCase):
 
     @no_duplicates
     def test_price_success(self):
-        self.order_builder.set_price(23.49)
+        self.order_builder.set_price('23.49')
         self.assertFalse(has_diff({
             'price': '23.49'
         }, self.order_builder.build()))
@@ -404,31 +404,31 @@ class OrderBuilderTest(unittest.TestCase):
 
     @no_duplicates
     def test_price_negative(self):
-        self.order_builder.set_price(-1.23)
+        self.order_builder.set_price('-1.23')
         self.assertFalse(has_diff({
             'price': '-1.23'
         }, self.order_builder.build()))
 
     @no_duplicates
     def test_price_zero(self):
-        self.order_builder.set_price(0.0)
+        self.order_builder.set_price('0.00')
         self.assertFalse(has_diff({
             'price': '0.00'
         }, self.order_builder.build()))
 
     @no_duplicates
-    def test_price_do_not_round_up(self):
-        self.order_builder.set_price(19.9999999)
-        self.assertFalse(has_diff({
-            'price': '19.99'
-        }, self.order_builder.build()))
+    def test_price_rejects_non_strings(self):
+        for bad in (19.9999999, 0, -1.23, None):
+            with self.assertRaisesRegex(
+                    ValueError, 'price must be passed as a string'):
+                self.order_builder.set_price(bad)
 
     @no_duplicates
-    def test_price_do_not_round_down(self):
-        self.order_builder.set_price(20.00000001)
-        self.assertFalse(has_diff({
-            'price': '20.00'
-        }, self.order_builder.build()))
+    def test_price_rejects_non_finite_strings(self):
+        for bad in ('nan', 'NaN', 'inf', '-inf', 'Infinity', '1e999'):
+            with self.assertRaisesRegex(
+                    ValueError, 'price must be a finite number'):
+                self.order_builder.set_price(bad)
 
     @no_duplicates
     def test_copy_price(self):
@@ -770,7 +770,7 @@ class OrderBuilderExamplesTest(unittest.TestCase):
             .set_complex_order_strategy_type(ComplexOrderStrategyType.NONE)
             .set_order_type(OrderType.LIMIT)
             .set_session(Session.NORMAL)
-            .set_price(6.45)
+            .set_price('6.45')
             .set_duration(Duration.DAY)
             .set_order_strategy_type(OrderStrategyType.SINGLE)
             .add_option_leg(OptionInstruction.BUY_TO_OPEN, 'XYZ_032015C49', 10))
@@ -802,7 +802,7 @@ class OrderBuilderExamplesTest(unittest.TestCase):
             OrderBuilder()
             .set_order_type(OrderType.NET_DEBIT)
             .set_session(Session.NORMAL)
-            .set_price(1.20)
+            .set_price('1.20')
             .set_duration(Duration.DAY)
             .set_order_strategy_type(OrderStrategyType.SINGLE)
             .add_option_leg(OptionInstruction.BUY_TO_OPEN, 'XYZ_011516C40', 10)
@@ -883,7 +883,7 @@ class OrderBuilderExamplesTest(unittest.TestCase):
             OrderBuilder()
             .set_order_type(OrderType.LIMIT)
             .set_session(Session.NORMAL)
-            .set_price(34.97)
+            .set_price('34.97')
             .set_duration(Duration.DAY)
             .set_order_strategy_type(OrderStrategyType.TRIGGER)
             .add_equity_leg(EquityInstruction.BUY, 'XYZ', 10)
@@ -891,7 +891,7 @@ class OrderBuilderExamplesTest(unittest.TestCase):
                 OrderBuilder()
                 .set_order_type(OrderType.LIMIT)
                 .set_session(Session.NORMAL)
-                .set_price(42.03)
+                .set_price('42.03')
                 .set_duration(Duration.DAY)
                 .set_order_strategy_type(OrderStrategyType.SINGLE)
                 .add_equity_leg(EquityInstruction.SELL, 'XYZ', 10)))
@@ -944,7 +944,7 @@ class OrderBuilderExamplesTest(unittest.TestCase):
                 OrderBuilder()
                 .set_order_type(OrderType.LIMIT)
                 .set_session(Session.NORMAL)
-                .set_price(45.97)
+                .set_price('45.97')
                 .set_duration(Duration.DAY)
                 .set_order_strategy_type(OrderStrategyType.SINGLE)
                 .add_equity_leg(EquityInstruction.SELL, 'XYZ', 2)
@@ -953,8 +953,8 @@ class OrderBuilderExamplesTest(unittest.TestCase):
                 OrderBuilder()
                 .set_order_type(OrderType.STOP_LIMIT)
                 .set_session(Session.NORMAL)
-                .set_price(37.00)
-                .set_stop_price(37.03)
+                .set_price('37.00')
+                .set_stop_price('37.03')
                 .set_duration(Duration.DAY)
                 .set_order_strategy_type(OrderStrategyType.SINGLE)
                 .add_equity_leg(EquityInstruction.SELL, 'XYZ', 2)))
@@ -1010,7 +1010,7 @@ class OrderBuilderExamplesTest(unittest.TestCase):
             .set_session(Session.NORMAL)
             .set_duration(Duration.DAY)
             .set_order_type(OrderType.LIMIT)
-            .set_price(14.97)
+            .set_price('14.97')
             .add_equity_leg(EquityInstruction.BUY, 'XYZ', 5)
             .add_child_order_strategy(
                 OrderBuilder()
@@ -1021,7 +1021,7 @@ class OrderBuilderExamplesTest(unittest.TestCase):
                     .set_session(Session.NORMAL)
                     .set_duration(Duration.GOOD_TILL_CANCEL)
                     .set_order_type(OrderType.LIMIT)
-                    .set_price(15.27)
+                    .set_price('15.27')
                     .add_equity_leg(EquityInstruction.SELL, 'XYZ', 5))
                 .add_child_order_strategy(
                     OrderBuilder()
@@ -1029,7 +1029,7 @@ class OrderBuilderExamplesTest(unittest.TestCase):
                     .set_session(Session.NORMAL)
                     .set_duration(Duration.GOOD_TILL_CANCEL)
                     .set_order_type(OrderType.STOP)
-                    .set_stop_price(11.27)
+                    .set_stop_price('11.27')
                     .add_equity_leg(EquityInstruction.SELL, 'XYZ', 5))))
 
         expected = {
@@ -1131,44 +1131,3 @@ class OrderBuilderExamplesTest(unittest.TestCase):
         self.assertFalse(has_diff(expected, builder.build()))
 
 
-class TruncateFloatTest(unittest.TestCase):
-
-    def test_zero(self):
-        self.assertEqual('0.00', truncate_float(0))
-
-    def test_zero_float(self):
-        self.assertEqual('0.00', truncate_float(0.0))
-
-    # positive numbers
-
-    def test_integer(self):
-        self.assertEqual('12.00', truncate_float(12))
-
-    def test_integer_as_float(self):
-        self.assertEqual('12.00', truncate_float(12.0))
-
-    def test_three_digits(self):
-        self.assertEqual('12.12', truncate_float(12.123))
-
-    def test_three_digits_truncate_not_round(self):
-        self.assertEqual('12.12', truncate_float(12.129))
-
-    def test_less_than_one(self):
-        self.assertEqual('0.1212', truncate_float(.12121))
-
-    # same as above, except with negative numbers
-
-    def test_negative_integer(self):
-        self.assertEqual('-12.00', truncate_float(-12))
-
-    def test_negative_integer_as_float(self):
-        self.assertEqual('-12.00', truncate_float(-12.0))
-
-    def test_negative_three_digits(self):
-        self.assertEqual('-12.12', truncate_float(-12.123))
-
-    def test_negative_three_digits_truncate_not_round(self):
-        self.assertEqual('-12.12', truncate_float(-12.129))
-
-    def test_negative_less_than_one(self):
-        self.assertEqual('-0.1212', truncate_float(-.12121))
