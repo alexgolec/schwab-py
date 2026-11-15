@@ -354,8 +354,12 @@ def test_forex_quote_format(live_client):
     assert 'regular' not in entry
 
     quote = entry['quote']
-    _check_price(quote['bidPrice'], positive=True)
-    _check_price(quote['askPrice'], positive=True)
+    # When the forex market is closed (weekend) the book is empty:
+    # bid/ask/last/mark serialize as 0.0 rather than being omitted.
+    # closePrice always carries the last close.
+    _check_price(quote['bidPrice'])
+    _check_price(quote['askPrice'])
+    _check_price(quote['closePrice'], positive=True)
     _check_price(quote['tick'])
     _check_price(quote['tickAmount'])
     _check_time(quote['quoteTime'])
