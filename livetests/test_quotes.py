@@ -1,5 +1,6 @@
 import datetime
 
+import conftest
 import pytest
 
 import schwab
@@ -343,16 +344,8 @@ def test_futures_fields_matrix(live_client, field, expected):
 # Forex
 
 def _forex_market_is_open(live_client):
-    '''Asks the market-hours API whether the forex market is open.
-    Skips the calling test if the status cannot be determined, since
-    neither session contract can be verified without it.'''
-    resp = live_client.get_market_hours(
-            [live_client.MarketHours.Market.FOREX])
-    if resp.status_code != 200:
-        pytest.skip('could not determine forex market status from '
-                    f'the market-hours API (status '
-                    f'{resp.status_code})')
-    return resp.json()['forex']['forex']['isOpen']
+    return conftest.market_is_open(
+            live_client, live_client.MarketHours.Market.FOREX)
 
 
 def test_forex_quote_format_market_open(live_client):

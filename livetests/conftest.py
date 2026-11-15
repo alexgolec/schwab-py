@@ -92,3 +92,16 @@ def live_client(schwab_credentials, tmp_path_factory):
 
     if not retained_path:
         token_path.unlink(missing_ok=True)
+
+
+def market_is_open(live_client, market):
+    '''Asks the market-hours API whether the given market is open.
+    Fails the calling test if the status cannot be determined: an
+    auth or transport failure must not silently masquerade as a
+    session condition.'''
+    resp = live_client.get_market_hours([market])
+    if resp.status_code != 200:
+        pytest.fail('could not determine market status from the '
+                    f'market-hours API (status {resp.status_code})')
+    products = resp.json()[market.value]
+    return any(p['isOpen'] for p in products.values())
