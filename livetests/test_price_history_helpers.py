@@ -310,9 +310,9 @@ def test_thirty_minute_default_no_dates(live_client):
 def test_day_deterministic_week(live_client):
     '''A fixed historical window returns deterministic daily data:
     AAPL's Mon Jan 13 through Fri Jan 17 2025 is exactly five
-    candles. Asserts the count, the first candle's exact OHLCV and
-    06:00-UTC session timestamp, and generic candle format on the
-    remaining days.'''
+    candles. Asserts the count, the first and last candles' exact
+    OHLCV and 06:00-UTC session timestamps, and generic candle
+    format on the remaining days.'''
     resp = live_client.get_price_history_every_day(
             'AAPL', start_datetime=_dt(2025, 1, 13),
             end_datetime=_dt(2025, 1, 18))
@@ -330,6 +330,14 @@ def test_day_deterministic_week(live_client):
     assert first['low'] == 229.72
     assert first['close'] == 234.4
     assert first['volume'] == 49630725
+
+    last = candles[-1]
+    assert last['datetime'] == _ms(_dt(2025, 1, 17)) + 6 * 3600000
+    assert last['open'] == 232.115
+    assert last['high'] == 232.29
+    assert last['low'] == 228.48
+    assert last['close'] == 229.98
+    assert last['volume'] == 68488301
 
     for candle in candles:
         _check_candle(candle)
