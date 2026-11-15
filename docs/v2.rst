@@ -1,0 +1,67 @@
+Announcing ``schwab-py`` v2.0
+=============================
+
+Reviving Regular Maintenance
+----------------------------
+
+After a prolonged hiatus `for good reasons, I promise <https://discord.com/
+channels/720378361880248621/1062730209943629915/1570943743467462781>`__, I am
+returning to actively maintaining ``schwab-py``! In the interim, we've seen good
+developments, like the community developing some very interesting forks and
+submitting some very important requests, as well as some bad developments, like
+deprecation warnings and bugs creeping in. I am now actively working through the
+outstanding issues with the library, as well as incorporating some of the
+interesting ideas suggested and implemented by community members.
+
+V2 Transition Timeline
+----------------------
+
+Some of the changes I am exploring are unfortunately breaking changes. For
+instance, the migration from the deprecated ``httpx`` to the supported
+``httpx2`` results in a different exposed exception hierarchy, which will cause
+existing code to break. In order to preserve compatibility with existing code,
+these new changes will be released as a ``2.x`` version series. 
+
+In order to minimize the impact on users, we will implement a transition plan:
+
+* All ``1.x`` releases will feature a deprecation warning admonishing users to
+  either prepare to transition to 2.0 or pin their versions to ``<2.0`` in their
+  package managers.
+* ``2.0`` will be made available as an extended series of ``alpha`` and ``beta``
+  releases prior to release, effectively turning it into an optional release for
+  a time. During this prerelease period, the interface will be subject to
+  change.
+* Once the interface stabilizes, a series of one or more ``2.0`` release
+  candidates will be released with the finalized interface.
+* The final ``2.0rc(x)`` release candidate will be released as ``2.0`` no less
+  than 90 days after the first ``1.x`` release featuring the deprecation
+  warning, and no less than 14 days after the final ``2.0`` release candidate.
+  This way, users who are still on ``1.x`` have an opportunity to learn about
+  and prepare for the upcoming upgrade, and users following along with the
+  development of ``2.0`` can adjust to the stable interface.
+* All development will be accompanied by frequent updates in the `support
+  channel on the project discord server
+  <https://discord.com/invite/mm44rstRCg>`__.
+
+Compatibility Changes
+---------------------
+
+This section lists the substantive differences between ``1.x`` and ``2.0``.
+
+AI Disclosure
+-------------
+
+In keeping with the general tendency in our industry, development of
+``schwab-py`` is now performed substantially using AI tools. These tools have
+proven incredibly useful, and I've already been able to implement tasks in days
+which I previously expected me to take weeks. I expect these tools will allow me
+to create a more correct, feature-rich, and useful library than I would have
+been able to deliver otherwise.
+
+On the topic of correctness: AI thrives with concrete and specific feedback, and
+to that end I am implementing a substantial functionality testing regime based
+on placing real API calls against my personal Charles Schwab accounts. You may
+inspect these tests in the
+`livetests <https://github.com/alexgolec/schwab-py/tree/main/livetests>`__
+directory of the codebase. If you spot anything suspicious, incorrect, or
+incomplete, please let me know in the Discord server.
