@@ -14,8 +14,8 @@ LOG_REDACTOR = debug.LogRedactor()
 
 
 class V2DeprecationWarning(FutureWarning):
-    '''Emitted on import while schwab-py is on the 1.x line, advising
-    that the upcoming 2.0 series introduces breaking changes.
+    '''Emitted on import while schwab-py is on the 1.x line, announcing
+    the upcoming 2.0 series and its breaking changes.
 
     The warning is attributed to ``schwab/__init__.py`` rather than the
     importing module so that it fires once per process and so module
@@ -32,8 +32,9 @@ class V2DeprecationWarning(FutureWarning):
 # This warning belongs to the 1.x line: remove it when the version is
 # bumped to 2.0.0a1.
 _warnings.warn(
-        'schwab-py is preparing a 2.0 release with breaking changes '
+        'schwab-py 2.0 is coming with new features and improvements '
         '(see https://schwab-py.readthedocs.io/en/latest/v2.html for '
-        'the transition plan and migration notes). To stay on the 1.x '
-        'line, pin "schwab-py<2.0" in your package manager.',
+        'the transition plan and migration notes). The release will '
+        'also include breaking changes: to stay on the 1.x line, pin '
+        '"schwab-py<2.0" in your package manager.',
         V2DeprecationWarning)
