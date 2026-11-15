@@ -344,22 +344,41 @@ def test_day_deterministic_week(live_client):
 
 
 def test_day_gap_structure(live_client):
-    '''Daily candles are spaced in whole-day session units with no
-    candles on weekends or holidays, but timestamps are *not* clean
-    multiples of 24h: the DST transition shifts the session boundary
-    by an hour, producing e.g. a 73-hour Friday-to-Monday gap.
-    Requests the last 90 days and asserts every gap is within an
-    hour of an N-day multiple for N in {1,3,4}.'''
+    '''Enshrines each observed daily gap case at a concrete calendar
+    date. Candle timestamps are midnight US Eastern, so gaps are
+    whole-day multiples *except* across DST transitions: the
+    spring-forward Friday-to-Monday gap is 71h and the fall-back one
+    is 73h instead of 72h. Also covered: the 24h weekday pair, the
+    48h mid-week holiday pair (Thanksgiving), and the 96h holiday
+    weekend (MLK). Requests Jan 2025 through Nov 2026 and asserts
+    the exact millisecond gap for each named date pair.'''
     resp = live_client.get_price_history_every_day(
-            'AAPL', start_datetime=_days_ago(90), end_datetime=_now())
+            'AAPL', start_datetime=_dt(2025, 1, 6),
+            end_datetime=_dt(2026, 11, 15))
+
+    assert resp.status_code == 200
     candles = resp.json()['candles']
-    day_ms = 86400000
-    for gap in _gaps(candles):
-        # N session days apart (weekends, holiday weekends), plus or
-        # minus an hour for DST transitions in the timestamps
-        assert abs(gap % day_ms) <= 3600000 or \
-                abs(gap % day_ms - day_ms) <= 3600000
-        assert 23 * 3600000 <= gap <= 97 * 3600000
+    by_date = {
+            datetime.datetime.fromtimestamp(
+                    c['datetime'] / 1000, datetime.timezone.utc).date():
+            c['datetime'] for c in candles}
+
+    def gap(d1, d2):
+        return by_date[d2] - by_date[d1]
+
+    HOUR = 3600000
+    assert gap(datetime.date(2025, 1, 13),   # Mon -> Tue: 24h
+               datetime.date(2025, 1, 14)) == 24 * HOUR
+    assert gap(datetime.date(2025, 1, 10),   # Fri -> Mon weekend: 72h
+               datetime.date(2025, 1, 13)) == 72 * HOUR
+    assert gap(datetime.date(2025, 11, 26),  # Wed -> Fri, Thanksgiving
+               datetime.date(2025, 11, 28)) == 48 * HOUR
+    assert gap(datetime.date(2025, 1, 17),   # Fri -> Tue, MLK weekend
+               datetime.date(2025, 1, 21)) == 96 * HOUR
+    assert gap(datetime.date(2026, 3, 6),    # Fri -> Mon spring-forward
+               datetime.date(2026, 3, 9)) == 71 * HOUR
+    assert gap(datetime.date(2026, 10, 30),  # Fri -> Mon fall-back
+               datetime.date(2026, 11, 2)) == 73 * HOUR
 
 
 def test_day_full_history(live_client):
@@ -424,17 +443,33 @@ def test_week_deterministic_week(live_client):
 
 
 def test_week_gap_structure(live_client):
-    '''Weekly candles are spaced ~7 days apart with no skipped weeks
-    in the covered span, subject to the same DST hour shift as daily
-    candles. Requests the last year and asserts every gap is within
-    6 hours of one week.'''
+    '''Weekly candles are stamped at the Monday session open, seven
+    days apart, subject to the same midnight-US-Eastern DST shift as
+    daily candles: the week containing spring-forward is 167h apart,
+    the one containing fall-back is 169h, and ordinary weeks are
+    168h. Requests Jan-Nov 2026 and asserts the exact millisecond
+    gap for each named Monday pair.'''
     resp = live_client.get_price_history_every_week(
-            'AAPL', start_datetime=_days_ago(365), end_datetime=_now())
+            'AAPL', start_datetime=_dt(2026, 1, 1),
+            end_datetime=_dt(2026, 11, 15))
+
+    assert resp.status_code == 200
     candles = resp.json()['candles']
-    week_ms = 604800000
-    for gap in _gaps(candles):
-        # ~7 days; DST transitions shift a few hours either way
-        assert abs(gap - week_ms) < 6 * 3600000
+    by_date = {
+            datetime.datetime.fromtimestamp(
+                    c['datetime'] / 1000, datetime.timezone.utc).date():
+            c['datetime'] for c in candles}
+
+    def gap(d1, d2):
+        return by_date[d2] - by_date[d1]
+
+    HOUR = 3600000
+    assert gap(datetime.date(2026, 1, 5),    # ordinary week: 168h
+               datetime.date(2026, 1, 12)) == 168 * HOUR
+    assert gap(datetime.date(2026, 3, 2),    # spring-forward week
+               datetime.date(2026, 3, 9)) == 167 * HOUR
+    assert gap(datetime.date(2026, 10, 26),  # fall-back week
+               datetime.date(2026, 11, 2)) == 169 * HOUR
 
 
 def test_week_full_history(live_client):
