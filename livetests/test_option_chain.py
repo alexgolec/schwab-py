@@ -91,6 +91,40 @@ def test_strike_key_matches_contract_strike(live_client):
                     assert contract['strikePrice'] == float(strike_key)
 
 
+def test_index_chain_multi_root(live_client):
+    '''$SPX produces a real index-option chain — isIndex true,
+    European exerciseType — and unlike AAPL it carries two
+    optionRoots (SPX monthlies plus SPXW weeklies) that collide
+    at some strikes, so a strike key maps to a contract LIST:
+    several strikes hold more than one contract.'''
+    data = _chain(live_client, symbol='$SPX', strike_count=2)
+    assert data['isIndex'] is True
+    roots = set()
+    multi = 0
+    for side, contract in _all_contracts(data):
+        assert contract['exerciseType'] == 'E'
+        roots.add(contract['optionRoot'])
+    for key in ('callExpDateMap', 'putExpDateMap'):
+        for strikes in data[key].values():
+            for contracts in strikes.values():
+                if len(contracts) > 1:
+                    multi += 1
+    assert {'SPX', 'SPXW'} <= roots
+    assert multi > 0
+
+
+def test_spy_bounded_request(live_client):
+    '''SPY responds to a bounded chain request normally. Its
+    unbounded chain is too large for the gateway — repeated
+    requests with no strikeCount returned HTTP 502 — so this
+    request is kept bounded to document the constraint without
+    depending on the outage.'''
+    data = _chain(live_client, symbol='SPY', strike_count=1)
+    assert data['status'] == 'SUCCESS'
+    assert data['isIndex'] is False
+    assert len(data['callExpDateMap']) > 0
+
+
 def test_contract_field_format(live_client):
     '''Contract records carry the standard option fields: putCall
     matching their map side, greeks within delta's [-1,1] domain,
@@ -108,6 +142,8 @@ def test_contract_field_format(live_client):
         for field in ('bid', 'ask', 'mark', 'last', 'openInterest'):
             assert contract[field] >= 0
         assert isinstance(contract['openInterest'], int)
+        assert contract['exerciseType'] == 'A'
+        assert contract['multiplier'] == 100.0
         # volatility carries a -999.0 missing-data sentinel on
         # contracts without a usable market, alongside real
         # non-negative values
@@ -143,6 +179,19 @@ def test_contract_type(live_client, contract_type):
         assert contract['putCall'] == side
 
 
+def test_contract_type_and_range_compose(live_client):
+    '''contractType and strikeRange compose: CALL plus OTM leaves
+    only out-of-the-money calls — the zeroed put map and the
+    moneyness filter apply together rather than one winning.'''
+    data = _chain(live_client, contract_type=_O.ContractType.CALL,
+                  strike_range=_O.StrikeRange.OUT_OF_THE_MONEY)
+    assert len(data['callExpDateMap']) > 0
+    assert len(data['putExpDateMap']) == 0
+    for _, contract in _all_contracts(data):
+        assert contract['putCall'] == 'CALL'
+        assert contract['inTheMoney'] is False
+
+
 ################################################################################
 # Strike filters
 
@@ -173,6 +222,15 @@ def test_strike_count_bounds(live_client):
             == sum(len(s) for s in default['callExpDateMap'].values())
 
 
+def test_strike_count_negative(live_client):
+    '''A negative strikeCount is silently treated as unbounded,
+    returning the full chain just like an over-large value.'''
+    data = _chain(live_client, strike_count=-1)
+    default = _chain(live_client)
+    assert sum(len(s) for s in data['callExpDateMap'].values()) \
+            == sum(len(s) for s in default['callExpDateMap'].values())
+
+
 def test_strike_exact(live_client):
     '''An exact strike filter returns only that strike, and only
     for expirations that actually list it — a sparse filter over
@@ -191,6 +249,55 @@ def test_strike_no_match(live_client):
     data = _chain(live_client, strike=-50)
     assert len(data['callExpDateMap']) == 0
     assert len(data['putExpDateMap']) == 0
+
+
+@pytest.mark.parametrize('strike', [272.5, 275.13])
+def test_strike_fractional_no_match(live_client, strike):
+    '''The exact-strike filter does no rounding or fuzzy matching:
+    strikes between or near listed increments return 200 with
+    empty maps, not the nearest listed strike.'''
+    data = _chain(live_client, strike=strike)
+    assert len(data['callExpDateMap']) == 0
+    assert len(data['putExpDateMap']) == 0
+
+
+def test_strike_overridden_by_count(live_client):
+    '''Precedence quirk: when strike and strikeCount are both
+    supplied, strike is silently ignored — the response is
+    indistinguishable from strikeCount alone (three strikes per
+    expiration), not the single-strike sparse filter.'''
+    strike = _live_strike(live_client)
+    data = _chain(live_client, strike=strike, strike_count=3)
+    sizes = [len(strikes)
+             for strikes in data['callExpDateMap'].values()]
+    assert len(sizes) > 0
+    assert all(size <= 3 for size in sizes)
+    assert any(size == 3 for size in sizes)
+    strikes_seen = {
+            float(k) for strikes in data['callExpDateMap'].values()
+            for k in strikes}
+    assert len(strikes_seen) > 1
+
+
+def test_strike_and_range_compose(live_client):
+    '''strike and strikeRange compose on a per-side basis: an
+    out-of-the-money PUT strike (below market) survives for puts
+    while calls at the same strike — being in the money — are
+    filtered out entirely.'''
+    chain = _chain(live_client, strike_count=3)
+    underlying = chain['underlyingPrice']
+    below = sorted(
+            float(k) for strikes in chain['callExpDateMap'].values()
+            for k in strikes if float(k) < underlying)
+    assert below
+    strike = below[len(below) // 2]
+    data = _chain(live_client, strike=strike,
+                  strike_range=_O.StrikeRange.OUT_OF_THE_MONEY)
+    assert len(data['callExpDateMap']) == 0
+    assert len(data['putExpDateMap']) > 0
+    for _, contract in _all_contracts(data):
+        assert contract['strikePrice'] == strike
+        assert contract['inTheMoney'] is False
 
 
 @pytest.mark.parametrize('strike_range', [
@@ -264,6 +371,70 @@ def test_exp_month(live_client):
     for key in data['callExpDateMap']:
         assert datetime.date.fromisoformat(
                 _exp_key_date(key)).month == 12
+
+
+def test_exp_month_intersects_dates(live_client):
+    '''expMonth and the date window compose as an intersection:
+    DECEMBER plus a window spanning December and January returns
+    only the December expiries inside it, while DECEMBER plus a
+    window that misses December entirely returns empty maps.'''
+    year = datetime.date.today().year
+    dec = _chain(live_client,
+                 exp_month=_O.ExpirationMonth.DECEMBER,
+                 from_date=datetime.date(year, 12, 1),
+                 to_date=datetime.date(year + 1, 2, 1))
+    keys = list(dec['callExpDateMap'])
+    if keys:
+        for key in keys:
+            d = datetime.date.fromisoformat(_exp_key_date(key))
+            assert d.month == 12
+            assert datetime.date(year, 12, 1) <= d \
+                    <= datetime.date(year + 1, 2, 1)
+
+    miss = _chain(live_client,
+                  exp_month=_O.ExpirationMonth.DECEMBER,
+                  from_date=datetime.date(year + 1, 3, 1),
+                  to_date=datetime.date(year + 1, 4, 1))
+    assert len(miss['callExpDateMap']) == 0
+    assert len(miss['putExpDateMap']) == 0
+
+
+def test_from_date_past(live_client):
+    '''Date-window validation is asymmetric: a fromDate in the past
+    is a hard 400, while a toDate beyond the last listed expiry
+    is accepted and simply bounded by the chain itself.'''
+    past = datetime.date.today() - datetime.timedelta(30)
+    resp = live_client.get_option_chain(
+            'AAPL', from_date=past,
+            to_date=past + datetime.timedelta(7))
+    assert resp.status_code == 400
+
+    data = _chain(live_client, to_date=datetime.date(2040, 1, 1),
+                  strike_count=1)
+    assert len(data['callExpDateMap']) > 0
+
+
+def test_window_with_no_expiry(live_client):
+    '''A window that contains no expiration is not an error — a
+    midpoint between two real expiries returns 200 with empty
+    maps, unlike the 400 for a window in the past.'''
+    full = _chain(live_client, strike_count=1)
+    exp_dates = sorted(
+            datetime.date.fromisoformat(_exp_key_date(k))
+            for k in full['callExpDateMap'])
+    assert len(exp_dates) >= 2
+    gap_start = exp_dates[0]
+    for nxt in exp_dates[1:]:
+        if (nxt - gap_start).days > 2:
+            break
+        gap_start = nxt
+    else:
+        pytest.skip('no multi-day gap between expirations')
+    mid = gap_start + datetime.timedelta(
+            days=(nxt - gap_start).days // 2)
+    data = _chain(live_client, from_date=mid, to_date=mid)
+    assert len(data['callExpDateMap']) == 0
+    assert len(data['putExpDateMap']) == 0
 
 
 ################################################################################
@@ -382,6 +553,103 @@ def test_strategy_chains_format(live_client, strategy):
                 assert field in strat
 
 
+def _strategies(data):
+    for monthly in data['monthlyStrategyList']:
+        yield from monthly['optionStrategyList']
+
+
+def _leg_width(strat):
+    return abs(strat['secondaryLeg']['strikePrice']
+               - strat['primaryLeg']['strikePrice'])
+
+
+def test_strategy_truncation_cap(live_client):
+    '''The strategy list is capped at 1000 entries server-side and
+    isChainTruncated reports the cap was hit: a default VERTICAL
+    request (multiple widths) returns exactly 1000 strategies with
+    the flag set.'''
+    data = _chain(live_client, strategy=_O.Strategy.VERTICAL)
+    assert data['isChainTruncated'] is True
+    assert sum(1 for _ in _strategies(data)) == 1000
+
+
+def test_vertical_default_mixed_widths(live_client):
+    '''An unbounded VERTICAL chain mixes leg widths: the response
+    contains strategies at more than one strike spacing, all
+    drawn from the advertised intervals list.'''
+    data = _chain(live_client, strategy=_O.Strategy.VERTICAL)
+    widths = {_leg_width(s) for s in _strategies(data)}
+    assert len(widths) > 1
+    assert widths <= set(data['intervals'])
+
+
+def test_strategy_interval_no_offering(live_client):
+    '''interval filters strategies to an exact width, and a width
+    nobody offers is not an error — intervals 0 and 1000 return
+    200 with an empty monthlyStrategyList.'''
+    for interval in (0, 1000):
+        data = _chain(live_client, strategy=_O.Strategy.VERTICAL,
+                      interval=interval)
+        assert data['monthlyStrategyList'] == []
+
+
+def test_straddle_ignores_interval(live_client):
+    '''STRADDLE legs share one strike, so interval is meaningless:
+    every strategy's legs have identical strikes regardless of the
+    requested width, while the 1000-entry cap still applies.'''
+    data = _chain(live_client, strategy=_O.Strategy.STRADDLE,
+                  interval=5)
+    strats = list(_strategies(data))
+    assert len(strats) == 1000
+    for strat in strats:
+        assert strat['primaryLeg']['strikePrice'] \
+                == strat['secondaryLeg']['strikePrice']
+
+
+def test_calendar_pairing_fields(live_client):
+    '''CALENDAR legs share a strike and differ only in expiration;
+    since the leg records carry no expiration of their own, the
+    pairing lives in the monthlyStrategyList entry's secondary*
+    fields — month, daysToExp, type — which differ from the
+    primary leg's.'''
+    data = _chain(live_client, strategy=_O.Strategy.CALENDAR)
+    saw_entry = False
+    for monthly in data['monthlyStrategyList']:
+        assert monthly['daysToExp'] != monthly['secondaryDaysToExp']
+        saw_entry = True
+        for strat in monthly['optionStrategyList']:
+            assert strat['primaryLeg']['strikePrice'] \
+                    == strat['secondaryLeg']['strikePrice']
+    assert saw_entry
+
+
+def test_diagonal_differs_in_both_dimensions(live_client):
+    '''DIAGONAL is a calendar plus a width: legs differ in both
+    strike and expiration, combining the monthly pairing fields
+    with non-equal leg strikes.'''
+    data = _chain(live_client, strategy=_O.Strategy.DIAGONAL,
+                  interval=5)
+    saw_diagonal = False
+    for monthly in data['monthlyStrategyList']:
+        for strat in monthly['optionStrategyList']:
+            assert _leg_width(strat) == 5
+            saw_diagonal = True
+    assert saw_diagonal
+
+
+def test_strategy_echo_fields_zeroed(live_client):
+    '''Strategy-chain responses keep the real underlyingPrice but
+    zero out the scenario echo fields — volatility, interestRate
+    and daysToExpiration are all 0.0 since no single-contract
+    analytics apply to multi-leg entries.'''
+    data = _chain(live_client, strategy=_O.Strategy.VERTICAL,
+                  interval=5)
+    assert data['underlyingPrice'] > 0
+    assert data['volatility'] == 0.0
+    assert data['interestRate'] == 0.0
+    assert data['daysToExpiration'] == 0.0
+
+
 def test_strategy_interval(live_client):
     '''interval fixes the strike spacing of VERTICAL spreads:
     requesting 5 returns strategies whose two legs' strikes differ
@@ -420,6 +688,28 @@ def test_analytical_format(live_client):
     assert data['strategy'] == 'ANALYTICAL'
     assert len(data['callExpDateMap']) > 0
     assert 'monthlyStrategyList' not in data
+
+
+@pytest.mark.parametrize('kwargs', [
+        {'volatility': -5}, {'underlying_price': -100},
+        {'interest_rate': 200}, {'days_to_expiration': -10}])
+def test_analytical_inputs_unvalidated(live_client, kwargs):
+    '''ANALYTICAL's four scenario inputs receive no server-side
+    validation at all: negative volatility, negative underlying
+    price, a 200%% interest rate and negative days-to-expiration
+    are all accepted with 200 SUCCESS.'''
+    data = _chain(live_client, strategy=_O.Strategy.ANALYTICAL,
+                  strike_count=1, **kwargs)
+    assert data['status'] == 'SUCCESS'
+
+
+def test_scenario_params_accepted_on_single(live_client):
+    '''The ANALYTICAL-only inputs are silently accepted on a
+    SINGLE request too — the "applies only to ANALYTICAL" contract
+    is documentation, not enforcement.'''
+    data = _chain(live_client, strategy=_O.Strategy.SINGLE,
+                  strike_count=1, volatility=50)
+    assert data['status'] == 'SUCCESS'
 
 
 def test_analytical_parameters_affect_greeks(live_client):
@@ -481,6 +771,24 @@ def test_non_optionable_symbol(live_client):
     assert data['numberOfContracts'] == 0
 
 
+@pytest.mark.parametrize('symbol', ['aapl', ' AAPL ', ''])
+def test_symbol_form_rejected(live_client, symbol):
+    '''Symbol matching is strict: lowercase, whitespace-padded and
+    empty symbols are all 400 'Check Param Values' — no
+    case-folding or trimming happens server-side.'''
+    resp = live_client.get_option_chain(symbol)
+    assert resp.status_code == 400
+
+
+@pytest.mark.parametrize('symbol', ['/ES', 'EUR/USD'])
+def test_no_chain_asset_classes(live_client, symbol):
+    '''Futures and forex symbols are recognized enough to fail
+    cleanly: they return the same 400 as a bogus symbol rather
+    than an empty-success chain.'''
+    resp = live_client.get_option_chain(symbol)
+    assert resp.status_code == 400
+
+
 def test_from_after_to(live_client):
     '''An inverted date window is rejected: fromDate after toDate
     yields 400 'Check Param Values'.'''
@@ -492,10 +800,12 @@ def test_from_after_to(live_client):
 
 @pytest.mark.parametrize('entitlement', list(_O.Entitlement))
 def test_entitlement(live_client, entitlement):
-    '''Every entitlement declaration is accepted without changing
-    the response shape — the parameter is a client-side
-    entitlement claim, not a filter.'''
+    '''Every entitlement declaration is accepted with zero
+    observable effect — the parameter is a client-side
+    entitlement claim, not a filter, and none of PP/NP/PN flip
+    isDelayed on this account's data.'''
     data = _chain(live_client, strike_count=1,
                   entitlement=entitlement)
     assert data['status'] == 'SUCCESS'
+    assert data['isDelayed'] is False
     assert len(data['callExpDateMap']) > 0
