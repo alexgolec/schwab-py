@@ -59,6 +59,22 @@ def test_symbol_search_multiple_symbols(live_client):
     assert {i['symbol'] for i in instruments} == {'AAPL', 'MSFT'}
 
 
+def test_symbol_search_invalid_symbols_dropped(live_client):
+    '''Invalid symbols in a multi-symbol request are silently
+    dropped: ['AAPL', 'XYZQW'] returns only AAPL with no error
+    field, and a list of only invalid symbols returns the bare
+    {} — unlike get_quotes, which collects bad symbols into an
+    errors.invalidSymbols list.'''
+    instruments = _instruments(
+            live_client, ['AAPL', 'XYZQW'],
+            _P.SYMBOL_SEARCH)['instruments']
+    assert [i['symbol'] for i in instruments] == ['AAPL']
+
+    assert _instruments(
+            live_client, ['XYZQW', 'NOPEQ'],
+            _P.SYMBOL_SEARCH) == {}
+
+
 def test_symbol_search_covers_other_asset_types(live_client):
     '''Lookup is not equity-only: the mutual fund SWPPX resolves
     with assetType MUTUAL_FUND.'''
