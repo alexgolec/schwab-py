@@ -105,6 +105,22 @@ class _TestClient:
         self.assertEqual(client.token_age(), 1000)
 
 
+    def test_default_base_url(self):
+        self.assertEqual(self.client.base_url, 'https://api.schwabapi.com')
+
+
+    def test_custom_base_url(self):
+        custom_url = 'https://mock.server.com'
+        client = self.client_class(
+                API_KEY, self.mock_session, base_url=custom_url)
+        client.logger.setLevel('DEBUG')
+        self.assertEqual(client.base_url, custom_url)
+
+        client.get_account(ACCOUNT_HASH)
+        self.mock_session.get.assert_called_once_with(
+            custom_url + '/trader/v1/accounts/{}'.format(ACCOUNT_HASH),
+            params={})
+
 
     # get_account
 
