@@ -52,7 +52,12 @@ def test_market_hours_equity_product_key(live_client):
     session entry is keyed 'EQ' with product 'EQ' and productName
     'equity'. Enshrines the asymmetry so callers take the nested
     dict's first value rather than assuming a fixed key.'''
-    closed = _hours(live_client, [_Market.EQUITY])['equity']
+    # The closed shape comes from a date with no session — the next
+    # Saturday — not from "today", which may itself be a session day.
+    saturday = _today() + datetime.timedelta(
+            days=(5 - _today().weekday()) % 7)
+    closed = _hours(live_client, [_Market.EQUITY],
+                    date=saturday)['equity']
     assert 'equity' in closed
     assert closed['equity']['product'] == 'equity'
 
@@ -66,6 +71,23 @@ def test_market_hours_equity_product_key(live_client):
             assert entry['EQ']['productName'] == 'equity'
             return
     pytest.fail('no EQ-keyed equity entry found in the next 7 days')
+
+
+def test_forex_market_hours_is_uninformative(live_client):
+    '''DOCUMENTING, NOT ENDORSING: the FOREX market-hours product is a
+    stub — it reports isOpen false with empty sessionHours for every
+    date, including weekdays when EUR/USD quotes are live. Forex
+    session state cannot be derived from this endpoint; quote
+    content is the only ground truth. If this fails, investigate
+    whether the flag became meaningful.'''
+    today = _today()
+    for offset in range(8):
+        products = _hours(live_client, [_Market.FOREX],
+                          date=today + datetime.timedelta(
+                                  days=offset))['forex']
+        product = next(iter(products.values()))
+        assert product['isOpen'] is False
+        assert not product.get('sessionHours')
 
 
 def test_market_hours_weekend_dates_closed(live_client):

@@ -181,9 +181,17 @@ def test_contract_field_format(live_client):
 
 
 def test_underlying_price_is_quote_last(live_client):
-    '''The chain's underlyingPrice equals the quotes endpoint's
-    lastPrice for the same symbol — the last trade, not the mark
-    or close.'''
+    '''On a closed book the chain's underlyingPrice equals the quotes
+    endpoint's lastPrice for the same symbol — both echo the last
+    close. Intraday they diverge (underlyingPrice is a rounded
+    snapshot, lastPrice the live last trade), so the equality
+    contract only holds while the market is closed.'''
+    if conftest.market_is_open(
+            live_client, schwab.client.Client.MarketHours.Market.EQUITY):
+        pytest.skip('equity market is open; underlyingPrice and '
+                    'lastPrice diverge intraday — the equality '
+                    'contract only holds on a closed book')
+
     quote = live_client.get_quotes(['AAPL']).json()
     last = quote['AAPL']['quote']['lastPrice']
     data = _chain(live_client, strike_count=1)

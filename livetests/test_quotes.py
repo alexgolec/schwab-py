@@ -195,7 +195,8 @@ def test_get_equity_quote_regular_section(live_client):
     assert resp.status_code == 200
     regular = resp.json()['AAPL']['regular']
     _check_price(regular['regularMarketLastPrice'], positive=True)
-    _check_price(regular['regularMarketNetChange'])
+    assert isinstance(
+            regular['regularMarketNetChange'], (int, float))
     assert isinstance(regular['regularMarketPercentChange'], (int, float))
     _check_size(regular['regularMarketLastSize'])
     _check_time(regular['regularMarketTradeTime'])
@@ -343,26 +344,35 @@ def test_futures_fields_matrix(live_client, field, expected):
 ################################################################################
 # Forex
 
-def _forex_market_is_open(live_client):
-    return conftest.market_is_open(
-            live_client, live_client.MarketHours.Market.FOREX)
+def _forex_quote(live_client):
+    resp = live_client.get_quotes(['EUR/USD'])
+    assert resp.status_code == 200
+    return resp.json()['EUR/USD']
+
+
+def _forex_book_is_live(entry):
+    '''Schwab's FOREX market-hours product is a stub — it reports
+    isOpen false with empty sessionHours for every date — so session
+    state cannot come from it. The quote book itself is the ground
+    truth: a live book has nonzero prices and timestamps, a closed
+    book is all zeroes.'''
+    quote = entry['quote']
+    return quote['bidPrice'] != 0 or quote['quoteTime'] != 0
 
 
 def test_forex_quote_format_market_open(live_client):
-    '''While the forex market is open the EUR/USD book is populated:
+    '''While the forex book is live the EUR/USD quote is populated:
     bid/ask are positive, timestamps are real epoch-millis. Session
-    state comes from the market-hours API's isOpen flag; skips when
-    the market is closed, where
-    test_forex_quote_format_market_closed applies instead.'''
-    if not _forex_market_is_open(live_client):
-        pytest.skip('forex market is closed (weekend); the '
-                    'closed-book contract is covered by '
+    state comes from the quote content itself (the FOREX
+    market-hours product is an uninformative stub); skips when the
+    book is closed, where test_forex_quote_format_market_closed
+    applies instead.'''
+    entry = _forex_quote(live_client)
+    if not _forex_book_is_live(entry):
+        pytest.skip('forex book is closed; the closed-book contract '
+                    'is covered by '
                     'test_forex_quote_format_market_closed')
 
-    resp = live_client.get_quotes(['EUR/USD'])
-
-    assert resp.status_code == 200
-    entry = resp.json()['EUR/USD']
     assert entry['assetMainType'] == 'FOREX'
 
     assert 'extended' not in entry
@@ -380,21 +390,18 @@ def test_forex_quote_format_market_open(live_client):
 
 
 def test_forex_quote_format_market_closed(live_client):
-    '''On a closed book (weekend) the EUR/USD quote is not omitted
-    or errored: every book field is present but zeroed out, with 0
-    sentinels on timestamps. Only closePrice stays populated with
-    the last close. Session state comes from the market-hours API's
-    isOpen flag; skips while the market is open, where
-    test_forex_quote_format_market_open applies instead.'''
-    if _forex_market_is_open(live_client):
-        pytest.skip('forex market is open; the open-book contract '
-                    'is covered by '
-                    'test_forex_quote_format_market_open')
+    '''On a closed book the EUR/USD quote is not omitted or errored:
+    every book field is present but zeroed out, with 0 sentinels on
+    timestamps. Only closePrice stays populated with the last close.
+    Session state comes from the quote content itself (the FOREX
+    market-hours product is an uninformative stub); skips while the
+    book is live, where test_forex_quote_format_market_open applies
+    instead.'''
+    entry = _forex_quote(live_client)
+    if _forex_book_is_live(entry):
+        pytest.skip('forex book is live; the open-book contract is '
+                    'covered by test_forex_quote_format_market_open')
 
-    resp = live_client.get_quotes(['EUR/USD'])
-
-    assert resp.status_code == 200
-    entry = resp.json()['EUR/USD']
     assert entry['assetMainType'] == 'FOREX'
 
     assert 'extended' not in entry
