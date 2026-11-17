@@ -1,6 +1,44 @@
 import time
 
 import pytest
+from authlib.integrations.httpx_client import OAuth2Client
+from authlib.oauth2.rfc6750 import InvalidTokenError
+
+from schwab.client.synchronous import Client
+
+
+def test_session_without_token_endpoint_cannot_refresh(
+        live_client, schwab_credentials):
+    '''Demonstrates the mechanism of
+    https://github.com/alexgolec/schwab-py/issues/222
+
+    Rebuilds the OAuth2 session exactly the way client_from_received_url
+    constructed it before the fix — token, update_token, and leeway but
+    no token_endpoint — around the session's live token. With the expiry
+    backdated, authlib holds a valid refresh token but has no endpoint to
+    send it to, so the request raises InvalidTokenError without making a
+    single HTTP call.
+
+    Then performs the same expired-token request through the real
+    session client, which does have token_endpoint: it refreshes and the
+    request succeeds. Note this second half fails on unfixed code when
+    the session client itself came from a fresh in-process login — that
+    failure is the bug, demonstrated end-to-end.'''
+    session = OAuth2Client(
+            schwab_credentials['api_key'],
+            client_secret=schwab_credentials['app_secret'],
+            token=dict(live_client.session.token),
+            update_token=lambda *args, **kwargs: None,
+            leeway=300)
+    session.token['expires_at'] = time.time() - 3600
+
+    client = Client(schwab_credentials['api_key'], session)
+    with pytest.raises(InvalidTokenError):
+        client.get_account_numbers()
+
+    live_client.session.token['expires_at'] = time.time() - 3600
+    resp = live_client.get_account_numbers()
+    assert resp.status_code == 200, resp.status_code
 
 
 @pytest.fixture(scope='session')
