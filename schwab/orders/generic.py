@@ -1,4 +1,3 @@
-import math
 
 from enum import Enum
 
@@ -37,20 +36,18 @@ def _build_object(obj):
 def _check_price_value(param_name, price):
     '''Validates a price for :func:`set_price` and :func:`set_stop_price`.
 
-    Prices must be passed as strings. Strings that do not parse as a
-    number are passed through unvalidated for Schwab to reject, but
-    strings that parse to a non-finite value (e.g. 'nan', 'inf') or a
-    negative value are refused here. Negative prices are refused
-    because the Schwab API silently strips the sign from price and
-    stopPrice, inverting the user's intent.'''
+    Prices must be passed as strings. Everything else is passed through
+    verbatim for Schwab to validate, with one exception: strings that
+    parse to a negative number are refused, because the Schwab API
+    silently strips the sign from price and stopPrice — a negative
+    input would be submitted as its absolute value, inverting the
+    user's intent.'''
     if not isinstance(price, str):
         raise ValueError(param_name + ' must be passed as a string')
     try:
         value = float(price)
     except ValueError:
         return price
-    if not math.isfinite(value):
-        raise ValueError(param_name + ' must be a finite number')
     if value < 0:
         raise ValueError(param_name + ' must not be negative')
     return price

@@ -208,15 +208,17 @@ class OrderBuilderTest(unittest.TestCase):
                 self.order_builder.set_stop_price(bad)
 
     @no_duplicates
-    def test_stop_price_rejects_non_finite_strings(self):
-        for bad in ('nan', 'NaN', 'inf', '-inf', 'Infinity', '1e999'):
-            with self.assertRaisesRegex(
-                    ValueError, 'stop_price must be a finite number'):
-                self.order_builder.set_stop_price(bad)
+    def test_stop_price_passes_non_finite_strings_through(self):
+        for value in ('nan', 'NaN', 'inf', 'Infinity', '1e999'):
+            self.order_builder.set_stop_price(value)
+            self.assertFalse(has_diff({
+                'stopPrice': value
+            }, self.order_builder.build()))
 
     @no_duplicates
     def test_stop_price_rejects_negative_strings(self):
-        for bad in ('-1.31', '-0.50', '-1e3'):
+        for bad in ('-1.31', '-0.50', '-1e3', '-inf', '-Infinity',
+                    '-1e999'):
             with self.assertRaisesRegex(
                     ValueError, 'stop_price must not be negative'):
                 self.order_builder.set_stop_price(bad)
@@ -419,15 +421,17 @@ class OrderBuilderTest(unittest.TestCase):
                 self.order_builder.set_price(bad)
 
     @no_duplicates
-    def test_price_rejects_non_finite_strings(self):
-        for bad in ('nan', 'NaN', 'inf', '-inf', 'Infinity', '1e999'):
-            with self.assertRaisesRegex(
-                    ValueError, 'price must be a finite number'):
-                self.order_builder.set_price(bad)
+    def test_price_passes_non_finite_strings_through(self):
+        for value in ('nan', 'NaN', 'inf', 'Infinity', '1e999'):
+            self.order_builder.set_price(value)
+            self.assertFalse(has_diff({
+                'price': value
+            }, self.order_builder.build()))
 
     @no_duplicates
     def test_price_rejects_negative_strings(self):
-        for bad in ('-1.23', '-0.50', '-1e3'):
+        for bad in ('-1.23', '-0.50', '-1e3', '-inf', '-Infinity',
+                    '-1e999'):
             with self.assertRaisesRegex(
                     ValueError, 'price must not be negative'):
                 self.order_builder.set_price(bad)

@@ -96,14 +96,12 @@ templates that call them now require prices as strings. Passing ``float``
 emitted. Callers previously relying on float conversion must format prices
 themselves — e.g., ``f'{price:.2f}'``.
 
-Strings that do not parse as numbers continue to pass through unvalidated,
-but strings that parse to non-finite values (``'nan'``, ``'inf'``,
-``'-inf'``, overflow values like ``'1e999'``) now raise ``ValueError`` since
-they can never represent a real price. Negative numeric strings also raise
-``ValueError``: the Schwab API silently strips the sign from ``price`` and
-``stopPrice`` fields, so a negative input would otherwise produce an order
-with the sign inverted. ``copy_price`` and ``copy_stop_price`` still bypass
-validation as before.
+All price strings pass through verbatim for Schwab to validate, with one
+exception: strings that parse to a negative number raise ``ValueError``,
+because the Schwab API silently strips the sign from ``price`` and
+``stopPrice`` fields — a negative input would otherwise be submitted as its
+absolute value, inverting the order's intent. ``copy_price`` and
+``copy_stop_price`` still bypass validation as before.
 
 AI Disclosure
 -------------
