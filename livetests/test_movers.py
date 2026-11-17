@@ -28,8 +28,11 @@ def test_movers_market_closed(live_client, index):
 
 def test_movers_market_open_format(live_client):
     '''During the session get_movers returns a non-empty screeners
-    list whose entries carry a symbol, description, last price,
-    change, direction, and volume. Skips while the market is
+    list whose entries carry the quote-style schema Schwab migrated
+    movers to: lastPrice/netChange/netPercentChange plus volume,
+    marketShare, totalVolume, and trades. The legacy fields (last,
+    change, direction) are gone; asserting their absence pins the
+    removal so a restoration fails loudly. Skips while the market is
     closed, where test_movers_market_closed applies instead.'''
     if not _equity_market_is_open(live_client):
         pytest.skip('equity market is closed; the empty-screeners '
@@ -44,48 +47,70 @@ def test_movers_market_open_format(live_client):
         assert isinstance(entry['symbol'], str)
         assert entry['symbol'] != ''
         assert isinstance(entry['description'], str)
-        assert isinstance(entry['last'], (int, float))
-        assert entry['last'] > 0
-        assert isinstance(entry['change'], (int, float))
-        assert entry['direction'] in ('up', 'down')
+        assert isinstance(entry['lastPrice'], (int, float))
+        assert entry['lastPrice'] > 0
+        assert isinstance(entry['netChange'], (int, float))
+        assert isinstance(entry['netPercentChange'], (int, float))
+        assert isinstance(entry['marketShare'], (int, float))
+        assert isinstance(entry['volume'], int)
         assert isinstance(entry['totalVolume'], int)
-        assert entry['totalVolume'] >= 0
+        assert isinstance(entry['trades'], int)
+        for gone in ('last', 'change', 'direction'):
+            assert gone not in entry
 
 
-def test_movers_sort_direction_matches(live_client):
-    '''The sort param selects the side of the book: sorting by
-    PERCENT_CHANGE_UP returns only upward movers and
-    PERCENT_CHANGE_DOWN only downward ones. Open-session only.'''
+def test_movers_sort_order_ignored(live_client):
+    '''DOCUMENTING, NOT ENDORSING: sort_order is currently ignored —
+    all four values return identical lists. If this test fails,
+    Schwab restored sort semantics; investigate which values took
+    effect and re-enshrine. Open-session only.'''
     if not _equity_market_is_open(live_client):
         pytest.skip('equity market is closed; movers data only '
                     'exists in session')
 
     M = live_client.Movers
-    for sort_order, direction in [
-            (M.SortOrder.PERCENT_CHANGE_UP, 'up'),
-            (M.SortOrder.PERCENT_CHANGE_DOWN, 'down')]:
+    results = {}
+    for sort_order in M.SortOrder:
         resp = live_client.get_movers(
                 M.Index.SPX, sort_order=sort_order)
         assert resp.status_code == 200
-        screeners = resp.json()['screeners']
-        for entry in screeners:
-            assert entry['direction'] == direction
+        results[sort_order] = resp.json()['screeners']
+    assert all(s == results[M.SortOrder.VOLUME]
+               for s in results.values())
 
 
-def test_movers_sort_and_frequency_params(live_client):
-    '''sort_order and frequency serialize through to the API:
-    a VOLUME-sorted, zero-frequency request on SPX returns 200
-    with a well-formed screeners list. Open-session only.'''
+def test_movers_frequency_ignored(live_client):
+    '''DOCUMENTING, NOT ENDORSING: frequency is currently ignored —
+    a sixty-minute window returns the same screeners list as the
+    default. If this test fails, Schwab restored frequency
+    semantics; investigate and re-enshrine. Open-session only.'''
     if not _equity_market_is_open(live_client):
         pytest.skip('equity market is closed; movers data only '
                     'exists in session')
 
     M = live_client.Movers
-    resp = live_client.get_movers(
-            M.Index.SPX, sort_order=M.SortOrder.VOLUME,
-            frequency=M.Frequency.ZERO)
+    base = live_client.get_movers(
+            M.Index.SPX, frequency=M.Frequency.ZERO)
+    windowed = live_client.get_movers(
+            M.Index.SPX, frequency=M.Frequency.SIXTY)
+    assert base.status_code == 200
+    assert windowed.status_code == 200
+    assert base.json()['screeners'] == windowed.json()['screeners']
+
+
+def test_movers_volume_ordered(live_client):
+    '''With all sort parameters ignored, the current response is
+    ordered by volume descending. Enshrines the effective ordering
+    so an ordering change fails loudly. Open-session only.'''
+    if not _equity_market_is_open(live_client):
+        pytest.skip('equity market is closed; movers data only '
+                    'exists in session')
+
+    M = live_client.Movers
+    resp = live_client.get_movers(M.Index.SPX)
     assert resp.status_code == 200
-    assert isinstance(resp.json()['screeners'], list)
+    volumes = [e['volume'] for e in resp.json()['screeners']]
+    assert volumes == sorted(volumes, reverse=True)
 
 
 def test_movers_invalid_index_client_side(live_client):
