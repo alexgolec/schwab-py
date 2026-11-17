@@ -20,13 +20,17 @@ def account_hash(live_client):
 
 @pytest.fixture(scope='module')
 def option_symbols(live_client):
-    '''Two calls and two puts at AAPL's first listed expiration,
-    pulled live so the legs never expire under the tests.'''
+    '''Two calls and two puts at AAPL's first expiration at least one
+    day out, pulled live so the legs never expire under the tests.
+
+    Skips same-day (0DTE) expirations: previewOrder rejects contracts
+    expiring today with 400 "Symbol is expired."'''
     resp = live_client.get_option_chain(
             'AAPL', strike_count=3)
     assert resp.status_code == 200
     chain = resp.json()
-    expiry = sorted(chain['callExpDateMap'])[0]
+    expiry = next(e for e in sorted(chain['callExpDateMap'])
+                  if int(e.rsplit(':', 1)[1]) >= 1)
     calls = [c['symbol'] for strike in sorted(
         chain['callExpDateMap'][expiry], key=float)
         for c in chain['callExpDateMap'][expiry][strike]]
