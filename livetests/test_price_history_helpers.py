@@ -16,11 +16,14 @@ def _now():
 
 
 def _check_candle(candle):
+    assert set(candle) == {
+            'open', 'high', 'low', 'close', 'volume', 'datetime'}
     for key in ('open', 'high', 'low', 'close'):
         price = candle[key]
         assert isinstance(price, (int, float))
         assert price > 0
-    assert candle['low'] <= candle['high']
+    assert candle['low'] <= candle['open'] <= candle['high']
+    assert candle['low'] <= candle['close'] <= candle['high']
     assert isinstance(candle['volume'], int)
     assert candle['volume'] >= 0
     assert isinstance(candle['datetime'], int)
@@ -46,6 +49,7 @@ def _check_minute_response(resp, granularity_ms):
     gaps = _gaps(candles)
     assert min(gaps) == granularity_ms
     assert all(g % granularity_ms == 0 for g in gaps)
+    assert all(c['datetime'] % granularity_ms == 0 for c in candles)
     return candles
 
 
@@ -101,27 +105,30 @@ def test_minute_recent_window_structure(live_client):
     assert candles[0]['datetime'] <= _ms(_days_ago(5))
 
 
-def test_minute_candle_cap(live_client):
-    '''Minute responses are hard-capped at 40,000 candles: a window
-    wider than what 40,000 minutes of trading fills returns exactly
-    40,000 candles ending at the present, i.e. the most recent data,
-    not the start of the requested window. Requests a year of data
-    and asserts the exact count plus a recent final candle.'''
+def test_minute_retention_horizon(live_client):
+    '''Minute data is retained for roughly 48 days: a window wider
+    than the horizon returns candles from the retention boundary to
+    the present — the most recent data, not the start of the
+    requested window. The candle count is density-dependent (traded
+    minutes only, thin minutes skipped) and not part of the
+    contract; the contract is the clamped reach and the recency of
+    the final candle.'''
     resp = live_client.get_price_history_every_minute(
             'AAPL', start_datetime=_days_ago(365), end_datetime=_now())
     candles = _check_minute_response(resp, 60000)
-    assert len(candles) == 40000
     assert candles[-1]['datetime'] > _ms(_days_ago(7))
+    assert candles[0]['datetime'] < _ms(_days_ago(30))
 
 
 def test_minute_default_no_dates(live_client):
     '''With no dates the helper normalizes start to 1971 and end to
-    ~now, which produces the same cap-bound response as an explicit
-    very wide window. Calls with no arguments and asserts the exact
-    40,000-candle result.'''
+    ~now, which produces the same retention-clamped response as an
+    explicit very wide window: reaches the horizon, ends at the
+    present.'''
     resp = live_client.get_price_history_every_minute('AAPL')
     candles = _check_minute_response(resp, 60000)
-    assert len(candles) == 40000
+    assert candles[-1]['datetime'] > _ms(_days_ago(7))
+    assert candles[0]['datetime'] < _ms(_days_ago(30))
 
 
 ################################################################################
@@ -148,23 +155,27 @@ def test_five_minute_recent_window_structure(live_client):
     _check_minute_response(resp, 300000)
 
 
-def test_five_minute_candle_cap(live_client):
-    '''The 40,000-candle cap applies to five-minute data as well:
-    a year-long window returns exactly 40,000 of the most recent
-    candles, not the requested window's oldest.'''
+def test_five_minute_retention_horizon(live_client):
+    '''Five-minute data is retained for roughly 200 days: a window
+    wider than the horizon returns candles from the retention
+    boundary to the present, not the requested window's oldest.
+    As with minute data the count is density-dependent and not part
+    of the contract.'''
     resp = live_client.get_price_history_every_five_minutes(
             'AAPL', start_datetime=_days_ago(365), end_datetime=_now())
     candles = _check_minute_response(resp, 300000)
-    assert len(candles) == 40000
+    assert candles[-1]['datetime'] > _ms(_days_ago(7))
+    assert candles[0]['datetime'] < _ms(_days_ago(150))
 
 
 def test_five_minute_default_no_dates(live_client):
     '''Default date normalization (1971 to ~now) produces the same
-    cap-bound response as an explicit wide window. Calls with no
-    arguments and asserts exactly 40,000 candles.'''
+    retention-clamped response as an explicit wide window: reaches
+    the horizon, ends at the present.'''
     resp = live_client.get_price_history_every_five_minutes('AAPL')
     candles = _check_minute_response(resp, 300000)
-    assert len(candles) == 40000
+    assert candles[-1]['datetime'] > _ms(_days_ago(7))
+    assert candles[0]['datetime'] < _ms(_days_ago(150))
 
 
 ################################################################################
