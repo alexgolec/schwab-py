@@ -34,6 +34,12 @@ or removed response keys) belong in livetest enshrinements, not in the
 v2 compatibility docs. Enshrining an observed API behavior in a test
 does not mean it should be documented there.
 
+The same applies to docstrings: livetest docstrings state what the
+test asserts, not narrations of observed API facts or change history.
+Do not describe API behavior, migrations, or motivations in docstrings
+— that is not this library's business. Exceptions are a special case
+decided by the maintainer personally, case by case.
+
 ## Testing
 
 - Unit suite: `make test` / `uv run pytest tests/`

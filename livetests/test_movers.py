@@ -28,12 +28,9 @@ def test_movers_market_closed(live_client, index):
 
 def test_movers_market_open_format(live_client):
     '''During the session get_movers returns a non-empty screeners
-    list whose entries carry the quote-style schema Schwab migrated
-    movers to: lastPrice/netChange/netPercentChange plus volume,
-    marketShare, totalVolume, and trades. The legacy fields (last,
-    change, direction) are gone; asserting their absence pins the
-    removal so a restoration fails loudly. Skips while the market is
-    closed, where test_movers_market_closed applies instead.'''
+    list whose entries carry the current field schema. Skips while
+    the market is closed, where test_movers_market_closed applies
+    instead.'''
     if not _equity_market_is_open(live_client):
         pytest.skip('equity market is closed; the empty-screeners '
                     'contract is covered by test_movers_market_closed')
@@ -60,10 +57,8 @@ def test_movers_market_open_format(live_client):
 
 
 def test_movers_sort_order_ignored(live_client):
-    '''DOCUMENTING, NOT ENDORSING: sort_order is currently ignored —
-    all four values return identical lists. If this test fails,
-    Schwab restored sort semantics; investigate which values took
-    effect and re-enshrine. Open-session only.'''
+    '''All four sort_order values return identical lists.
+    Open-session only.'''
     if not _equity_market_is_open(live_client):
         pytest.skip('equity market is closed; movers data only '
                     'exists in session')
@@ -80,10 +75,8 @@ def test_movers_sort_order_ignored(live_client):
 
 
 def test_movers_frequency_ignored(live_client):
-    '''DOCUMENTING, NOT ENDORSING: frequency is currently ignored —
-    a sixty-minute window returns the same screeners list as the
-    default. If this test fails, Schwab restored frequency
-    semantics; investigate and re-enshrine. Open-session only.'''
+    '''A sixty-minute frequency window returns the same screeners
+    list as the default. Open-session only.'''
     if not _equity_market_is_open(live_client):
         pytest.skip('equity market is closed; movers data only '
                     'exists in session')
@@ -99,9 +92,8 @@ def test_movers_frequency_ignored(live_client):
 
 
 def test_movers_volume_ordered(live_client):
-    '''With all sort parameters ignored, the current response is
-    ordered by volume descending. Enshrines the effective ordering
-    so an ordering change fails loudly. Open-session only.'''
+    '''The response is ordered by volume descending.
+    Open-session only.'''
     if not _equity_market_is_open(live_client):
         pytest.skip('equity market is closed; movers data only '
                     'exists in session')
