@@ -3,7 +3,9 @@ import pytest
 import schwab
 from schwab.orders import equities, options
 from schwab.orders.common import (
-        Duration, OrderStrategyType, Session, SpecialInstruction)
+        Duration, OrderStrategyType, OrderType, Session,
+        SpecialInstruction, StopPriceLinkBasis, StopPriceLinkType,
+        StopType)
 
 
 _S = schwab.client.Client
@@ -579,3 +581,137 @@ def test_preview_order_builder_and_dict_equivalent(
     for key in ('orderType', 'session', 'duration', 'price',
                 'quantity', 'strategy'):
         assert b_strat[key] == d_strat[key]
+
+
+################################################################################
+# Price value handling — discoveries from probing the preview endpoint
+#
+# These tests pin observed Schwab behavior for the price and stopPrice
+# fields. copy_price/copy_stop_price are used deliberately: they bypass
+# the builder's validation so we can observe the API's own handling.
+# NOTE: several tests enshrine behavior we do NOT endorse (e.g. silent
+# sign stripping); if Schwab changes it, the failure is the signal.
+
+def _preview_price(live_client, account_hash, price):
+    '''Sends an equity_buy_limit with the given raw price string via
+    copy_price (bypassing builder validation) and returns the
+    response.'''
+    builder = equities.equity_buy_limit('AAPL', 1, '1.00')
+    builder.copy_price(price)
+    return live_client.preview_order(account_hash, builder)
+
+
+def test_price_format_normalization(live_client, account_hash):
+    '''Schwab's price parser is liberal: whitespace, leading +,
+    leading zeros, trailing zeros, and scientific notation are all
+    accepted and normalized to a JSON number in the echo.'''
+    for raw, expected in (
+            ('350.00', 350.0), ('350', 350.0), ('350.0', 350.0),
+            ('350.00000', 350.0), (' 350.00 ', 350.0),
+            ('+350.00', 350.0), ('0350.00', 350.0), ('1e3', 1000.0)):
+        resp = _preview_price(live_client, account_hash, raw)
+        assert resp.status_code == 200, (raw, resp.text[:200])
+        assert resp.json()['orderStrategy']['price'] == expected, raw
+
+
+def test_price_invalid_strings_rejected(live_client, account_hash):
+    '''Non-numeric strings are rejected outright with HTTP 400 —
+    confirming that pass-through-unvalidated strings are handled by
+    Schwab, not silently accepted.'''
+    for raw in ('abc', '$350.00', '350,00', '--350.00'):
+        resp = _preview_price(live_client, account_hash, raw)
+        assert resp.status_code == 400, (raw, resp.status_code)
+        assert 'Invalid value' in resp.json()['message']
+
+
+def test_price_non_finite_rejected(live_client, account_hash):
+    '''Schwab rejects non-finite prices with HTTP 400, matching the
+    builder's own earlier ValueError — the two layers agree.'''
+    for raw in ('nan', 'inf'):
+        resp = _preview_price(live_client, account_hash, raw)
+        assert resp.status_code == 400, (raw, resp.status_code)
+
+
+def test_price_precision_rule_flagged(live_client, account_hash):
+    '''Prices with more than two decimals above $1 (or four below)
+    still echo but carry Schwab's own validation message stating the
+    rule.'''
+    for raw in ('350.999', '350.005', '0.00001'):
+        resp = _preview_price(live_client, account_hash, raw)
+        assert resp.status_code == 200, (raw, resp.text[:200])
+        messages = ' '.join(
+                x['activityMessage'] for x in
+                resp.json()['orderValidationResult'].get('rejects', []))
+        assert 'no more than two decimals' in messages, (raw, messages)
+
+
+def test_negative_price_silently_stripped(live_client, account_hash):
+    '''DOCUMENTING, NOT ENDORSING: Schwab silently strips the sign from
+    the price field — '-350.00' echoes as 350.0 with no error. This is
+    why the builder now refuses negative price strings with
+    ValueError. If this test fails, Schwab changed the behavior —
+    investigate before updating.'''
+    resp = _preview_price(live_client, account_hash, '-350.00')
+    assert resp.status_code == 200, resp.text[:200]
+    assert resp.json()['orderStrategy']['price'] == 350.0
+
+
+def test_negative_net_debit_silently_stripped(
+        live_client, account_hash, option_symbols):
+    '''DOCUMENTING, NOT ENDORSING: the sign strip applies to vertical
+    net_debit too, where negative semantically means credit —
+    '-1.50' echoes as a 1.5 debit, inverting the order.'''
+    builder = options.bull_call_vertical_open(
+            option_symbols['call_lo'], option_symbols['call_hi'],
+            1, '1.00')
+    builder.copy_price('-1.50')
+    resp = live_client.preview_order(account_hash, builder)
+    assert resp.status_code == 200, resp.text[:200]
+    assert resp.json()['orderStrategy']['price'] == 1.5
+
+
+def test_stop_price_echo_absent(live_client, account_hash):
+    '''stopPrice does not surface anywhere in the preview echo; the
+    orderValue derived from it is the observable. '-350.00' and
+    '350.00' both derive orderValue 350.0, confirming the sign strip
+    applies to stopPrice as well.'''
+    for raw in ('-350.00', '350.00'):
+        builder = (equities.equity_buy_market('AAPL', 1)
+                .set_order_type(OrderType.STOP)
+                .copy_stop_price(raw))
+        resp = live_client.preview_order(account_hash, builder)
+        assert resp.status_code == 200, resp.text[:200]
+        strategy = resp.json()['orderStrategy']
+        assert 'stopPrice' not in strategy
+        assert strategy['orderValue'] == 350.0, raw
+
+
+def _trailing_stop(builder_fn, basis, offset):
+    return (builder_fn('AAPL', 1)
+            .set_order_type(OrderType.TRAILING_STOP)
+            .set_stop_type(StopType.STANDARD)
+            .set_stop_price_link_type(StopPriceLinkType.VALUE)
+            .set_stop_price_link_basis(basis)
+            .set_stop_price_offset(offset))
+
+
+def test_trailing_stop_offset_sign_rule(live_client, account_hash):
+    '''stopPriceOffset is validated directionally, NOT stripped: SELL
+    trailing stops require a positive offset, while BUY stops accept
+    negative values. Confirms price/stopPrice are the only numeric
+    fields where the sign is silently discarded. Also enshrines that
+    previewable trailing stops require stopType and a valid
+    stopPriceLinkBasis — without them the endpoint returns 500.'''
+    for off in (-5.0, 0.0):
+        resp = live_client.preview_order(account_hash, _trailing_stop(
+            equities.equity_sell_market, StopPriceLinkBasis.BID, off))
+        assert resp.status_code == 400, (off, resp.status_code)
+        assert 'stopPriceOffset' in resp.text
+
+    resp = live_client.preview_order(account_hash, _trailing_stop(
+        equities.equity_sell_market, StopPriceLinkBasis.BID, 5.0))
+    assert resp.status_code == 200, resp.text[:200]
+
+    resp = live_client.preview_order(account_hash, _trailing_stop(
+        equities.equity_buy_market, StopPriceLinkBasis.ASK, -5.0))
+    assert resp.status_code == 200, resp.text[:200]
