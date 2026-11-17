@@ -1,8 +1,8 @@
 import time
 
 import pytest
+from authlib.integrations.base_client.errors import InvalidTokenError
 from authlib.integrations.httpx_client import OAuth2Client
-from authlib.oauth2.rfc6750 import InvalidTokenError
 
 from schwab.client.synchronous import Client
 
