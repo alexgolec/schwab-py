@@ -103,20 +103,6 @@ because the Schwab API silently strips the sign from ``price`` and
 absolute value, inverting the order's intent. ``copy_price`` and
 ``copy_stop_price`` still bypass validation as before.
 
-Observed Schwab API Changes
----------------------------
-
-Changes observed in Schwab's own API that affect callers regardless of
-library version:
-
-* **Movers response schema migrated.** ``get_movers`` screeners entries now
-  carry quote-style fields (``lastPrice``, ``netChange``,
-  ``netPercentChange``, ``marketShare``, ``trades``, ``volume``) instead of
-  the documented ``last``, ``change``, and ``direction`` — code reading the
-  old fields will get ``KeyError``. Additionally, ``sort_order`` and
-  ``frequency`` are currently ignored: all values return the same
-  volume-ordered list.
-
 AI Disclosure
 -------------
 

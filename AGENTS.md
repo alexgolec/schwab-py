@@ -23,6 +23,17 @@ credential prompt). Push explicitly via SSH:
 git push git@github.com:alexgolec/schwab-py <branch>:<branch>
 ```
 
+## Documentation scope
+
+`docs/v2.rst` documents API-visible changes between v1 and v2 **of this
+library** — changes that may require users to modify their code in
+response to changes schwab-py itself made. It is not a changelog for
+Schwab's API: behaviors that Schwab changes and that schwab-py passes
+through transparently (response field renames, ignored parameters, new
+or removed response keys) belong in livetest enshrinements, not in the
+v2 compatibility docs. Enshrining an observed API behavior in a test
+does not mean it should be documented there.
+
 ## Testing
 
 - Unit suite: `make test` / `uv run pytest tests/`
