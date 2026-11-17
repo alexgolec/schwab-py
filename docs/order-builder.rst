@@ -302,17 +302,21 @@ trade.
 Note on Prices
 ~~~~~~~~~~~~~~~~~
 
-**Important Note:** The Schwab API expects prices as strings, and
-``schwab-py`` passes them through unchanged. Prices must be passed as
-strings: ``set_price``, ``set_stop_price``, and the order templates raise
-``ValueError`` on ``float``, ``int``, and other non-string values. Formatting
-— decimal places, padding, and so on — is entirely the caller's
-responsibility.
+The Schwab API expects prices as strings, and ``schwab-py`` mostly passes the
+values you give it to the API verbatim and allow Schwab to handle the values as
+they please. Passing in ``float``, ``int`` or any other non-string values
+results in a ``ValueError``. Users should be aware of a few things, however:
 
-Strings that do not parse as numbers are passed through unvalidated and left
-for Schwab to reject, although strings that parse to non-finite values
-(``'nan'``, ``'inf'``, ``'-inf'``, overflow values like ``'1e999'``) are
-refused with ``ValueError`` since they can never represent a real price.
+*Precision:* You should know that Schwab supports two digits of precision for
+prices higher than $1, and four digits for prices less than $1. The API may
+reject or modify prices which don't meet these requirements. ``schwab-py`` will
+happily let you pass bogus values in, however.
+
+*Negative prices:* There appears to be a bug on Schwab's side where negative
+values passed to ``price`` and ``stopPrice`` have their sign flipped to a
+positive value rather than being rejected. ``schwab-py`` treats these as a
+special case and raises ``ValueError`` since the intent of a negative price is
+ill-defined and impossible to satisfy through the API. 
 
 .. automethod:: schwab.orders.generic.OrderBuilder.set_price
 .. automethod:: schwab.orders.generic.OrderBuilder.copy_price
