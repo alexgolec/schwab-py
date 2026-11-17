@@ -30,13 +30,15 @@ def test_session_without_token_endpoint_cannot_refresh(
             token=dict(live_client.session.token),
             update_token=lambda *args, **kwargs: None,
             leeway=300)
-    session.token['expires_at'] = time.time() - 3600
+    # expires_at must be an int — OAuth2Token.is_expired ignores
+    # non-integer values and treats them as never expiring
+    session.token['expires_at'] = int(time.time() - 3600)
 
     client = Client(schwab_credentials['api_key'], session)
     with pytest.raises(InvalidTokenError):
         client.get_account_numbers()
 
-    live_client.session.token['expires_at'] = time.time() - 3600
+    live_client.session.token['expires_at'] = int(time.time() - 3600)
     resp = live_client.get_account_numbers()
     assert resp.status_code == 200, resp.status_code
 
@@ -73,7 +75,7 @@ def test_fresh_login_session_can_refresh_access_token(
     leeway to force the refresh path without waiting for the access
     token's natural ~30-minute expiry.'''
     client = freshly_authenticated_client
-    client.session.token['expires_at'] = time.time() - 3600
+    client.session.token['expires_at'] = int(time.time() - 3600)
 
     resp = client.get_account_numbers()
     assert resp.status_code == 200, resp.status_code
