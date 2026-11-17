@@ -58,9 +58,13 @@ def schwab_credentials():
 
 
 @pytest.fixture(scope='session')
-def live_client(schwab_credentials, tmp_path_factory):
+def live_login(schwab_credentials, tmp_path_factory):
     '''Performs one real Schwab login for the entire test run. Requires
     interactive browser access.
+
+    Returns a dict with 'client' (the authenticated client) and
+    'fresh_login' (True if a fresh in-process login flow was performed,
+    False if an existing token file was loaded).
 
     When the RETAINED_TOKEN_PATH environment variable (or the same key in
     schwab-credentials.env) points at a filename, the token is loaded from
@@ -72,6 +76,8 @@ def live_client(schwab_credentials, tmp_path_factory):
         token_path.parent.mkdir(parents=True, exist_ok=True)
     else:
         token_path = tmp_path_factory.mktemp('schwab-live') / 'token.json'
+
+    fresh_login = not token_path.exists()
 
     try:
         client = schwab.auth.easy_client(
@@ -88,10 +94,17 @@ def live_client(schwab_credentials, tmp_path_factory):
                     'rerun with -s (e.g. make test-live)')
         raise
 
-    yield client
+    yield {'client': client, 'fresh_login': fresh_login}
 
     if not retained_path:
         token_path.unlink(missing_ok=True)
+
+
+@pytest.fixture(scope='session')
+def live_client(live_login):
+    '''The authenticated client from live_login; see that fixture for
+    details on login and token retention.'''
+    return live_login['client']
 
 
 def market_is_open(live_client, market):
