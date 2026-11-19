@@ -377,7 +377,7 @@ through the login flow on a different machine than the one on which
 opening the relevant URLs, this flow allows you to manually copy-paste around 
 the URLs. It's a little more cumbersome, but it has no dependency on selenium.
 
-Alterately, you can take advantage of the fact that token files are portable.
+Alternatively, you can take advantage of the fact that token files are portable.
 Once you create a token on one machine, such as one where you can open a web
 browser, you can easily copy that token file to another machine, such as your
 application in the cloud. However, make sure you don't use the same token on
