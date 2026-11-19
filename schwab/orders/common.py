@@ -70,6 +70,9 @@ class Session(Enum):
     #: session. This is the union of ``NORMAL``, ``AM``, and ``PM``.
     SEAMLESS = 'SEAMLESS'
 
+    #: Extended Overnight Session, 24 hours Sunday - Friday
+    EXTO = 'EXTO'
+
 
 class OrderType(Enum):
     '''
