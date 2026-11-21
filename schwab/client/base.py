@@ -7,6 +7,7 @@ from enum import Enum
 
 import datetime
 import httpx2
+import inspect
 import json
 import logging
 import pickle
@@ -128,6 +129,59 @@ class BaseClient(EnumEnforcer):
         return self.token_metadata.token_age()
 
     _TOKEN_REVOKE_URL = 'https://api.schwabapi.com/v1/oauth/revoke'
+
+    def revoke(self):
+        '''Permanently revoke this token and make it unusable for future calls.
+        This method both revokes the token on Schwab's side using :rfc:`7009`
+        and updates the token file to reflect that it's been revoked by marking
+        it as revoked and stripping it of all of the now-useless secret values.
+
+        A few important notes:
+
+         * This operation is irreversible: a token cannot be revived or
+           refreshed after it has been revoked. This operation is also
+           idempotent: calling it multiple times yields the same result.
+         * Passing the file path of a previously-revoked token into
+           ``easy_client`` causes it to ignore it, start the full
+           authentication flow, and overwrite the existing token with the new
+           one.
+         * Finally, if you attempt to create a new client using a token file
+           which was previously revoked, your token creation method will
+           raise :class:`~schwab.utils.TokenRevokedError`.
+
+        :raises TokenRevocationError: The request could not be sent, Schwab
+            returned a status other than 200, the client has no usable
+            refresh token or persistent metadata, or the revoked marker
+            could not be stored. Look at ``endpoint_answered``,
+            ``status_code``, ``retryable``, and ``server_revoked`` for more
+            details. Note for security reasons the exception carries no
+            credential-bearing request or response.'''
+        refresh_token = self._token_revocation_refresh_token()
+        if refresh_token is None:
+            return None
+        transport_error = None
+        try:
+            response = self._revoke_token_request(refresh_token)
+        except httpx2.HTTPError:
+            transport_error = self._token_revocation_transport_error()
+        if transport_error is not None:
+            raise transport_error
+        if inspect.isawaitable(response):
+            return self._await_revoke_response(response)
+        self._persist_token_revocation(response)
+
+    async def _await_revoke_response(self, response):
+        '''Awaits an asynchronous client's ``_revoke_token_request``
+        coroutine, then persists the tombstone. Only ever invoked for
+        asynchronous clients; ``Client`` callers never see this method.'''
+        transport_error = None
+        try:
+            response = await response
+        except httpx2.HTTPError:
+            transport_error = self._token_revocation_transport_error()
+        if transport_error is not None:
+            raise transport_error
+        self._persist_token_revocation(response)
 
     def _token_revocation_refresh_token(self):
         '''Returns the refresh token to revoke, ``None`` if this client's
