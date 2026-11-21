@@ -1,3 +1,5 @@
+.PHONY: test test-live fix coverage docs dist release clean
+
 test:
 	uv run pytest tests/
 
@@ -11,6 +13,9 @@ coverage:
 	uv run coverage run -m pytest tests/
 	uv run coverage report
 	uv run coverage html
+
+docs:
+	uv run sphinx-build -W -E -a docs/ docs-build
 
 dist: clean
 	uv build
