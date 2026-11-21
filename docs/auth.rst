@@ -131,6 +131,46 @@ seven day token age restriction is implemented by Schwab, and so the token may
 become expired sooner *or* later than seven days.
 
 
+.. _token_revocation:
+
+------------------
+Revoking a Token
+------------------
+
+Deleting a token file only forgets the credential *locally* — the refresh
+token it contained remains valid on Schwab's servers until it expires. If a
+token may have been exposed, or you simply want to retire it deliberately,
+deleting the file is not enough.
+
+``Client`` and ``AsyncClient`` expose ``revoke()``, which submits the
+refresh token to Schwab's OAuth 2.0 token revocation endpoint (`RFC 7009
+<https://www.rfc-editor.org/rfc/rfc7009>`__). On success it replaces the
+stored token with a secretless revoked marker — the credential itself is
+removed from disk — and subsequent loads refuse the marker:
+``client_from_token_file`` and ``client_from_access_functions`` raise
+``schwab.utils.TokenRevokedError``, while ``easy_client`` quietly starts a
+fresh authorization flow.
+
+Revocation is **irreversible** — it is not a way to force a token refresh.
+RFC 7009 notes that an authorization server *should* also invalidate access
+tokens issued from the same grant when it supports that operation; treat
+that cascade as likely rather than guaranteed.
+
+Failures raise ``schwab.utils.TokenRevocationError``, which exposes
+machine-readable fields for deciding what to do next:
+
+``endpoint_answered`` / ``status_code``
+    Whether Schwab answered and with which status.
+``retryable``
+    True when the call may be safely repeated: transport failures, rate
+    limiting, and server errors. Revocation is idempotent — per RFC 7009,
+    revoking an already-revoked or unknown token also returns 200.
+``server_revoked``
+    The edge case where Schwab accepted the revocation but the local marker
+    could not be persisted. The credential is dead server-side; do not
+    reuse the client, but retrying the revocation is safe.
+
+
 ----------------------
 Advanced Functionality
 ----------------------

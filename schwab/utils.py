@@ -86,6 +86,40 @@ class AccountHashMismatchException(ValueError):
     '''
 
 
+class TokenRevokedError(Exception):
+    '''
+    Raised when loading a token that has been marked as revoked. A revoked
+    token carries no credential; create a new token via the full
+    authorization flow.
+    '''
+
+
+class TokenRevocationError(Exception):
+    '''
+    Raised when a refresh token could not be safely revoked.
+
+    ``endpoint_answered`` and ``status_code`` describe whether Schwab
+    answered the request and with which status. ``retryable`` is true when
+    the request can be safely repeated: transport failures, rate limits,
+    and server errors. ``server_revoked`` is true only in the partial-success
+    case where Schwab accepted the revocation but the local revoked marker
+    could not be persisted.
+
+    This exception deliberately carries no request or response objects. A
+    revocation request contains the refresh token in its body and the
+    application secret in its authentication, so attaching either would turn
+    an ordinary diagnostic into a credential container.
+    '''
+
+    def __init__(self, message, *, status_code=None, endpoint_answered=False,
+                 retryable=False, server_revoked=False):
+        super().__init__(message)
+        self.status_code = status_code
+        self.endpoint_answered = endpoint_answered
+        self.retryable = retryable
+        self.server_revoked = server_revoked
+
+
 class LazyLog:
     'Helper to defer evaluation of expensive variables in log messages'
     def __init__(self, func):

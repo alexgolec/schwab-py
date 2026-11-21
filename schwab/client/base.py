@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 
 import datetime
+import httpx2
 import json
 import logging
 import pickle
@@ -15,7 +16,7 @@ import warnings
 
 from schwab.orders.generic import OrderBuilder
 
-from ..utils import EnumEnforcer
+from ..utils import EnumEnforcer, TokenRevocationError
 
 
 def get_logger():
@@ -117,14 +118,78 @@ class BaseClient(EnumEnforcer):
         self.session.timeout = timeout
 
     def token_age(self):
-        '''Get the age of the token used to create this client, in seconds. For 
-        users who prefer to proactively delete their token files before the 
+        '''Get the age of the token used to create this client, in seconds. For
+        users who prefer to proactively delete their token files before the
         become expired, this method can offer a hint for when to do so.
 
-        Note that the actual expiration is governed by Schwab's internal 
-        implementation, and the token might become expired sooner *or* later 
+        Note that the actual expiration is governed by Schwab's internal
+        implementation, and the token might become expired sooner *or* later
         than the documented seven day term.'''
         return self.token_metadata.token_age()
+
+    _TOKEN_REVOKE_URL = 'https://api.schwabapi.com/v1/oauth/revoke'
+
+    def _token_revocation_refresh_token(self):
+        '''Returns the refresh token to revoke, ``None`` if this client's
+        token is already revoked (a local no-op), or raises
+        :class:`~schwab.utils.TokenRevocationError` if revocation cannot be
+        performed safely.'''
+        if self.token_metadata is None:
+            raise TokenRevocationError(
+                    'This client was built without token metadata, so its '
+                    'refresh token cannot be revoked and persisted safely.',
+                    endpoint_answered=False)
+        if self.token_metadata.revoked:
+            return None
+        token = self.token_metadata.token or {}
+        refresh_token = token.get('refresh_token')
+        if not isinstance(refresh_token, str) or not refresh_token:
+            raise TokenRevocationError(
+                    'The stored token has no usable refresh token to revoke. '
+                    'Complete the full authorization flow to create a new '
+                    'token.',
+                    endpoint_answered=False)
+        return refresh_token
+
+    def _persist_token_revocation(self, response):
+        '''On HTTP 200, records the revocation in the local token metadata.
+        Anything else, and any failure to persist the marker, raises
+        :class:`~schwab.utils.TokenRevocationError`.'''
+        if response.status_code != httpx2.codes.OK:
+            status = response.status_code
+            raise TokenRevocationError(
+                    'Schwab did not accept the refresh token revocation '
+                    'request (HTTP {}). The local token remains active.'
+                    .format(status),
+                    status_code=status,
+                    endpoint_answered=True,
+                    retryable=(status == 429 or 500 <= status < 600))
+        persistence_error = None
+        try:
+            self.token_metadata.mark_revoked()
+        except Exception:
+            persistence_error = TokenRevocationError(
+                    'Schwab accepted the refresh token revocation, but the '
+                    'local revoked marker could not be persisted. Do not '
+                    'reuse this client; retrying the revocation is safe.',
+                    status_code=httpx2.codes.OK,
+                    endpoint_answered=True,
+                    retryable=True,
+                    server_revoked=True)
+        if persistence_error is not None:
+            raise persistence_error
+
+    @staticmethod
+    def _token_revocation_transport_error():
+        # Constructed outside the except block in revoke() so that no
+        # credential-bearing request or response object can escape via
+        # __context__.
+        return TokenRevocationError(
+                'The refresh token revocation endpoint could not be reached. '
+                'The local token remains active and may still be active at '
+                'Schwab.',
+                endpoint_answered=False,
+                retryable=True)
 
 
     ##########################################################################

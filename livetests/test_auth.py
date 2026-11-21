@@ -1,10 +1,14 @@
+import json
+import os
 import time
 
 import pytest
 from authlib.integrations.base_client.errors import InvalidTokenError
 from authlib.integrations.httpx_client import OAuth2Client
 
+import schwab.auth
 from schwab.client.synchronous import Client
+from schwab.utils import TokenRevokedError
 
 
 def test_session_without_token_endpoint_cannot_refresh(
@@ -79,3 +83,47 @@ def test_fresh_login_session_can_refresh_access_token(
 
     resp = client.get_account_numbers()
     assert resp.status_code == 200, resp.status_code
+
+
+def test_revoke_refresh_token(live_client, schwab_credentials):
+    '''DESTRUCTIVE: revokes the session client's refresh token at
+    Schwab via ``client.revoke()`` (RFC 7009). Only runs when the
+    environment contains ``SCHWAB_LIVE_TOKEN_REVOCATION=1`` *and*
+    ``RETAINED_TOKEN_PATH`` points at the token to destroy — the
+    tombstone must land in a file we can inspect.
+
+    Afterwards the retained token file contains a secretless revoked
+    marker, direct loads refuse it, and the next ``make test-live``
+    run performs a fresh browser login. Every other test in the same
+    run will fail with auth errors once the access token dies, so run
+    this test standalone:
+
+        SCHWAB_LIVE_TOKEN_REVOCATION=1 \\
+            uv run pytest livetests/test_auth.py::test_revoke_refresh_token -sv
+    '''
+    if os.environ.get('SCHWAB_LIVE_TOKEN_REVOCATION') != '1':
+        pytest.skip(
+                'destructive test: set SCHWAB_LIVE_TOKEN_REVOCATION=1 '
+                'to revoke the retained refresh token at Schwab')
+    token_path = schwab_credentials['retained_token_path']
+    if not token_path:
+        pytest.skip(
+                'this test inspects the on-disk tombstone; set '
+                'RETAINED_TOKEN_PATH (environment variable or '
+                'schwab-credentials.env) so the token lives in a '
+                'known file')
+
+    assert live_client.revoke() is None
+    assert live_client.token_metadata.revoked
+    assert live_client.token_metadata.token is None
+
+    # The on-disk marker is secretless: no token material survives.
+    with open(token_path) as f:
+        stored = json.load(f)
+    assert stored['revoked'] is True
+    assert 'token' not in stored
+
+    with pytest.raises(TokenRevokedError):
+        schwab.auth.client_from_token_file(
+                token_path, schwab_credentials['api_key'],
+                schwab_credentials['app_secret'])

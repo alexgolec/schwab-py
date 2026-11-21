@@ -192,6 +192,16 @@ Token Age
 .. automethod:: schwab.client.Client.token_age
 
 
++++++++++++++++++
+Token Revocation
++++++++++++++++++
+
+Permanently revokes the client's refresh token at Schwab. **Destructive and
+irreversible** — see :ref:`token_revocation` for details.
+
+.. automethod:: schwab.client.Client.revoke
+
+
 ++++++++++++
 Account Info
 ++++++++++++
