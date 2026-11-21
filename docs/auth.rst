@@ -131,6 +131,15 @@ seven day token age restriction is implemented by Schwab, and so the token may
 become expired sooner *or* later than seven days.
 
 
+----------------
+Token Revocation
+----------------
+
+If you're done with a token, you may revoke it by calling the
+:meth:`revoke() <schwab.client.Client.revoke>` method:
+
+.. automethod:: schwab.client.Client.revoke
+
 ----------------------
 Advanced Functionality
 ----------------------
