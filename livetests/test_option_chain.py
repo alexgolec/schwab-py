@@ -885,40 +885,55 @@ def test_scenario_params_accepted_on_single(live_client):
     assert data['status'] == 'SUCCESS'
 
 
-def test_analytical_parameters_affect_greeks(live_client):
-    '''The four ANALYTICAL inputs (volatility, underlyingPrice,
-    interestRate, daysToExpiration) are documented as scenario
-    overrides: extreme values should visibly move a contract's
-    greeks versus a bare request. Skips on a closed market, where
-    the pricing engine may be idle — the params were observed
-    ignored out of hours; if this fails while the market is OPEN,
-    the overrides are genuinely dead and warrant investigation.'''
-    if not conftest.market_is_open(
-            live_client, schwab.client.Client.MarketHours.Market.EQUITY):
-        pytest.skip('equity market closed — ANALYTICAL inputs '
-                    'appear ignored out of hours; rerun during a '
-                    'session to verify')
+def test_analytical_parameters_ignored(live_client):
+    '''DOCUMENTING, NOT ENDORSING: the four ANALYTICAL scenario
+    inputs (volatility, underlyingPrice, interestRate,
+    daysToExpiration) are accepted without validation but have no
+    observable effect — extreme overrides return a contract with
+    identical computed values, and the response's own echo fields
+    carry market-derived values rather than the inputs. Probed
+    across underlyings, contract types, strategies, strike ranges,
+    entitlements and value formats with the same result; the
+    scenario engine appears severed in the TDA-to-Schwab migration
+    (an account-entitlement gate cannot be fully ruled out). If
+    this fails, the inputs have taken effect — investigate and
+    re-enshrine.'''
 
     def first_contract(data):
         strikes = next(iter(data['callExpDateMap'].values()))
         return next(iter(strikes.values()))[0]
 
-    bare = _chain(live_client, strategy=_O.Strategy.ANALYTICAL,
-                  strike_count=1)
-    scenario = _chain(live_client, strategy=_O.Strategy.ANALYTICAL,
-                      strike_count=1, volatility=99.0,
-                      underlying_price=100.0, interest_rate=20.0,
-                      days_to_expiration=365)
-    c_bare = first_contract(bare)
-    c_scenario = first_contract(scenario)
-    assert c_bare['symbol'] == c_scenario['symbol']
-    differs = any(
-            c_bare[g] != c_scenario[g]
-            for g in ('delta', 'gamma', 'theta', 'vega', 'mark',
-                      'volatility'))
-    assert differs, ('ANALYTICAL inputs had no effect on contract '
-                     'greeks with the market open — the scenario '
-                     'parameters appear to be ignored')
+    computed = ('delta', 'gamma', 'theta', 'vega', 'rho',
+                'volatility', 'theoreticalOptionValue',
+                'theoreticalVolatility', 'intrinsicValue',
+                'extrinsicValue')
+    request = dict(strategy=_O.Strategy.ANALYTICAL, strike_count=1)
+    scenario_args = dict(volatility=99.0, underlying_price=1.0,
+                         interest_rate=20.0, days_to_expiration=365)
+
+    def greeks(data):
+        contract = first_contract(data)
+        return tuple(contract[g] for g in computed)
+
+    # A market tick can perturb computed fields between calls, so the
+    # scenario response must differ from BOTH neighboring baselines
+    # for a diff to be attributable to the inputs.
+    before = _chain(live_client, **request)
+    scenario = _chain(live_client, **request, **scenario_args)
+    after = _chain(live_client, **request)
+
+    param_caused = (greeks(scenario) != greeks(before)
+                    and greeks(scenario) != greeks(after))
+    assert not param_caused, (
+            'ANALYTICAL scenario inputs moved contract values — the '
+            'feature appears to have been reactivated; investigate '
+            'and re-enshrine')
+    for key, value in (('volatility', 99.0), ('underlyingPrice', 1.0),
+                       ('interestRate', 20.0),
+                       ('daysToExpiration', 365)):
+        assert scenario[key] != value, (
+                f'top-level {key} echoed a scenario input — the '
+                'scenario feature may have been reactivated')
 
 
 ################################################################################
