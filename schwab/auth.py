@@ -776,8 +776,8 @@ def easy_client(api_key, app_secret, callback_url, token_path, asyncio=False,
                 logger.info('token too old, proactively creating a new one')
                 c = None
         except TokenRevokedError:
-            logger.info('Token at \'%s\' is marked as revoked, creating a '
-                        'new one', token_path)
+            logger.warning('Token at \'%s\' is marked as revoked, creating '
+                           'a new one', token_path)
 
     # Return early on success
     if c is not None:

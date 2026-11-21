@@ -1144,10 +1144,14 @@ class EasyClientTest(unittest.TestCase):
         mock_client = MagicMock()
         client_from_login_flow.return_value = mock_client
 
-        c = auth.easy_client(API_KEY, APP_SECRET, CALLBACK_URL, self.token_path)
+        with self.assertLogs(auth.get_logger(), level='WARNING') as logs:
+            c = auth.easy_client(
+                    API_KEY, APP_SECRET, CALLBACK_URL, self.token_path)
 
         self.assertIs(c, mock_client)
         client_from_login_flow.assert_called_once()
+        self.assertTrue(any(
+                'marked as revoked' in m for m in logs.output))
 
 
 # Client.revoke() and AsyncClient.revoke() submit the stored refresh token
