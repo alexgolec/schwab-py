@@ -80,6 +80,9 @@ filterwarnings = [
     "ignore::urllib3.exceptions.SystemTimeWarning",
     "ignore::urllib3.exceptions.InsecureRequestWarning",
 ]
+markers = [
+    "run_last: livetests only; run the test after all others (see livetests/conftest.py)",
+]
 
 [tool.coverage.run]
 branch = true
