@@ -133,14 +133,15 @@ class BaseClient(EnumEnforcer):
     def revoke(self):
         '''Permanently revoke this token and make it unusable for future calls.
         This method both revokes the token on Schwab's side using :rfc:`7009`
-        and updates the token file to reflect that it's been revoked by marking
-        it as revoked and stripping it of all of the now-useless secret values.
+        and updates the token file by marking it as revoked and stripping it of
+        all of the now-useless secret values.
 
         A few important notes:
 
          * This operation is irreversible: a token cannot be revived or
-           refreshed after it has been revoked. This operation is also
-           idempotent: calling it multiple times yields the same result.
+           refreshed after it has been revoked. 
+         * This operation is idempotent: calling it multiple times yields the
+           same result as calling it just once.
          * Passing the file path of a previously-revoked token into
            ``easy_client`` causes it to ignore it, start the full
            authentication flow, and overwrite the existing token with the new
