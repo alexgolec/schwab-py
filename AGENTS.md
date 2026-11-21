@@ -34,15 +34,6 @@ or removed response keys) belong in livetest enshrinements, not in the
 v2 compatibility docs. Enshrining an observed API behavior in a test
 does not mean it should be documented there.
 
-## Code conventions
-
-- Do not add comments explaining conventions that are evident from the
-  file's structure — reserve comments for non-obvious logic.
-- Docstrings render as RST via Sphinx (`make docs` builds with `-W`);
-  check bullet/continuation indentation before submitting.
-- `schwab/client/` has its own `AGENTS.md` covering the sync/async
-  specialization layout — read it before adding client methods.
-
 ## Testing
 
 - Unit suite: `make test` / `uv run pytest tests/`
