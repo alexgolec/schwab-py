@@ -15,9 +15,16 @@ class AsyncClient(BaseClient):
         await self.session.aclose()
 
     async def _revoke_token_request(self, refresh_token):
-        return await self.session.revoke_token(
-                self._TOKEN_REVOKE_URL, refresh_token,
-                token_type_hint='refresh_token')
+        transport_error = None
+        try:
+            response = await self.session.revoke_token(
+                    self._TOKEN_REVOKE_URL, refresh_token,
+                    token_type_hint='refresh_token')
+        except httpx2.HTTPError:
+            transport_error = self._token_revocation_transport_error()
+        if transport_error is not None:
+            raise transport_error
+        self._persist_token_revocation(response)
 
     async def _get_request(self, path, params):
         dest = 'https://api.schwabapi.com' + path

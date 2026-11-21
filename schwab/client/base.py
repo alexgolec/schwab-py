@@ -7,7 +7,6 @@ from enum import Enum
 
 import datetime
 import httpx2
-import inspect
 import json
 import logging
 import pickle
@@ -160,29 +159,7 @@ class BaseClient(EnumEnforcer):
         refresh_token = self._token_revocation_refresh_token()
         if refresh_token is None:
             return None
-        transport_error = None
-        try:
-            response = self._revoke_token_request(refresh_token)
-        except httpx2.HTTPError:
-            transport_error = self._token_revocation_transport_error()
-        if transport_error is not None:
-            raise transport_error
-        if inspect.isawaitable(response):
-            return self._await_revoke_response(response)
-        self._persist_token_revocation(response)
-
-    async def _await_revoke_response(self, response):
-        '''Awaits an asynchronous client's ``_revoke_token_request``
-        coroutine, then persists the tombstone. Only ever invoked for
-        asynchronous clients; ``Client`` callers never see this method.'''
-        transport_error = None
-        try:
-            response = await response
-        except httpx2.HTTPError:
-            transport_error = self._token_revocation_transport_error()
-        if transport_error is not None:
-            raise transport_error
-        self._persist_token_revocation(response)
+        return self._revoke_token_request(refresh_token)
 
     def _token_revocation_refresh_token(self):
         '''Returns the refresh token to revoke, ``None`` if this client's
