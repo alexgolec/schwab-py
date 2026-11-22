@@ -593,7 +593,11 @@ def _client_from_token(api_key, app_secret, token, token_write_func,
 
     if asyncio:
         async def oauth_client_update_token(t, *args, **kwargs):
-            token_write_func(t, *args, **kwargs)  # pragma: no cover
+            # Accept both synchronous write functions and ones returning an
+            # awaitable, such as token stores backed by an async database.
+            ret = token_write_func(t, *args, **kwargs)
+            if inspect.isawaitable(ret):
+                await ret
         session_class = AsyncOAuth2Client
         client_class = AsyncClient
     else:

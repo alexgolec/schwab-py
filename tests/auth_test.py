@@ -13,6 +13,7 @@ from .utils import (
 from unittest.mock import patch, ANY, MagicMock
 from unittest.mock import ANY as _
 
+import asyncio
 import httpx2
 import json
 import os
@@ -662,6 +663,63 @@ class ClientFromAccessFunctionsTest(unittest.TestCase):
                              asyncio=True))
         async_client.assert_called_once()
         client.assert_not_called()
+
+    @no_duplicates
+    @patch('schwab.auth.Client')
+    @patch('schwab.auth.AsyncClient')
+    @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
+    @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
+    def test_async_client_awaits_async_write_func(
+            self, async_session, sync_session, async_client, client):
+        token_read_func = MagicMock(return_value=self.token)
+
+        writes = []
+
+        async def token_write_func(token):
+            writes.append(token)
+
+        auth.client_from_access_functions(
+                API_KEY, APP_SECRET, token_read_func, token_write_func,
+                asyncio=True)
+
+        # The update token callback must await the async write function,
+        # passing it the metadata-wrapped token
+        session_call = async_session.mock_calls[0]
+        update_token = session_call[2]['update_token']
+
+        asyncio.run(update_token(self.raw_token))
+        self.assertEqual([{
+            'creation_timestamp': TOKEN_CREATION_TIMESTAMP,
+            'token': self.raw_token
+        }], writes)
+
+    @no_duplicates
+    @patch('schwab.auth.Client')
+    @patch('schwab.auth.AsyncClient')
+    @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
+    @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
+    def test_async_client_accepts_sync_write_func(
+            self, async_session, sync_session, async_client, client):
+        token_read_func = MagicMock(return_value=self.token)
+
+        token_writes = []
+
+        def token_write_func(token):
+            token_writes.append(token)
+
+        auth.client_from_access_functions(
+                API_KEY, APP_SECRET, token_read_func, token_write_func,
+                asyncio=True)
+
+        # A synchronous write function still works under asyncio=True:
+        # the async update callback calls it without awaiting
+        session_call = async_session.mock_calls[0]
+        update_token = session_call[2]['update_token']
+        asyncio.run(update_token(self.raw_token))
+        self.assertEqual([{
+            'creation_timestamp': TOKEN_CREATION_TIMESTAMP,
+            'token': self.raw_token
+        }], token_writes)
 
     @no_duplicates
     @patch('schwab.auth.Client')
