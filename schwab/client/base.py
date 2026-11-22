@@ -220,7 +220,9 @@ class BaseClient(EnumEnforcer):
     def _persist_token_revocation(self, response):
         '''On HTTP 200, records the revocation in the local token metadata.
         Anything else, and any failure to persist the marker, raises
-        :class:`~schwab.utils.TokenRevocationError`.'''
+        :class:`~schwab.utils.TokenRevocationError`. Returns whatever
+        :meth:`~schwab.auth.TokenMetadata.mark_revoked` returned, which may
+        be an awaitable for the async client to await.'''
         if response.status_code != httpx2.codes.OK:
             status = response.status_code
             raise TokenRevocationError(
@@ -231,19 +233,29 @@ class BaseClient(EnumEnforcer):
                     endpoint_answered=True,
                     retryable=(status == 429 or 500 <= status < 600))
         persistence_error = None
+        ret = None
         try:
-            self.token_metadata.mark_revoked()
+            ret = self.token_metadata.mark_revoked()
         except Exception:
-            persistence_error = TokenRevocationError(
-                    'Schwab accepted the refresh token revocation, but the '
-                    'local revoked marker could not be persisted. Do not '
-                    'reuse this client; retrying the revocation is safe.',
-                    status_code=httpx2.codes.OK,
-                    endpoint_answered=True,
-                    retryable=True,
-                    server_revoked=True)
+            persistence_error = \
+                    self._token_revocation_persistence_error()
         if persistence_error is not None:
             raise persistence_error
+        return ret
+
+    @staticmethod
+    def _token_revocation_persistence_error():
+        # Constructed outside the except block for the same reason as
+        # _token_revocation_transport_error: no credential-bearing state
+        # should escape via __context__.
+        return TokenRevocationError(
+                'Schwab accepted the refresh token revocation, but the '
+                'local revoked marker could not be persisted. Do not '
+                'reuse this client; retrying the revocation is safe.',
+                status_code=httpx2.codes.OK,
+                endpoint_answered=True,
+                retryable=True,
+                server_revoked=True)
 
     @staticmethod
     def _token_revocation_transport_error():

@@ -6,6 +6,7 @@ def register_redactions_from_response(x):
     pass
 
 import httpx2
+import inspect
 import json
 
 
@@ -20,7 +21,16 @@ class Client(BaseClient):
             transport_error = self._token_revocation_transport_error()
         if transport_error is not None:
             raise transport_error
-        self._persist_token_revocation(response)
+        ret = self._persist_token_revocation(response)
+        if inspect.isawaitable(ret):
+            # A coroutine write function slipped past construction-time
+            # checks; a synchronous client cannot await the tombstone
+            # write, so fail loudly rather than silently dropping it.
+            if inspect.iscoroutine(ret):
+                ret.close()
+            raise TypeError(
+                    'token_write_func must be a function accepting a '
+                    'token object, not an awaitable function.')
 
     def _get_request(self, path, params):
         dest = self.base_url + path

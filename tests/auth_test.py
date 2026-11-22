@@ -1490,6 +1490,21 @@ class SyncRevokeTest(unittest.TestCase):
         self.assertTrue(ctx.exception.retryable)
         self.assertTrue(ctx.exception.server_revoked)
 
+    @no_duplicates
+    def test_revoke_rejects_awaitable_returning_write_func(self):
+        # A write function returning an awaitable slips past the
+        # construction-time check but must fail loudly at revocation
+        # rather than silently dropping the tombstone write.
+        self._ok()
+
+        async def coro():
+            pass
+        self.metadata.unwrapped_token_write_func = lambda t: coro()
+
+        with self.assertRaisesRegex(
+                TypeError, 'not an awaitable function'):
+            self.client.revoke()
+
 
 class AsyncRevokeTest(unittest.TestCase):
 
@@ -1548,6 +1563,36 @@ class AsyncRevokeTest(unittest.TestCase):
                 MockResponse({}, 200))
         self.metadata.unwrapped_token_write_func = MagicMock(
                 side_effect=OSError('disk full'))
+        with self.assertRaises(TokenRevocationError) as ctx:
+            self.client.revoke()
+        self.assertTrue(ctx.exception.server_revoked)
+        self.assertTrue(ctx.exception.retryable)
+
+    @no_duplicates
+    def test_revoke_awaits_async_write_func(self):
+        self.mock_session.revoke_token.return_value = (
+                MockResponse({}, 200))
+
+        writes = []
+
+        async def write(token):
+            writes.append(token)
+        self.metadata.unwrapped_token_write_func = write
+
+        self.assertIsNone(self.client.revoke())
+        self.assertEqual([REVOKED_TOMBSTONE], writes)
+        self.assertTrue(self.metadata.revoked)
+        self.assertIsNone(self.metadata.token)
+
+    @no_duplicates
+    def test_revoke_async_write_failure_reports_server_revoked(self):
+        self.mock_session.revoke_token.return_value = (
+                MockResponse({}, 200))
+
+        async def write(token):
+            raise OSError('disk full')
+        self.metadata.unwrapped_token_write_func = write
+
         with self.assertRaises(TokenRevocationError) as ctx:
             self.client.revoke()
         self.assertTrue(ctx.exception.server_revoked)
