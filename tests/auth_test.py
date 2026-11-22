@@ -618,6 +618,16 @@ class ClientFromAccessFunctionsTest(unittest.TestCase):
             auth.client_from_access_functions(
                     API_KEY, APP_SECRET, token_read_func, lambda t: None)
 
+    @no_duplicates
+    def test_rejects_awaitable_read_func(self):
+        async def token_read_func():
+            return self.token
+
+        with self.assertRaisesRegex(
+                TypeError, 'not an awaitable function'):
+            auth.client_from_access_functions(
+                    API_KEY, APP_SECRET, token_read_func, lambda t: None)
+
 
 # Note the client_from_received_url is called internally by the other client 
 # generation functions, so testing here is kept light
