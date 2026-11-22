@@ -112,6 +112,48 @@ def test_get_orders_future_end_date(live_client):
     assert isinstance(resp.json(), list)
 
 
+def test_get_orders_for_account_with_filters(live_client):
+    '''The account-scoped orders endpoint applies the same
+    entered-time window contract as the all-accounts endpoint: a
+    bounded window is accepted and returns a list.'''
+    account_hash = live_client.get_account_numbers().json()[0]['hashValue']
+    now = datetime.datetime.now(datetime.timezone.utc)
+    resp = live_client.get_orders_for_account(
+            account_hash,
+            from_entered_datetime=now - datetime.timedelta(days=59),
+            to_entered_datetime=now)
+
+    assert resp.status_code == 200
+    assert isinstance(resp.json(), list)
+
+
+def test_get_orders_for_account_span_too_wide(live_client):
+    '''The account-scoped endpoint enforces the same one-year window
+    cap as the all-accounts endpoint.'''
+    account_hash = live_client.get_account_numbers().json()[0]['hashValue']
+    now = datetime.datetime.now(datetime.timezone.utc)
+    resp = live_client.get_orders_for_account(
+            account_hash,
+            from_entered_datetime=now - datetime.timedelta(days=366),
+            to_entered_datetime=now)
+
+    assert resp.status_code == 400
+    assert 'more than a year' in resp.json()['message']
+
+
+def test_get_orders_equal_bounds_accepted(live_client):
+    '''DOCUMENTING OBSERVED BEHAVIOR, NOT ENDORSING: identical
+    from/to bounds form a legal zero-width instant window — the API
+    accepts it with 200 and an empty result rather than rejecting it
+    as a degenerate range.'''
+    now = datetime.datetime.now(datetime.timezone.utc)
+    resp = live_client.get_orders_for_all_linked_accounts(
+            from_entered_datetime=now, to_entered_datetime=now)
+
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+
 def test_get_orders_max_results_boundary(live_client):
     resp = live_client.get_orders_for_all_linked_accounts(max_results=5000)
 

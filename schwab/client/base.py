@@ -391,12 +391,11 @@ class BaseClient(EnumEnforcer):
                                       ``from_entered_datetime`` not exceed one
                                       year, but imposes no limit on how long
                                       ago the dates themselves may be.
-                                      ``to_entered_datetime`` must also be set.
+                                      Defaults to 60 days before now.
         :param to_entered_datetime: Specifies that no orders entered after this
                                     time should be returned. Must be a
                                     timezone-aware ``datetime.datetime``.
-                                    ``from_entered_datetime``
-                                    must also be set.
+                                    Defaults to the current time.
         :param status: Restrict query to orders with this status. See
                        :class:`Order.Status` for options.
         '''
@@ -426,12 +425,11 @@ class BaseClient(EnumEnforcer):
                                       ``from_entered_datetime`` not exceed one
                                       year, but imposes no limit on how long
                                       ago the dates themselves may be.
-                                      ``to_entered_datetime`` must also be set.
+                                      Defaults to 60 days before now.
         :param to_entered_datetime: Specifies that no orders entered after this
                                     time should be returned. Must be a
                                     timezone-aware ``datetime.datetime``.
-                                    ``from_entered_datetime``
-                                    must also be set.
+                                    Defaults to the current time.
         :param status: Restrict query to orders with this status. See
                        :class:`Order.Status` for options.
         '''

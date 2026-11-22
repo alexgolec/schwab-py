@@ -174,6 +174,32 @@ def test_previous_close_flag(live_client):
     assert 'previousCloseDate' not in resp.json()
 
 
+def test_omitted_end_datetime_returns_most_recent_data(live_client):
+    '''An omitted endDate leaves the window open to the present: the
+    response ends on the same candle as an explicit end_datetime of
+    now, and that candle is a recent session. Enshrines the
+    observable contract behind the docstring's "previous trading
+    day" phrasing — whatever the precise session boundary, the
+    default behaves as "up to now".'''
+    start = datetime.datetime.now(datetime.timezone.utc) - \
+        datetime.timedelta(days=30)
+    kwargs = dict(period_type=_PH.PeriodType.YEAR,
+                  period=_PH.Period.ONE_YEAR,
+                  frequency_type=_PH.FrequencyType.DAILY,
+                  frequency=_PH.Frequency.DAILY,
+                  start_datetime=start)
+    without_end = _check_response(
+            live_client.get_price_history('AAPL', **kwargs))
+    with_end = _check_response(live_client.get_price_history(
+            'AAPL',
+            end_datetime=datetime.datetime.now(datetime.timezone.utc),
+            **kwargs))
+
+    assert without_end[-1]['datetime'] == with_end[-1]['datetime']
+    # The last candle is a recent session, i.e. within the past week.
+    assert _now_ms() - without_end[-1]['datetime'] < 7 * 86400000
+
+
 def test_empty_for_ancient_window(live_client):
     resp = live_client.get_price_history(
             'AAPL',
