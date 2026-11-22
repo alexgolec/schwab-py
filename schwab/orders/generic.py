@@ -79,6 +79,7 @@ class OrderBuilder(EnumEnforcer):
         self._stopType = None
         self._priceLinkBasis = None
         self._priceLinkType = None
+        self._priceOffset = None
         self._price = None
         self._orderLegCollection = None
         self._activationPrice = None
@@ -316,6 +317,30 @@ class OrderBuilder(EnumEnforcer):
         Clear the price link basis.
         '''
         self._priceLinkType = None
+        return self
+
+    # PriceOffset
+    def set_price_offset(self, price_offset):
+        '''
+        Set the price offset used to derive the limit price of a
+        conditional order, most notably ``TRAILING_STOP_LIMIT``.
+
+        This field is meaningless on its own: the API requires
+        ``priceLinkBasis`` and ``priceLinkType`` alongside it, and
+        rejects orders that mix a link trio with a fixed ``price``. See
+        :class:`~schwab.orders.common.PriceLinkBasis` for valid
+        bases — ``MANUAL`` selects a fixed ``price`` instead, and
+        ``TRIGGER`` is only valid on child orders of trigger
+        strategies.
+        '''
+        self._priceOffset = price_offset
+        return self
+
+    def clear_price_offset(self):
+        '''
+        Clear the price offset.
+        '''
+        self._priceOffset = None
         return self
 
     # Price
