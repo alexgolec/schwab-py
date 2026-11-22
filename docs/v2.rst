@@ -118,7 +118,7 @@ following changes:
   specify instants in time. Code which generates timezone-naive instances
   such as using ``datetime.now()`` will now see methods raise ``ValueError``
   instead of accepting these values. For example, the call to ``datetime.now()``
-  must be replaced by one which passes a time zone explictly such as
+  must be replaced by one which passes a time zone explicitly such as
   ``datetime.datetime.now(zoneinfo.ZoneInfo('America/New_York'))``.
   
   The methods with these new semantics are:
