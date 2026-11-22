@@ -10,7 +10,7 @@ from .utils import (
         ResyncProxy,
         no_duplicates
 )
-from unittest.mock import patch, ANY, MagicMock
+from unittest.mock import patch, ANY, AsyncMock, MagicMock
 from unittest.mock import ANY as _
 
 import httpx2
@@ -616,6 +616,196 @@ class ClientFromAccessFunctionsTest(unittest.TestCase):
         token_read_func = MagicMock(return_value=dict(REVOKED_TOMBSTONE))
         with self.assertRaises(TokenRevokedError):
             auth.client_from_access_functions(
+                    API_KEY, APP_SECRET, token_read_func, lambda t: None)
+
+
+class ClientFromAccessFunctionsAsyncTest(unittest.IsolatedAsyncioTestCase):
+
+    def setUp(self):
+        self.raw_token = {'token': 'yes'}
+        self.token = {
+                'token': self.raw_token,
+                'creation_timestamp': TOKEN_CREATION_TIMESTAMP
+        }
+
+    @no_duplicates
+    @patch('schwab.auth.Client')
+    @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
+    @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
+    async def test_success_with_async_read_func(
+            self, async_session, sync_session, client):
+        token_read_func = AsyncMock()
+        token_read_func.return_value = self.token
+
+        token_writes = []
+
+        def token_write_func(token):
+            token_writes.append(token)
+
+        client.return_value = 'returned client'
+        self.assertEqual('returned client',
+                         await auth.client_from_access_functions_async(
+                             API_KEY,
+                             APP_SECRET,
+                             token_read_func,
+                             token_write_func))
+
+        sync_session.assert_called_once_with(
+            API_KEY,
+            client_secret=APP_SECRET,
+            token=self.raw_token,
+            token_endpoint=_,
+            update_token=_,
+            leeway=_)
+        token_read_func.assert_called_once()
+
+        # Verify that the write function is called when the updater is called
+        session_call = sync_session.mock_calls[0]
+        update_token = session_call[2]['update_token']
+
+        update_token(self.raw_token)
+        self.assertEqual([{
+            'creation_timestamp': TOKEN_CREATION_TIMESTAMP,
+            'token': self.raw_token
+        }], token_writes)
+
+    @no_duplicates
+    @patch('schwab.auth.Client')
+    @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
+    @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
+    async def test_success_with_sync_read_func(
+            self, async_session, sync_session, client):
+        # A regular (non-coroutine) read function is also accepted
+        token_read_func = MagicMock()
+        token_read_func.return_value = self.token
+
+        client.return_value = 'returned client'
+        self.assertEqual('returned client',
+                         await auth.client_from_access_functions_async(
+                             API_KEY,
+                             APP_SECRET,
+                             token_read_func,
+                             MagicMock()))
+
+        sync_session.assert_called_once_with(
+            API_KEY,
+            client_secret=APP_SECRET,
+            token=self.raw_token,
+            token_endpoint=_,
+            update_token=_,
+            leeway=_)
+
+    @no_duplicates
+    @patch('schwab.auth.Client')
+    @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
+    @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
+    async def test_success_with_enforce_enums_disabled(
+            self, async_session, sync_session, client):
+        token_read_func = AsyncMock()
+        token_read_func.return_value = self.token
+
+        client.return_value = 'returned client'
+        self.assertEqual('returned client',
+                         await auth.client_from_access_functions_async(
+                             API_KEY,
+                             APP_SECRET,
+                             token_read_func,
+                             MagicMock(),
+                             enforce_enums=False))
+
+        client.assert_called_once_with(
+                API_KEY, _, token_metadata=_, enforce_enums=False,
+                base_url=auth.DEFAULT_BASE_URL)
+
+    @no_duplicates
+    @patch('schwab.auth.Client')
+    @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
+    @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
+    async def test_custom_base_url(self, async_session, sync_session, client):
+        token_read_func = AsyncMock()
+        token_read_func.return_value = self.token
+
+        client.return_value = 'returned client'
+        self.assertEqual('returned client',
+                         await auth.client_from_access_functions_async(
+                             API_KEY,
+                             APP_SECRET,
+                             token_read_func,
+                             MagicMock(),
+                             base_url='https://proxy.example.com'))
+
+        sync_session.assert_called_once_with(
+            API_KEY,
+            client_secret=APP_SECRET,
+            token=self.raw_token,
+            token_endpoint='https://proxy.example.com/v1/oauth/token',
+            update_token=_,
+            leeway=_)
+        client.assert_called_once_with(
+                API_KEY, _, token_metadata=_, enforce_enums=_,
+                base_url='https://proxy.example.com')
+
+    @no_duplicates
+    @patch('schwab.auth.AsyncClient')
+    @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
+    @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
+    async def test_asyncio_true_uses_async_session(
+            self, async_session, sync_session, client):
+        token_read_func = AsyncMock()
+        token_read_func.return_value = self.token
+
+        client.return_value = 'returned client'
+        self.assertEqual('returned client',
+                         await auth.client_from_access_functions_async(
+                             API_KEY,
+                             APP_SECRET,
+                             token_read_func,
+                             MagicMock(),
+                             asyncio=True))
+
+        async_session.assert_called_once_with(
+            API_KEY,
+            client_secret=APP_SECRET,
+            token=self.raw_token,
+            token_endpoint=_,
+            update_token=_,
+            leeway=_)
+        sync_session.assert_not_called()
+
+    @no_duplicates
+    @patch('schwab.auth.AsyncClient')
+    @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
+    @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
+    async def test_asyncio_true_awaits_async_write_func(
+            self, async_session, sync_session, client):
+        token_read_func = AsyncMock()
+        token_read_func.return_value = self.token
+
+        token_writes = []
+
+        async def token_write_func(token):
+            token_writes.append(token)
+
+        client.return_value = 'returned client'
+        await auth.client_from_access_functions_async(
+                API_KEY, APP_SECRET, token_read_func, token_write_func,
+                asyncio=True)
+
+        # Verify the async write function is awaited when the updater is called
+        session_call = async_session.mock_calls[0]
+        update_token = session_call[2]['update_token']
+
+        await update_token(self.raw_token)
+        self.assertEqual([{
+            'creation_timestamp': TOKEN_CREATION_TIMESTAMP,
+            'token': self.raw_token
+        }], token_writes)
+
+    @no_duplicates
+    async def test_refuses_revoked_tombstone(self):
+        token_read_func = AsyncMock(return_value=dict(REVOKED_TOMBSTONE))
+        with self.assertRaises(TokenRevokedError):
+            await auth.client_from_access_functions_async(
                     API_KEY, APP_SECRET, token_read_func, lambda t: None)
 
 

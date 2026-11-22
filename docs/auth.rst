@@ -158,6 +158,8 @@ instead.
 
 .. autofunction:: schwab.auth.client_from_access_functions
 
+.. autofunction:: schwab.auth.client_from_access_functions_async
+
 
 ++++++++++++++++++++++++++++++++++++++++
 Technical Details about Token Refreshing

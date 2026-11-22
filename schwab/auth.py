@@ -3,6 +3,7 @@ from authlib.integrations.httpx_client import AsyncOAuth2Client, OAuth2Client
 import collections
 import contextlib
 import httpx2
+import inspect
 import json
 import logging
 import multiprocess
@@ -577,7 +578,9 @@ def _client_from_token(api_key, app_secret, token, token_write_func,
 
     if asyncio:
         async def oauth_client_update_token(t, *args, **kwargs):
-            token_write_func(t, *args, **kwargs)  # pragma: no cover
+            res = token_write_func(t, *args, **kwargs)
+            if inspect.isawaitable(res):
+                await res
         session_class = AsyncOAuth2Client
         client_class = AsyncClient
     else:
@@ -639,8 +642,37 @@ def client_from_access_functions(api_key, app_secret, token_read_func,
                      Defaults to ``https://api.schwabapi.com``. Useful for
                      pointing the client at a mock server or a proxy.
     '''
-    token = token_read_func()
+    return __client_from_loaded_token(
+            api_key, app_secret, token_read_func(), token_write_func,
+            asyncio, enforce_enums, base_url)
 
+
+async def client_from_access_functions_async(
+        api_key, app_secret, token_read_func, token_write_func,
+        asyncio=False, enforce_enums=True, base_url=None):
+    '''
+    Async variant of ``client_from_access_functions`` for users whose token
+    store is only reachable over async I/O, such as a database or a secrets
+    manager client. ``token_read_func`` may be a coroutine function or a
+    regular function; its result is awaited if awaitable. When ``asyncio`` is
+    set to ``True``, ``token_write_func`` may also be a coroutine function.
+
+    All parameters other than ``token_read_func`` are identical to
+    ``client_from_access_functions``.
+    '''
+    token = token_read_func()
+    if inspect.isawaitable(token):
+        token = await token
+    return __client_from_loaded_token(
+            api_key, app_secret, token, token_write_func,
+            asyncio, enforce_enums, base_url)
+
+
+def __client_from_loaded_token(api_key, app_secret, token, token_write_func,
+                               asyncio, enforce_enums, base_url):
+    '''Shared tail of the access-functions creation paths: everything that
+    happens once the token object has been loaded is identical for the sync
+    and async entry points.'''
     # Extract metadata and unpack the token, if necessary
     metadata = TokenMetadata.from_loaded_token(token, token_write_func)
     if metadata.revoked:
