@@ -150,13 +150,17 @@ class TokenMetadata:
         '''Persists a secretless revoked marker via the unwrapped write
         function: the credential itself is dropped from storage, leaving
         only the timestamp and the revoked flag. Subsequent loads surface
-        the revoked state via :class:`~schwab.utils.TokenRevokedError`.'''
-        self.unwrapped_token_write_func({
+        the revoked state via :class:`~schwab.utils.TokenRevokedError`.
+
+        Returns whatever the write function returned, so asynchronous
+        callers can await it if it is awaitable.'''
+        ret = self.unwrapped_token_write_func({
             'creation_timestamp': self.creation_timestamp,
             'revoked': True,
         })
         self.token = None
         self.revoked = True
+        return ret
 
 
 ################################################################################

@@ -6,6 +6,7 @@ def register_redactions_from_response(x):
     pass
 
 import httpx2
+import inspect
 import json
 
 
@@ -24,7 +25,19 @@ class AsyncClient(BaseClient):
             transport_error = self._token_revocation_transport_error()
         if transport_error is not None:
             raise transport_error
-        self._persist_token_revocation(response)
+        ret = self._persist_token_revocation(response)
+        if inspect.isawaitable(ret):
+            # The token write function returned an awaitable; the async
+            # client awaits it, mapping failures onto the same
+            # persistence error as the synchronous path.
+            persistence_error = None
+            try:
+                await ret
+            except Exception:
+                persistence_error = \
+                        self._token_revocation_persistence_error()
+            if persistence_error is not None:
+                raise persistence_error
 
     async def _get_request(self, path, params):
         dest = self.base_url + path
