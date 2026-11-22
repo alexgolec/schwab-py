@@ -3,6 +3,7 @@ from authlib.integrations.httpx_client import AsyncOAuth2Client, OAuth2Client
 import collections
 import contextlib
 import httpx2
+import inspect
 import json
 import logging
 import multiprocess
@@ -10,11 +11,14 @@ import os
 import psutil
 import queue
 import sys
+import threading
 import time
 import urllib
 import urllib3
 import warnings
 import webbrowser
+
+from asyncio import run as asyncio_run
 
 from schwab.client import AsyncClient, Client
 from schwab.debug import register_redactions
@@ -562,6 +566,35 @@ def client_from_manual_flow(api_key, app_secret, callback_url, token_path,
 # client_from_access_functions
 
 
+def __resolve_awaitable(awaitable):
+    '''Drives an awaitable to completion and returns its result.
+
+    A synchronous function cannot await, and ``asyncio.run()`` cannot be
+    invoked inside a running event loop, so the awaitable is awaited on a
+    fresh loop in a helper thread. Works whether or not the calling thread
+    already has a running loop. One caveat: if the awaitable references
+    objects bound to the caller's loop (for instance an ``aiohttp`` session
+    created in the running loop), the coroutine fails with an
+    "attached to a different loop" error — such callers must await the
+    read themselves and pass a synchronous accessor.'''
+    outcome = queue.Queue()
+
+    def runner():
+        try:
+            outcome.put(('ok', asyncio_run(awaitable)))
+        except BaseException as e:
+            outcome.put(('err', e))
+
+    t = threading.Thread(target=runner, daemon=True)
+    t.start()
+    t.join()
+
+    status, value = outcome.get()
+    if status == 'err':
+        raise value
+    return value
+
+
 def _client_from_token(api_key, app_secret, token, token_write_func,
                        token_metadata, asyncio, enforce_enums, base_url=None):
     '''Builds a client around an already-obtained token. Session construction
@@ -623,7 +656,11 @@ def client_from_access_functions(api_key, app_secret, token_read_func,
     :param app_secret: Application secret. Provided upon :ref:`app approval 
                        <approved_pending>`.
     :param token_read_func: Function that takes no arguments and returns a token
-                            object.
+                            object. If it returns an awaitable — for instance,
+                            if it is a coroutine function backed by an async
+                            token store — the awaitable is awaited on a fresh
+                            event loop in a helper thread, so it works whether
+                            or not the caller's thread has a running loop.
     :param token_write_func: Function that writes the token on update. Will be
                              called whenever the token is updated, such as when
                              it is refreshed. See the above-mentioned example 
@@ -640,6 +677,8 @@ def client_from_access_functions(api_key, app_secret, token_read_func,
                      pointing the client at a mock server or a proxy.
     '''
     token = token_read_func()
+    if inspect.isawaitable(token):
+        token = __resolve_awaitable(token)
 
     # Extract metadata and unpack the token, if necessary
     metadata = TokenMetadata.from_loaded_token(token, token_write_func)

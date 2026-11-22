@@ -10,7 +10,7 @@ from .utils import (
         ResyncProxy,
         no_duplicates
 )
-from unittest.mock import patch, ANY, MagicMock
+from unittest.mock import patch, ANY, MagicMock, AsyncMock
 from unittest.mock import ANY as _
 
 import httpx2
@@ -612,11 +612,83 @@ class ClientFromAccessFunctionsTest(unittest.TestCase):
                 base_url='https://proxy.example.com')
 
     @no_duplicates
+    @patch('schwab.auth.Client')
+    @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
+    @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
+    def test_success_with_async_read_func(
+            self, async_session, sync_session, client):
+        token_read_func = AsyncMock(return_value=self.token)
+
+        client.return_value = 'returned client'
+        self.assertEqual('returned client',
+                         auth.client_from_access_functions(
+                             API_KEY,
+                             APP_SECRET,
+                             token_read_func,
+                             MagicMock()))
+
+        token_read_func.assert_called_once()
+        sync_session.assert_called_once_with(
+            API_KEY,
+            client_secret=APP_SECRET,
+            token=self.raw_token,
+            token_endpoint=_,
+            update_token=_,
+            leeway=_)
+
+    @no_duplicates
+    @patch('schwab.auth.Client')
+    @patch('schwab.auth.AsyncClient')
+    @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
+    @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
+    def test_success_with_async_read_func_async_client(
+            self, async_session, sync_session, async_client, client):
+        token_read_func = AsyncMock(return_value=self.token)
+
+        async_client.return_value = 'returned client'
+        self.assertEqual('returned client',
+                         auth.client_from_access_functions(
+                             API_KEY,
+                             APP_SECRET,
+                             token_read_func,
+                             MagicMock(),
+                             asyncio=True))
+
+        token_read_func.assert_called_once()
+        async_client.assert_called_once()
+        client.assert_not_called()
+        async_session.assert_called_once_with(
+            API_KEY,
+            client_secret=APP_SECRET,
+            token=self.raw_token,
+            token_endpoint=_,
+            update_token=_,
+            leeway=_)
+
+    @no_duplicates
     def test_refuses_revoked_tombstone(self):
         token_read_func = MagicMock(return_value=dict(REVOKED_TOMBSTONE))
         with self.assertRaises(TokenRevokedError):
             auth.client_from_access_functions(
                     API_KEY, APP_SECRET, token_read_func, lambda t: None)
+
+
+class ClientFromAccessFunctionsAsyncContextTest(
+        unittest.IsolatedAsyncioTestCase):
+
+    @no_duplicates
+    async def test_async_read_func_inside_running_loop(self):
+        # Coroutine read functions work even when the synchronous entry
+        # point is called from inside a running event loop: the awaitable
+        # is resolved on a fresh loop in a helper thread.
+        token_read_func = AsyncMock(return_value={
+            'token': {'token': 'yes'},
+            'creation_timestamp': TOKEN_CREATION_TIMESTAMP
+        })
+        client = auth.client_from_access_functions(
+                API_KEY, APP_SECRET, token_read_func, lambda t: None)
+        self.assertIsInstance(client, Client)
+        token_read_func.assert_called_once()
 
 
 # Note the client_from_received_url is called internally by the other client 
