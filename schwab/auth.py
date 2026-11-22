@@ -3,6 +3,7 @@ from authlib.integrations.httpx_client import AsyncOAuth2Client, OAuth2Client
 import collections
 import contextlib
 import httpx2
+import inspect
 import json
 import logging
 import multiprocess
@@ -577,7 +578,11 @@ def _client_from_token(api_key, app_secret, token, token_write_func,
 
     if asyncio:
         async def oauth_client_update_token(t, *args, **kwargs):
-            token_write_func(t, *args, **kwargs)  # pragma: no cover
+            # Accept both synchronous write functions and ones that return an
+            # awaitable, such as token stores backed by an async database.
+            ret = token_write_func(t, *args, **kwargs)
+            if inspect.isawaitable(ret):
+                await ret
         session_class = AsyncOAuth2Client
         client_class = AsyncClient
     else:
@@ -596,6 +601,28 @@ def _client_from_token(api_key, app_secret, token, token_write_func,
         token_metadata=token_metadata,
         enforce_enums=enforce_enums,
         base_url=base_url)
+
+
+def _client_from_loaded_token(api_key, app_secret, loaded_token,
+                              token_write_func, asyncio, enforce_enums,
+                              base_url):
+    '''Shared tail of the ``client_from_access_functions`` entry points:
+    everything that happens once the loaded token object is in hand.'''
+    # Extract metadata and unpack the token, if necessary
+    metadata = TokenMetadata.from_loaded_token(
+            loaded_token, token_write_func)
+    if metadata.revoked:
+        raise TokenRevokedError(
+                'The loaded token has been marked as revoked. Complete the '
+                'full authorization flow to create a new token.')
+    token = metadata.token
+
+    # Don't emit token details in debug logs
+    register_redactions(token)
+
+    return _client_from_token(
+            api_key, app_secret, token, metadata.wrapped_token_write_func(),
+            metadata, asyncio, enforce_enums, base_url=base_url)
 
 
 def client_from_access_functions(api_key, app_secret, token_read_func,
@@ -639,24 +666,48 @@ def client_from_access_functions(api_key, app_secret, token_read_func,
                      Defaults to ``https://api.schwabapi.com``. Useful for
                      pointing the client at a mock server or a proxy.
     '''
+    return _client_from_loaded_token(
+            api_key, app_secret, token_read_func(), token_write_func,
+            asyncio, enforce_enums, base_url)
+
+
+async def client_from_access_functions_async(
+        api_key, app_secret, token_read_func, token_write_func, asyncio=False,
+        enforce_enums=True, base_url=None):
+    '''
+    Async variant of :func:`client_from_access_functions`, for token stores
+    whose reads must happen in an async context, such as databases or secret
+    managers accessed over the network. Shares the same implementation; only
+    the token read differs.
+
+    :param api_key: Your Schwab application's app key.
+    :param app_secret: Application secret. Provided upon :ref:`app approval
+                       <approved_pending>`.
+    :param token_read_func: Function that takes no arguments and returns a
+                            token object, or an awaitable that resolves to
+                            one.
+    :param token_write_func: Function that writes the token on update. Will be
+                             called whenever the token is updated, such as when
+                             it is refreshed. When ``asyncio`` is true, it may
+                             return an awaitable, which is awaited.
+    :param asyncio: If set to ``True``, this will enable async support allowing
+                    the client to be used in an async environment. Defaults to
+                    ``False``
+    :param enforce_enums: Set it to ``False`` to disable the enum checks on ALL
+                          the client methods. Only do it if you know you really
+                          need it. For most users, it is advised to use enums
+                          to avoid errors.
+    :param base_url: Override the base URL used for API and OAuth requests.
+                     Defaults to ``https://api.schwabapi.com``. Useful for
+                     pointing the client at a mock server or a proxy.
+    '''
     token = token_read_func()
+    if inspect.isawaitable(token):
+        token = await token
 
-    # Extract metadata and unpack the token, if necessary
-    metadata = TokenMetadata.from_loaded_token(token, token_write_func)
-    if metadata.revoked:
-        raise TokenRevokedError(
-                'The loaded token has been marked as revoked. Complete the '
-                'full authorization flow to create a new token.')
-    token = metadata.token
-
-    # Don't emit token details in debug logs
-    register_redactions(token)
-
-    wrapped_token_write_func = metadata.wrapped_token_write_func()
-
-    return _client_from_token(
-            api_key, app_secret, token, wrapped_token_write_func, metadata,
-            asyncio, enforce_enums, base_url=base_url)
+    return _client_from_loaded_token(
+            api_key, app_secret, token, token_write_func,
+            asyncio, enforce_enums, base_url)
 
 
 ################################################################################
