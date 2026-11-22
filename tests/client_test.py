@@ -5,6 +5,7 @@ import os
 import pytest
 import pytz
 import unittest
+import zoneinfo
 from unittest.mock import ANY, MagicMock, Mock, patch
 
 from schwab.client import AsyncClient, Client
@@ -26,14 +27,14 @@ SYMBOL = 'AAPL'
 TRANSACTION_ID = 400000
 WATCHLIST_ID = 5000000
 
-MIN_DATETIME = datetime.datetime(year=1971, month=1, day=1)
-MIN_ISO = '1971-01-01T00:00:00+0000'
+MIN_DATETIME = datetime.datetime(year=1971, month=1, day=1,
+                                 tzinfo=datetime.timezone.utc)
 MIN_TIMESTAMP_MILLIS = int(MIN_DATETIME.timestamp()) * 1000
 
-NOW_DATETIME = datetime.datetime(2020, 1, 2, 3, 4, 5)
+NOW_DATETIME = datetime.datetime(2020, 1, 2, 3, 4, 5,
+                                 tzinfo=datetime.timezone.utc)
 NOW_DATE = datetime.date(2020, 1, 2)
 NOW_DATETIME_ISO = '2020-01-02T03:04:05Z'
-NOW_DATETIME_TRUNCATED_ISO = '2020-01-02T00:00:00Z'
 NOW_DATE_ISO = '2020-01-02'
 
 NOW_DATETIME_MINUS_60_DAYS = NOW_DATE - datetime.timedelta(days=60)
@@ -55,9 +56,21 @@ class mockdatetime(datetime.datetime):
 
 EARLIER_DATETIME = datetime.datetime(2001, 1, 2, 3, 4, 5,
                                      tzinfo=pytz.timezone('America/New_York'))
-EARLIER_ISO = '2001-01-02T03:04:05-0456'
+EARLIER_ISO = '2001-01-02T08:00:05Z'
 EARLIER_MILLIS = 978422405000
-EARLIER_DATE_STR = '2001-01-02'
+EARLIER_DATE = datetime.date(2001, 1, 2)
+
+ET_ZONE = zoneinfo.ZoneInfo('America/New_York')
+
+
+def _et_midnight_millis(d):
+    return int(datetime.datetime(
+        d.year, d.month, d.day, tzinfo=ET_ZONE).timestamp() * 1000)
+
+
+MIN_DATE_ET_MILLIS = _et_midnight_millis(datetime.date(1971, 1, 1))
+END_DATE_ET_MILLIS = _et_midnight_millis(datetime.date(2020, 1, 9))
+EARLIER_DATE_ET_MILLIS = _et_midnight_millis(EARLIER_DATE)
 
 class _TestClient:
     """
@@ -224,7 +237,7 @@ class _TestClient:
                     ACCOUNT_HASH, from_entered_datetime='2020-01-02')
         self.assertEqual(
                 str(cm.exception),
-                "expected type in (datetime.date, datetime.datetime) for " +
+                "expected type 'datetime.datetime' for " +
                 "from_entered_datetime, got 'builtins.str'")
 
 
@@ -235,7 +248,7 @@ class _TestClient:
                     ACCOUNT_HASH, to_entered_datetime='2020-01-02')
         self.assertEqual(
                 str(cm.exception),
-                "expected type in (datetime.date, datetime.datetime) for " +
+                "expected type 'datetime.datetime' for " +
                 "to_entered_datetime, got 'builtins.str'")
 
 
@@ -254,7 +267,8 @@ class _TestClient:
     def test_get_orders_for_account_from_entered_datetime(self):
         self.client.get_orders_for_account(
                 ACCOUNT_HASH, from_entered_datetime=datetime.datetime(
-                    year=2024, month=6, day=5, hour=4, minute=3, second=2))
+                    year=2024, month=6, day=5, hour=4, minute=3, second=2,
+                    tzinfo=datetime.timezone.utc))
         self.mock_session.get.assert_called_once_with(
             self.make_url('/trader/v1/accounts/{accountHash}/orders'), params={
                 'fromEnteredTime': '2024-06-05T04:03:02Z',
@@ -266,11 +280,47 @@ class _TestClient:
     def test_get_orders_for_account_to_entered_datetime(self):
         self.client.get_orders_for_account(
                 ACCOUNT_HASH, to_entered_datetime=datetime.datetime(
-                    year=2024, month=6, day=5, hour=4, minute=3, second=2))
+                    year=2024, month=6, day=5, hour=4, minute=3, second=2,
+                    tzinfo=datetime.timezone.utc))
         self.mock_session.get.assert_called_once_with(
             self.make_url('/trader/v1/accounts/{accountHash}/orders'), params={
                 'fromEnteredTime': NOW_DATETIME_MINUS_60_DAYS_ISO,
                 'toEnteredTime': '2024-06-05T04:03:02Z',
+            })
+
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_orders_for_account_from_entered_datetime_naive(self):
+        with self.assertRaises(ValueError) as cm:
+            self.client.get_orders_for_account(
+                    ACCOUNT_HASH, from_entered_datetime=datetime.datetime(
+                        year=2024, month=6, day=5))
+        self.assertEqual(
+                str(cm.exception),
+                'from_entered_datetime must be a timezone-aware ' +
+                'datetime.datetime')
+
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_orders_for_account_from_entered_datetime_date(self):
+        with self.assertRaises(ValueError) as cm:
+            self.client.get_orders_for_account(
+                    ACCOUNT_HASH,
+                    from_entered_datetime=datetime.date(2024, 6, 5))
+        self.assertEqual(
+                str(cm.exception),
+                "expected type 'datetime.datetime' for " +
+                "from_entered_datetime, got 'datetime.date'")
+
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_orders_for_account_from_entered_datetime_offset(self):
+        self.client.get_orders_for_account(
+                ACCOUNT_HASH, from_entered_datetime=EARLIER_DATETIME)
+        self.mock_session.get.assert_called_once_with(
+            self.make_url('/trader/v1/accounts/{accountHash}/orders'), params={
+                'fromEnteredTime': EARLIER_ISO,
+                'toEnteredTime': NOW_DATETIME_ISO,
             })
 
 
@@ -329,7 +379,7 @@ class _TestClient:
                     from_entered_datetime='2020-01-02')
         self.assertEqual(
                 str(cm.exception),
-                "expected type in (datetime.date, datetime.datetime) for " +
+                "expected type 'datetime.datetime' for " +
                 "from_entered_datetime, got 'builtins.str'")
 
 
@@ -340,7 +390,7 @@ class _TestClient:
                     to_entered_datetime='2020-01-02')
         self.assertEqual(
                 str(cm.exception),
-                "expected type in (datetime.date, datetime.datetime) for " +
+                "expected type 'datetime.datetime' for " +
                 "to_entered_datetime, got 'builtins.str'")
 
 
@@ -359,7 +409,8 @@ class _TestClient:
     def test_get_orders_for_all_linked_accounts_from_entered_datetime(self):
         self.client.get_orders_for_all_linked_accounts(
                 from_entered_datetime=datetime.datetime(
-                    year=2024, month=6, day=5, hour=4, minute=3, second=2))
+                    year=2024, month=6, day=5, hour=4, minute=3, second=2,
+                    tzinfo=datetime.timezone.utc))
         self.mock_session.get.assert_called_once_with(
             self.make_url('/trader/v1/orders'), params={
                 'fromEnteredTime': '2024-06-05T04:03:02Z',
@@ -371,7 +422,8 @@ class _TestClient:
     def test_get_orders_for_all_linked_accounts_to_entered_datetime(self):
         self.client.get_orders_for_all_linked_accounts(
                 to_entered_datetime=datetime.datetime(
-                    year=2024, month=6, day=5, hour=4, minute=3, second=2))
+                    year=2024, month=6, day=5, hour=4, minute=3, second=2,
+                    tzinfo=datetime.timezone.utc))
         self.mock_session.get.assert_called_once_with(
             self.make_url('/trader/v1/orders'), params={
                 'fromEnteredTime': NOW_DATETIME_MINUS_60_DAYS_ISO,
@@ -555,9 +607,9 @@ class _TestClient:
 
 
     @patch('schwab.client.base.datetime.datetime', mockdatetime)
-    def test_get_transactions_symbol_start_date_as_datetime(self):
+    def test_get_transactions_symbol_start_datetime(self):
         self.client.get_transactions(
-                ACCOUNT_HASH, start_date=NOW_DATETIME)
+                ACCOUNT_HASH, start_datetime=NOW_DATETIME)
         self.mock_session.get.assert_called_once_with(
             self.make_url('/trader/v1/accounts/{accountHash}/transactions'),
             params={
@@ -567,23 +619,34 @@ class _TestClient:
 
 
     @patch('schwab.client.base.datetime.datetime', mockdatetime)
-    def test_get_transactions_symbol_start_date_as_date(self):
-        self.client.get_transactions(
-                ACCOUNT_HASH, start_date=NOW_DATE)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/trader/v1/accounts/{accountHash}/transactions'),
-            params={
-                'types': ','.join(t.value for t in self.client.Transactions.TransactionType),
-                'startDate': NOW_DATETIME_TRUNCATED_ISO,
-                'endDate': NOW_DATETIME_ISO})
+    def test_get_transactions_symbol_start_datetime_date(self):
+        with self.assertRaises(ValueError) as cm:
+            self.client.get_transactions(
+                    ACCOUNT_HASH, start_datetime=NOW_DATE)
+        self.assertEqual(
+                str(cm.exception),
+                "expected type 'datetime.datetime' for " +
+                "start_datetime, got 'datetime.date'")
 
 
     @patch('schwab.client.base.datetime.datetime', mockdatetime)
-    def test_get_transactions_symbol_end_date_as_datetime(self):
+    def test_get_transactions_symbol_start_datetime_naive(self):
+        with self.assertRaises(ValueError) as cm:
+            self.client.get_transactions(
+                    ACCOUNT_HASH,
+                    start_datetime=datetime.datetime(2020, 6, 7, 8, 9, 0))
+        self.assertEqual(
+                str(cm.exception),
+                'start_datetime must be a timezone-aware datetime.datetime')
+
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_transactions_symbol_end_datetime(self):
         self.client.get_transactions(
                 ACCOUNT_HASH,
                 # NOW_DATETIME is the default, use something different
-                end_date=datetime.datetime(2020, 6, 7, 8, 9, 0))
+                end_datetime=datetime.datetime(
+                    2020, 6, 7, 8, 9, 0, tzinfo=datetime.timezone.utc))
         self.mock_session.get.assert_called_once_with(
             self.make_url('/trader/v1/accounts/{accountHash}/transactions'),
             params={
@@ -593,14 +656,24 @@ class _TestClient:
 
 
     @patch('schwab.client.base.datetime.datetime', mockdatetime)
-    def test_get_transactions_symbol_end_date_as_date(self):
-        self.client.get_transactions(ACCOUNT_HASH, end_date=NOW_DATE)
+    def test_get_transactions_symbol_end_datetime_offset(self):
+        self.client.get_transactions(ACCOUNT_HASH, end_datetime=EARLIER_DATETIME)
         self.mock_session.get.assert_called_once_with(
             self.make_url('/trader/v1/accounts/{accountHash}/transactions'),
             params={
                 'types': ','.join(t.value for t in self.client.Transactions.TransactionType),
                 'startDate': NOW_DATETIME_MINUS_60_DAYS_ISO,
-                'endDate': NOW_DATETIME_TRUNCATED_ISO})
+                'endDate': EARLIER_ISO})
+
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_transactions_symbol_end_datetime_date(self):
+        with self.assertRaises(ValueError) as cm:
+            self.client.get_transactions(ACCOUNT_HASH, end_datetime=NOW_DATE)
+        self.assertEqual(
+                str(cm.exception),
+                "expected type 'datetime.datetime' for " +
+                "end_datetime, got 'datetime.date'")
 
 
     # get_transaction
@@ -817,7 +890,36 @@ class _TestClient:
                          "expected type 'datetime.datetime' for " +
                          "end_datetime, got 'builtins.str'")
 
-    
+
+    def test_get_price_history_start_datetime_naive(self):
+        with self.assertRaises(ValueError) as cm:
+            self.client.get_price_history(
+                    SYMBOL,
+                    start_datetime=datetime.datetime(2020, 1, 1, 9, 30))
+        self.assertEqual(str(cm.exception),
+                         'start_datetime must be a timezone-aware ' +
+                         'datetime.datetime')
+
+
+    def test_get_price_history_start_datetime_date(self):
+        with self.assertRaises(ValueError) as cm:
+            self.client.get_price_history(
+                    SYMBOL, start_datetime=NOW_DATE)
+        self.assertEqual(str(cm.exception),
+                         "expected type 'datetime.datetime' for " +
+                         "start_datetime, got 'datetime.date'")
+
+
+    def test_get_price_history_end_datetime_naive(self):
+        with self.assertRaises(ValueError) as cm:
+            self.client.get_price_history(
+                    SYMBOL,
+                    end_datetime=datetime.datetime(2020, 1, 1, 9, 30))
+        self.assertEqual(str(cm.exception),
+                         'end_datetime must be a timezone-aware ' +
+                         'datetime.datetime')
+
+
     def test_get_price_history_need_extended_hours_data(self):
         self.client.get_price_history(SYMBOL, need_extended_hours_data=True)
         self.mock_session.get.assert_called_once_with(
@@ -929,12 +1031,12 @@ class _TestClient:
 
     
     def test_get_option_chain_from_date_datetime(self):
-        self.client.get_option_chain(
-            'AAPL', from_date=NOW_DATETIME)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/marketdata/v1/chains'), params={
-                'symbol': 'AAPL',
-                'fromDate': NOW_DATE_ISO})
+        with self.assertRaises(ValueError) as cm:
+            self.client.get_option_chain(
+                'AAPL', from_date=NOW_DATETIME)
+        self.assertEqual(str(cm.exception),
+                         "expected type 'datetime.date' for " +
+                         "from_date, got 'datetime.datetime'")
 
     
     def test_get_option_chain_from_date_date(self):
@@ -954,11 +1056,11 @@ class _TestClient:
 
     
     def test_get_option_chain_to_date_datetime(self):
-        self.client.get_option_chain('AAPL', to_date=NOW_DATETIME)
-        self.mock_session.get.assert_called_once_with(
-            self.make_url('/marketdata/v1/chains'), params={
-                'symbol': 'AAPL',
-                'toDate': NOW_DATE_ISO})
+        with self.assertRaises(ValueError) as cm:
+            self.client.get_option_chain('AAPL', to_date=NOW_DATETIME)
+        self.assertEqual(str(cm.exception),
+                         "expected type 'datetime.date' for " +
+                         "to_date, got 'datetime.datetime'")
 
     
     def test_get_option_chain_to_date_date(self):
@@ -1792,8 +1894,8 @@ class _TestClient:
                 'frequencyType': 'daily',
                 # DAILY
                 'frequency': 1,
-                'startDate': MIN_TIMESTAMP_MILLIS,
-                'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
+                'startDate': MIN_DATE_ET_MILLIS,
+                'endDate': END_DATE_ET_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
             self.make_url('/marketdata/v1/pricehistory'),
@@ -1801,9 +1903,9 @@ class _TestClient:
 
 
     @patch('schwab.client.base.datetime.datetime', mockdatetime)
-    def test_get_price_history_every_day_start_datetime(self):
+    def test_get_price_history_every_day_start_date(self):
         self.client.get_price_history_every_day(
-                'AAPL', start_datetime=EARLIER_DATETIME)
+                'AAPL', start_date=EARLIER_DATE)
         params = {
                 'symbol': SYMBOL,
                 'periodType': 'year',
@@ -1812,8 +1914,8 @@ class _TestClient:
                 'frequencyType': 'daily',
                 # DAILY
                 'frequency': 1,
-                'startDate': EARLIER_MILLIS,
-                'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
+                'startDate': EARLIER_DATE_ET_MILLIS,
+                'endDate': END_DATE_ET_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
             self.make_url('/marketdata/v1/pricehistory'),
@@ -1821,9 +1923,20 @@ class _TestClient:
 
 
     @patch('schwab.client.base.datetime.datetime', mockdatetime)
-    def test_get_price_history_every_day_end_datetime(self):
+    def test_get_price_history_every_day_start_date_datetime(self):
+        with self.assertRaises(ValueError) as cm:
+            self.client.get_price_history_every_day(
+                    'AAPL', start_date=EARLIER_DATETIME)
+        self.assertEqual(
+                str(cm.exception),
+                "expected type 'datetime.date' for " +
+                "start_date, got 'datetime.datetime'")
+
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_price_history_every_day_end_date(self):
         self.client.get_price_history_every_day(
-                'AAPL', end_datetime=EARLIER_DATETIME)
+                'AAPL', end_date=EARLIER_DATE)
         params = {
                 'symbol': SYMBOL,
                 'periodType': 'year',
@@ -1832,8 +1945,8 @@ class _TestClient:
                 'frequencyType': 'daily',
                 # DAILY
                 'frequency': 1,
-                'startDate': MIN_TIMESTAMP_MILLIS,
-                'endDate': EARLIER_MILLIS,
+                'startDate': MIN_DATE_ET_MILLIS,
+                'endDate': EARLIER_DATE_ET_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
             self.make_url('/marketdata/v1/pricehistory'),
@@ -1852,8 +1965,8 @@ class _TestClient:
                 'frequencyType': 'daily',
                 # DAILY
                 'frequency': 1,
-                'startDate': MIN_TIMESTAMP_MILLIS,
-                'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
+                'startDate': MIN_DATE_ET_MILLIS,
+                'endDate': END_DATE_ET_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
             self.make_url('/marketdata/v1/pricehistory'),
@@ -1872,8 +1985,8 @@ class _TestClient:
                 'frequencyType': 'daily',
                 # DAILY
                 'frequency': 1,
-                'startDate': MIN_TIMESTAMP_MILLIS,
-                'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
+                'startDate': MIN_DATE_ET_MILLIS,
+                'endDate': END_DATE_ET_MILLIS,
                 'needExtendedHoursData': True,
         }
         self.mock_session.get.assert_called_once_with(
@@ -1892,8 +2005,8 @@ class _TestClient:
                 'frequencyType': 'daily',
                 # DAILY
                 'frequency': 1,
-                'startDate': MIN_TIMESTAMP_MILLIS,
-                'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
+                'startDate': MIN_DATE_ET_MILLIS,
+                'endDate': END_DATE_ET_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
             self.make_url('/marketdata/v1/pricehistory'),
@@ -1912,8 +2025,8 @@ class _TestClient:
                 'frequencyType': 'daily',
                 # DAILY
                 'frequency': 1,
-                'startDate': MIN_TIMESTAMP_MILLIS,
-                'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
+                'startDate': MIN_DATE_ET_MILLIS,
+                'endDate': END_DATE_ET_MILLIS,
                 'needPreviousClose': True,
         }
         self.mock_session.get.assert_called_once_with(
@@ -1935,8 +2048,8 @@ class _TestClient:
                 'frequencyType': 'weekly',
                 # DAILY
                 'frequency': 1,
-                'startDate': MIN_TIMESTAMP_MILLIS,
-                'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
+                'startDate': MIN_DATE_ET_MILLIS,
+                'endDate': END_DATE_ET_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
             self.make_url('/marketdata/v1/pricehistory'),
@@ -1944,9 +2057,9 @@ class _TestClient:
 
 
     @patch('schwab.client.base.datetime.datetime', mockdatetime)
-    def test_get_price_history_every_week_start_datetime(self):
+    def test_get_price_history_every_week_start_date(self):
         self.client.get_price_history_every_week(
-                'AAPL', start_datetime=EARLIER_DATETIME)
+                'AAPL', start_date=EARLIER_DATE)
         params = {
                 'symbol': SYMBOL,
                 'periodType': 'year',
@@ -1955,8 +2068,8 @@ class _TestClient:
                 'frequencyType': 'weekly',
                 # DAILY
                 'frequency': 1,
-                'startDate': EARLIER_MILLIS,
-                'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
+                'startDate': EARLIER_DATE_ET_MILLIS,
+                'endDate': END_DATE_ET_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
             self.make_url('/marketdata/v1/pricehistory'),
@@ -1964,9 +2077,20 @@ class _TestClient:
 
 
     @patch('schwab.client.base.datetime.datetime', mockdatetime)
-    def test_get_price_history_every_week_end_datetime(self):
+    def test_get_price_history_every_week_start_date_datetime(self):
+        with self.assertRaises(ValueError) as cm:
+            self.client.get_price_history_every_week(
+                    'AAPL', start_date=EARLIER_DATETIME)
+        self.assertEqual(
+                str(cm.exception),
+                "expected type 'datetime.date' for " +
+                "start_date, got 'datetime.datetime'")
+
+
+    @patch('schwab.client.base.datetime.datetime', mockdatetime)
+    def test_get_price_history_every_week_end_date(self):
         self.client.get_price_history_every_week(
-                'AAPL', end_datetime=EARLIER_DATETIME)
+                'AAPL', end_date=EARLIER_DATE)
         params = {
                 'symbol': SYMBOL,
                 'periodType': 'year',
@@ -1975,8 +2099,8 @@ class _TestClient:
                 'frequencyType': 'weekly',
                 # DAILY
                 'frequency': 1,
-                'startDate': MIN_TIMESTAMP_MILLIS,
-                'endDate': EARLIER_MILLIS,
+                'startDate': MIN_DATE_ET_MILLIS,
+                'endDate': EARLIER_DATE_ET_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
             self.make_url('/marketdata/v1/pricehistory'),
@@ -1995,8 +2119,8 @@ class _TestClient:
                 'frequencyType': 'weekly',
                 # DAILY
                 'frequency': 1,
-                'startDate': MIN_TIMESTAMP_MILLIS,
-                'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
+                'startDate': MIN_DATE_ET_MILLIS,
+                'endDate': END_DATE_ET_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
             self.make_url('/marketdata/v1/pricehistory'),
@@ -2015,8 +2139,8 @@ class _TestClient:
                 'frequencyType': 'weekly',
                 # DAILY
                 'frequency': 1,
-                'startDate': MIN_TIMESTAMP_MILLIS,
-                'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
+                'startDate': MIN_DATE_ET_MILLIS,
+                'endDate': END_DATE_ET_MILLIS,
                 'needExtendedHoursData': True,
         }
         self.mock_session.get.assert_called_once_with(
@@ -2035,8 +2159,8 @@ class _TestClient:
                 'frequencyType': 'weekly',
                 # DAILY
                 'frequency': 1,
-                'startDate': MIN_TIMESTAMP_MILLIS,
-                'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
+                'startDate': MIN_DATE_ET_MILLIS,
+                'endDate': END_DATE_ET_MILLIS,
         }
         self.mock_session.get.assert_called_once_with(
             self.make_url('/marketdata/v1/pricehistory'),
@@ -2055,8 +2179,8 @@ class _TestClient:
                 'frequencyType': 'weekly',
                 # DAILY
                 'frequency': 1,
-                'startDate': MIN_TIMESTAMP_MILLIS,
-                'endDate': NOW_DATETIME_PLUS_SEVEN_DAYS_TIMESTAMP_MILLIS,
+                'startDate': MIN_DATE_ET_MILLIS,
+                'endDate': END_DATE_ET_MILLIS,
                 'needPreviousClose': True,
         }
         self.mock_session.get.assert_called_once_with(
@@ -2165,6 +2289,16 @@ class _TestClient:
         self.assertEqual(str(cm.exception),
                          "expected type 'datetime.date' for " +
                          "date, got 'builtins.str'")
+
+
+    def test_get_market_hours_date_datetime(self):
+        with self.assertRaises(ValueError) as cm:
+            self.client.get_market_hours(
+                    self.client_class.MarketHours.Market.EQUITY,
+                    date=NOW_DATETIME)
+        self.assertEqual(str(cm.exception),
+                         "expected type 'datetime.date' for " +
+                         "date, got 'datetime.datetime'")
 
 
     # get_instruments

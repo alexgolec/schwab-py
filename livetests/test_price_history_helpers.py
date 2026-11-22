@@ -2,6 +2,11 @@ import datetime
 
 import pytest
 
+import schwab
+
+
+_PH = schwab.client.Client.PriceHistory
+
 
 def _dt(y, m, d):
     return datetime.datetime(y, m, d, tzinfo=datetime.timezone.utc)
@@ -325,8 +330,8 @@ def test_day_deterministic_week(live_client):
     OHLCV and 06:00-UTC session timestamps, and generic candle
     format on the remaining days.'''
     resp = live_client.get_price_history_every_day(
-            'AAPL', start_datetime=_dt(2025, 1, 13),
-            end_datetime=_dt(2025, 1, 18))
+            'AAPL', start_date=datetime.date(2025, 1, 13),
+            end_date=datetime.date(2025, 1, 18))
 
     assert resp.status_code == 200
     data = resp.json()
@@ -364,8 +369,8 @@ def test_day_gap_structure(live_client):
     weekend (MLK). Requests Jan 2025 through Nov 2026 and asserts
     the exact millisecond gap for each named date pair.'''
     resp = live_client.get_price_history_every_day(
-            'AAPL', start_datetime=_dt(2025, 1, 6),
-            end_datetime=_dt(2026, 11, 15))
+            'AAPL', start_date=datetime.date(2025, 1, 6),
+            end_date=datetime.date(2026, 11, 15))
 
     assert resp.status_code == 200
     candles = resp.json()['candles']
@@ -399,7 +404,7 @@ def test_day_full_history(live_client):
     exact timestamp and split-adjusted OHLCV as an anchor for
     full-history reach.'''
     resp = live_client.get_price_history_every_day(
-            'AAPL', start_datetime=_dt(1971, 1, 1), end_datetime=_now())
+            'AAPL', start_date=datetime.date(1971, 1, 1))
 
     assert resp.status_code == 200
     candles = resp.json()['candles']
@@ -424,6 +429,102 @@ def test_day_default_no_dates(live_client):
     assert candles[0]['datetime'] == _ms(_dt(1985, 1, 2)) + 6 * 3600000
 
 
+def _mlk(year):
+    '''Martin Luther King Jr. Day: the third Monday of January, a
+    market holiday.'''
+    jan15 = datetime.date(year, 1, 15)
+    return jan15 + datetime.timedelta(days=(7 - jan15.weekday()) % 7)
+
+
+def _ud(d):
+    '''UTC midnight on the given date.'''
+    return _dt(d.year, d.month, d.day)
+
+
+def _et(d, hh=0, mm=0):
+    '''A datetime in US Eastern Standard Time (UTC-5) on the given
+    date. A fixed offset is used so these tests are deterministic
+    without tzdata; the boundary tests only use January dates,
+    which always fall in EST.'''
+    return datetime.datetime(
+            d.year, d.month, d.day, hh, mm,
+            tzinfo=datetime.timezone(datetime.timedelta(hours=-5)))
+
+
+def _stamp(d):
+    '''The millisecond candle stamp for a session date in EST:
+    01:00 EST of that day = 06:00 UTC.'''
+    return _ms(_ud(d)) + 6 * 3600000
+
+
+def test_day_window_resolves_to_eastern_calendar_days(live_client):
+    '''DOCUMENTING OBSERVED BEHAVIOR, NOT ENDORSING: the API resolves
+    the instant-valued startDate/endDate to their US-Eastern
+    calendar days and filters candles day-wise. A bound expressed
+    in UTC can therefore select a different ET day than its UTC
+    date suggests, and any time-of-day within an ET day selects the
+    same day.
+
+    Window: the week before the previous year's MLK Day, which is
+    always a full trading week, plus the MLK week itself for
+    non-trading-day bounds. January is always EST, so candle
+    stamps are 06:00Z = 01:00 EST of the session day.'''
+    mlk = _mlk(datetime.date.today().year - 1)
+    mon = mlk - datetime.timedelta(days=7)
+    tue, fri, sat = (mon + datetime.timedelta(days=d)
+                     for d in (1, 4, 5))
+    sun = mon - datetime.timedelta(days=1)
+
+    # every_day now accepts only calendar dates, so the instant-level
+    # boundary probes go through get_price_history with the same wire
+    # params the helper sends.
+    def candles_between(start, end):
+        resp = live_client.get_price_history(
+                'AAPL',
+                period_type=_PH.PeriodType.YEAR,
+                period=_PH.Period.TWENTY_YEARS,
+                frequency_type=_PH.FrequencyType.DAILY,
+                frequency=_PH.Frequency.DAILY,
+                start_datetime=start, end_datetime=end)
+        assert resp.status_code == 200
+        return [c['datetime'] for c in resp.json()['candles']]
+
+    # A start of midnight UTC Tuesday is 19:00 EST *Monday*, so the
+    # window opens on Monday's candle even though its UTC date is
+    # Tuesday.
+    stamps = candles_between(_ud(tue), _ud(sat))
+    assert stamps[0] == _stamp(mon)
+
+    # The same clock time on Tuesday in ET (00:00 EST = 05:00Z)
+    # resolves to ET-day Tuesday instead.
+    stamps = candles_between(_et(tue), _ud(sat))
+    assert stamps[0] == _stamp(tue)
+
+    # Sub-day precision is a no-op: a start *after* the candle's own
+    # 01:00-EST stamp but on the same ET day still includes it.
+    stamps = candles_between(_et(mon, 1, 30), _ud(sat))
+    assert stamps[0] == _stamp(mon)
+
+    # The end bound discriminates day-vs-instant filtering: an end
+    # at 00:30 EST Tuesday precedes Tuesday's candle stamp yet the
+    # candle is still included because the day itself is in range.
+    stamps = candles_between(_ud(sun), _et(tue, 0, 30))
+    assert stamps[-1] == _stamp(tue)
+
+    # An end one ET-day boundary earlier drops that candle.
+    stamps = candles_between(_ud(sun), _et(mon, 23, 59))
+    assert stamps[-1] == _stamp(mon)
+
+    # A bound on a non-trading day resolves to its ET day like any
+    # other: start on MLK Monday opens on Tuesday's candle, and an
+    # end on that Monday sees no candle at all.
+    stamps = candles_between(_et(mlk), _ud(mlk + datetime.timedelta(days=5)))
+    assert stamps[0] == _stamp(mlk + datetime.timedelta(days=1))
+
+    stamps = candles_between(_ud(mlk), _et(mlk))
+    assert stamps == []
+
+
 ################################################################################
 # every_week
 
@@ -435,8 +536,8 @@ def test_week_deterministic_week(live_client):
     correct aggregation of that week's five daily candles (Monday's
     open, Friday's close, the week's extremes, summed volume).'''
     resp = live_client.get_price_history_every_week(
-            'AAPL', start_datetime=_dt(2025, 1, 13),
-            end_datetime=_dt(2025, 1, 18))
+            'AAPL', start_date=datetime.date(2025, 1, 13),
+            end_date=datetime.date(2025, 1, 18))
 
     assert resp.status_code == 200
     data = resp.json()
@@ -461,8 +562,8 @@ def test_week_gap_structure(live_client):
     168h. Requests Jan-Nov 2026 and asserts the exact millisecond
     gap for each named Monday pair.'''
     resp = live_client.get_price_history_every_week(
-            'AAPL', start_datetime=_dt(2026, 1, 1),
-            end_datetime=_dt(2026, 11, 15))
+            'AAPL', start_date=datetime.date(2026, 1, 1),
+            end_date=datetime.date(2026, 11, 15))
 
     assert resp.status_code == 200
     candles = resp.json()['candles']
@@ -490,7 +591,7 @@ def test_week_full_history(live_client):
     1985-01-02). Asserts that bucket's exact timestamp and
     split-adjusted OHLCV.'''
     resp = live_client.get_price_history_every_week(
-            'AAPL', start_datetime=_dt(1971, 1, 1), end_datetime=_now())
+            'AAPL', start_date=datetime.date(1971, 1, 1))
 
     assert resp.status_code == 200
     candles = resp.json()['candles']
@@ -513,3 +614,62 @@ def test_week_default_no_dates(live_client):
     assert resp.status_code == 200
     candles = resp.json()['candles']
     assert candles[0]['datetime'] == _ms(_dt(1984, 12, 31)) + 6 * 3600000
+
+
+def test_week_window_resolves_to_eastern_calendar_days(live_client):
+    '''DOCUMENTING OBSERVED BEHAVIOR, NOT ENDORSING: weekly windows
+    resolve bounds to US-Eastern calendar days as daily ones do,
+    but the two bounds key on different days of the candle's week:
+    the start bound compares against the candle's *stamped* Monday
+    while the end bound must reach the week's first *trading* day.
+    On holiday-shortened weeks those differ.
+
+    Window: the week before the previous year's MLK Day, the
+    holiday-shortened MLK week (stamped Monday, first trading day
+    Tuesday), and the following full week.'''
+    mlk = _mlk(datetime.date.today().year - 1)
+    pmon, nmon = (mlk + datetime.timedelta(days=d) for d in (-7, 7))
+
+    # every_week now accepts only calendar dates, so the instant-level
+    # boundary probes go through get_price_history with the same wire
+    # params the helper sends.
+    def candles_between(start, end):
+        resp = live_client.get_price_history(
+                'AAPL',
+                period_type=_PH.PeriodType.YEAR,
+                period=_PH.Period.TWENTY_YEARS,
+                frequency_type=_PH.FrequencyType.WEEKLY,
+                frequency=_PH.Frequency.WEEKLY,
+                start_datetime=start, end_datetime=end)
+        assert resp.status_code == 200
+        return [c['datetime'] for c in resp.json()['candles']]
+
+    # A Tuesday-midnight-UTC start is 19:00 EST Monday: the Monday-
+    # stamped weekly candle is still selected. The end resolves to
+    # the holiday Monday, which does not reach the MLK week's first
+    # trading day and so excludes it.
+    stamps = candles_between(
+            _ud(pmon + datetime.timedelta(days=1)),
+            _ud(mlk + datetime.timedelta(days=1)))
+    assert stamps == [_stamp(pmon)]
+
+    # A start on the holiday Monday itself also selects the week:
+    # the start bound keys on the stamp day, not a trading day.
+    stamps = candles_between(_et(mlk), _ud(mlk + datetime.timedelta(days=5)))
+    assert stamps == [_stamp(mlk)]
+
+    # But a start on Tuesday — the week's first trading day —
+    # misses it entirely, because the stamp day precedes the bound.
+    stamps = candles_between(
+            _et(mlk + datetime.timedelta(days=1)),
+            _ud(nmon + datetime.timedelta(days=1)))
+    assert stamps == [_stamp(nmon)]
+
+    # The end bound is stricter: an end resolving to the holiday
+    # Monday does NOT include the week — it must reach the first
+    # trading day (Tuesday).
+    stamps = candles_between(_ud(pmon), _et(mlk, 19))
+    assert stamps == [_stamp(pmon)]
+
+    stamps = candles_between(_ud(pmon), _et(mlk + datetime.timedelta(days=1), 19))
+    assert stamps == [_stamp(pmon), _stamp(mlk)]

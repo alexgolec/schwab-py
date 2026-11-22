@@ -13,6 +13,7 @@ import pickle
 import schwab
 import time
 import warnings
+import zoneinfo
 
 from schwab.orders.generic import OrderBuilder
 
@@ -83,27 +84,53 @@ class BaseClient(EnumEnforcer):
                     ', '.join(exp_type_names), name, value_type_name)
             raise ValueError(error_str)
 
+    def _assert_aware_datetime(self, var_name, dt):
+        self._assert_type(var_name, dt, [self._DATETIME])
+        if dt.tzinfo is None or dt.utcoffset() is None:
+            raise ValueError(
+                    '{} must be a timezone-aware datetime.datetime'.format(
+                        var_name))
+
+    def _assert_date(self, var_name, dt):
+        # datetime is a subclass of date; a datetime here is almost
+        # certainly a caller error.
+        if isinstance(dt, self._DATETIME) or not isinstance(dt, self._DATE):
+            raise ValueError(
+                    "expected type 'datetime.date' for {}, got '{}'".format(
+                        var_name,
+                        '{}.{}'.format(
+                            type(dt).__module__, type(dt).__name__)))
+
     def _format_date_as_iso(self, var_name, dt):
-        '''Formats datetime or date objects as yyyy-MM-dd'T'HH:mm:ss.SSSZ'''
-        self._assert_type(var_name, dt, [self._DATE, self._DATETIME])
+        '''Formats timezone-aware datetime objects as
+        yyyy-MM-dd'T'HH:mm:ssZ in UTC'''
+        self._assert_aware_datetime(var_name, dt)
 
-        if not isinstance(dt, self._DATETIME):
-            dt = datetime.datetime(year=dt.year, month=dt.month, day=dt.day)
-
-        return dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+        return dt.astimezone(datetime.timezone.utc).strftime(
+                '%Y-%m-%dT%H:%M:%SZ')
 
     def _format_date_as_day(self, var_name, dt):
-        '''Formats datetime or date objects as YYYY-MM-DD'''
-        self._assert_type(var_name, dt, [self._DATE])
+        '''Formats date objects as YYYY-MM-DD'''
+        self._assert_date(var_name, dt)
 
         return dt.strftime('%Y-%m-%d')
 
 
     def _format_date_as_millis(self, var_name, dt):
-        'Converts datetime objects to compatible millisecond values'
-        self._assert_type(var_name, dt, [self._DATETIME])
+        'Converts timezone-aware datetime objects to millisecond values'
+        self._assert_aware_datetime(var_name, dt)
 
         return int(dt.timestamp() * 1000)
+
+
+    def _date_as_eastern_midnight(self, var_name, d):
+        '''Converts a date to midnight US Eastern of that day, as an
+        aware datetime.'''
+        self._assert_date(var_name, d)
+
+        return datetime.datetime(
+                d.year, d.month, d.day,
+                tzinfo=zoneinfo.ZoneInfo('America/New_York'))
 
 
     def set_timeout(self, timeout):
@@ -357,14 +384,18 @@ class BaseClient(EnumEnforcer):
         :param max_results: The maximum number of orders to retrieve.
                             Maximum 5000.
         :param from_entered_datetime: Specifies that no orders entered before
-                                      this time should be returned. The API
-                                      requires that to_entered_datetime minus
+                                      this time should be returned. Must be a
+                                      timezone-aware ``datetime.datetime``.
+                                      The API requires that
+                                      to_entered_datetime minus
                                       from_entered_datetime not exceed one
                                       year, but imposes no limit on how long
                                       ago the dates themselves may be.
                                       ``toEnteredTime`` must also be set.
         :param to_entered_datetime: Specifies that no orders entered after this
-                                    time should be returned. ``fromEnteredTime``
+                                    time should be returned. Must be a
+                                    timezone-aware ``datetime.datetime``.
+                                    ``fromEnteredTime``
                                     must also be set.
         :param status: Restrict query to orders with this status. See
                        :class:`Order.Status` for options.
@@ -388,14 +419,18 @@ class BaseClient(EnumEnforcer):
         :param max_results: The maximum number of orders to retrieve.
                             Maximum 5000.
         :param from_entered_datetime: Specifies that no orders entered before
-                                      this time should be returned. The API
-                                      requires that to_entered_datetime minus
+                                      this time should be returned. Must be a
+                                      timezone-aware ``datetime.datetime``.
+                                      The API requires that
+                                      to_entered_datetime minus
                                       from_entered_datetime not exceed one
                                       year, but imposes no limit on how long
                                       ago the dates themselves may be.
                                       ``toEnteredTime`` must also be set.
         :param to_entered_datetime: Specifies that no orders entered after this
-                                    time should be returned. ``fromEnteredTime``
+                                    time should be returned. Must be a
+                                    timezone-aware ``datetime.datetime``.
+                                    ``fromEnteredTime``
                                     must also be set.
         :param status: Restrict query to orders with this status. See
                        :class:`Order.Status` for options.
@@ -465,25 +500,26 @@ class BaseClient(EnumEnforcer):
             self,
             account_hash,
             *,
-            start_date=None,
-            end_date=None,
+            start_datetime=None,
+            end_datetime=None,
             transaction_types=None,
             symbol=None):
         '''Transaction for a specific account.
 
-        :param account_hash: Account hash corresponding to the account whose 
+        :param account_hash: Account hash corresponding to the account whose
                              transactions should be returned.
-        :param start_date: Only transactions after this date will be returned.
-                           The API requires that ``end_date - start_date`` not
-                           exceed one year, but imposes no limit on how long
-                           ago the dates themselves may be. If this parameter
-                           is not set, it will be set to 60 days prior to now.
-                           Accepts ``datetime.date`` and ``datetime.datetime``.
-        :param end_date: Only transactions before this date will be returned. If 
-                         this parameter is not set, it will be set to the 
-                         current time.
-                         Accepts ``datetime.date`` and ``datetime.datetime``.
-        :param transaction_types: Only transactions with one of the specified 
+        :param start_datetime: Only transactions after this date will be
+                               returned. Must be a timezone-aware
+                               ``datetime.datetime``. The API requires that
+                               ``end_datetime - start_datetime`` not exceed one
+                               year, but imposes no limit on how long ago the
+                               dates themselves may be. If this parameter is
+                               not set, it will be set to 60 days prior to now.
+        :param end_datetime: Only transactions before this date will be
+                             returned. Must be a timezone-aware
+                             ``datetime.datetime``. If this parameter is not
+                             set, it will be set to the current time.
+        :param transaction_types: Only transactions with one of the specified
                                   types will be returned.
         :param symbol: Only transactions with the specified symbol will be
                         returned.
@@ -497,25 +533,27 @@ class BaseClient(EnumEnforcer):
                 transaction_types, self.Transactions.TransactionType)
 
         # Start date
-        if start_date is None:
-            start_date = self._format_date_as_iso(
-                    'start_date',
+        if start_datetime is None:
+            start_datetime = self._format_date_as_iso(
+                    'start_datetime',
                     datetime.datetime.now(datetime.timezone.utc)
                     - datetime.timedelta(days=60))
         else:
-            start_date = self._format_date_as_iso('start_date', start_date)
+            start_datetime = self._format_date_as_iso(
+                    'start_datetime', start_datetime)
 
         # End date
-        if end_date is None:
-            end_date = self._format_date_as_iso(
-                    'end_date', datetime.datetime.now(datetime.timezone.utc))
+        if end_datetime is None:
+            end_datetime = self._format_date_as_iso(
+                    'end_datetime', datetime.datetime.now(datetime.timezone.utc))
         else:
-            end_date = self._format_date_as_iso('end_date', end_date)
+            end_datetime = self._format_date_as_iso(
+                    'end_datetime', end_datetime)
 
         params = {
                 'types':  ','.join(transaction_types),
-                'startDate': start_date,
-                'endDate': end_date,
+                'startDate': start_datetime,
+                'endDate': end_datetime,
         }
 
         if symbol is not None:
@@ -858,8 +896,11 @@ class BaseClient(EnumEnforcer):
                                is formed.
         :param frequency: The number of the frequencyType to be included in each
                           candle.
-        :param start_datetime: Start date.
-        :param end_datetime: End date. Default is previous trading day.
+        :param start_datetime: Start time. Must be a timezone-aware
+                               ``datetime.datetime``.
+        :param end_datetime: End time. Must be a timezone-aware
+                             ``datetime.datetime``. Default is previous trading
+                             day.
         :param need_extended_hours_data: If true, return extended hours data.
                                          Default is true.
         :param need_previous_close: If true, return the previous close price and 
@@ -905,12 +946,28 @@ class BaseClient(EnumEnforcer):
 
     def __normalize_start_and_end_datetimes(self, start_datetime, end_datetime):
         if start_datetime is None:
-            start_datetime = datetime.datetime(year=1971, month=1, day=1)
+            start_datetime = datetime.datetime(
+                    year=1971, month=1, day=1,
+                    tzinfo=datetime.timezone.utc)
         if end_datetime is None:
             end_datetime = (datetime.datetime.now(datetime.timezone.utc) +
                     datetime.timedelta(days=7))
 
         return start_datetime, end_datetime
+
+    def __normalize_start_and_end_dates(self, start_date, end_date):
+        '''Fills defaults for ``date``-valued bounds and converts
+        them to midnight US Eastern of each calendar day, as aware
+        datetimes.'''
+        if start_date is None:
+            start_date = datetime.date(year=1971, month=1, day=1)
+        if end_date is None:
+            end_date = (datetime.datetime.now(datetime.timezone.utc) +
+                    datetime.timedelta(days=7)).date()
+
+        return (
+                self._date_as_eastern_midnight('start_date', start_date),
+                self._date_as_eastern_midnight('end_date', end_date))
 
 
     def get_price_history_every_minute(
@@ -920,6 +977,9 @@ class BaseClient(EnumEnforcer):
         Fetch price history for a stock or ETF symbol at a per-minute
         granularity. This endpoint currently appears to return up to 48 days of
         data.
+
+        This method accepts ``start_datetime`` and ``end_datetime`` keyword
+        arguments, which must be timezone-aware ``datetime.datetime`` objects.
         '''
 
         start_datetime, end_datetime = self.__normalize_start_and_end_datetimes(
@@ -944,6 +1004,9 @@ class BaseClient(EnumEnforcer):
         Fetch price history for a stock or ETF symbol at a per-five-minutes
         granularity. This endpoint currently appears to return approximately
         nine months of data.
+
+        This method accepts ``start_datetime`` and ``end_datetime`` keyword
+        arguments, which must be timezone-aware ``datetime.datetime`` objects.
         '''
 
         start_datetime, end_datetime = self.__normalize_start_and_end_datetimes(
@@ -968,6 +1031,9 @@ class BaseClient(EnumEnforcer):
         Fetch price history for a stock or ETF symbol at a per-ten-minutes
         granularity. This endpoint currently appears to return approximately
         nine months of data.
+
+        This method accepts ``start_datetime`` and ``end_datetime`` keyword
+        arguments, which must be timezone-aware ``datetime.datetime`` objects.
         '''
 
         start_datetime, end_datetime = self.__normalize_start_and_end_datetimes(
@@ -992,6 +1058,9 @@ class BaseClient(EnumEnforcer):
         Fetch price history for a stock or ETF symbol at a per-fifteen-minutes
         granularity. This endpoint currently appears to return approximately
         nine months of data.
+
+        This method accepts ``start_datetime`` and ``end_datetime`` keyword
+        arguments, which must be timezone-aware ``datetime.datetime`` objects.
         '''
 
         start_datetime, end_datetime = self.__normalize_start_and_end_datetimes(
@@ -1016,6 +1085,9 @@ class BaseClient(EnumEnforcer):
         Fetch price history for a stock or ETF symbol at a per-thirty-minutes
         granularity. This endpoint currently appears to return approximately
         nine months of data.
+
+        This method accepts ``start_datetime`` and ``end_datetime`` keyword
+        arguments, which must be timezone-aware ``datetime.datetime`` objects.
         '''
 
         start_datetime, end_datetime = self.__normalize_start_and_end_datetimes(
@@ -1034,17 +1106,22 @@ class BaseClient(EnumEnforcer):
 
 
     def get_price_history_every_day(
-            self, symbol, *, start_datetime=None, end_datetime=None, 
+            self, symbol, *, start_date=None, end_date=None,
             need_extended_hours_data=None, need_previous_close=None):
         '''
-        Fetch price history for a stock or ETF symbol at a daily granularity. 
-        The exact period of time over which this endpoint returns data is 
-        unclear, although it has been observed returning data as far back as 
+        Fetch price history for a stock or ETF symbol at a daily granularity.
+        The exact period of time over which this endpoint returns data is
+        unclear, although it has been observed returning data as far back as
         1985 (for ``AAPL``).
+
+        :param start_date: Start date. Must be a ``datetime.date``. The API
+                           resolves this bound to a US Eastern calendar day.
+        :param end_date: End date. Must be a ``datetime.date``. The API
+                         resolves this bound to a US Eastern calendar day.
         '''
 
-        start_datetime, end_datetime = self.__normalize_start_and_end_datetimes(
-                start_datetime, end_datetime)
+        start_datetime, end_datetime = self.__normalize_start_and_end_dates(
+                start_date, end_date)
 
         return self.get_price_history(
                 symbol,
@@ -1059,17 +1136,22 @@ class BaseClient(EnumEnforcer):
 
 
     def get_price_history_every_week(
-            self, symbol, *, start_datetime=None, end_datetime=None, 
+            self, symbol, *, start_date=None, end_date=None,
             need_extended_hours_data=None, need_previous_close=None):
         '''
         Fetch price history for a stock or ETF symbol at a weekly granularity.
-        The exact period of time over which this endpoint returns data is 
-        unclear, although it has been observed returning data as far back as 
+        The exact period of time over which this endpoint returns data is
+        unclear, although it has been observed returning data as far back as
         1985 (for ``AAPL``).
+
+        :param start_date: Start date. Must be a ``datetime.date``. The API
+                           resolves this bound to a US Eastern calendar day.
+        :param end_date: End date. Must be a ``datetime.date``. The API
+                         resolves this bound to a US Eastern calendar day.
         '''
 
-        start_datetime, end_datetime = self.__normalize_start_and_end_datetimes(
-                start_datetime, end_datetime)
+        start_datetime, end_datetime = self.__normalize_start_and_end_dates(
+                start_date, end_date)
 
         return self.get_price_history(
                 symbol,

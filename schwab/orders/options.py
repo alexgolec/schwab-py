@@ -23,10 +23,9 @@ class OptionSymbol:
     '''Construct an option symbol from its constituent parts.
 
     :param underlying_symbol: Symbol of the underlying. Not validated.
-    :param expiration_date: Expiration date. Accepts ``datetime.date``,
-                            ``datetime.datetime``, or strings with the
-                            format ``[Two digit year][Two digit month][Two
-                            digit day]``.
+    :param expiration_date: Expiration date. Accepts ``datetime.date`` or
+                            strings with the format ``[Two digit year]
+                            [Two digit month][Two digit day]``.
     :param contract_type: ``P`` or ``PUT`` for put and ``C`` or ``CALL`` for 
                           call.
     :param strike_price_as_string: Strike price represented as a decimal string.
@@ -73,18 +72,13 @@ class OptionSymbol:
 
         if isinstance(expiration_date, str):
             self.expiration_date = _parse_expiration_date(expiration_date)
-        elif isinstance(expiration_date, datetime.datetime):
-            self.expiration_date = datetime.date(
-                year=expiration_date.year,
-                month=expiration_date.month,
-                day=expiration_date.day)
-        elif isinstance(expiration_date, datetime.date):
+        elif (isinstance(expiration_date, datetime.date)
+                and not isinstance(expiration_date, datetime.datetime)):
             self.expiration_date = expiration_date
         else:
             raise ValueError(
                 'expiration_date must be a string with format %y%m%d ' +
-                '(e.g. 240614) or one of datetime.date or ' +
-                'datetime.datetime')
+                '(e.g. 240614) or a datetime.date')
 
         assert(isinstance(self.expiration_date, datetime.date))
 

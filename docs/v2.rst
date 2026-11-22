@@ -103,6 +103,42 @@ because the Schwab API silently strips the sign from ``price`` and
 absolute value, inverting the order's intent. ``copy_price`` and
 ``copy_stop_price`` still bypass validation as before.
 
+Datetime and date parameter contract
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Parameters that specify instants in time now require timezone-aware
+``datetime.datetime`` objects, and parameters that specify calendar days
+now require ``datetime.date`` objects. In 1.x these parameters accepted a
+mixture of both types, sometimes interpreting naive datetimes as local time
+and sometimes as UTC depending on the endpoint. Passing an unexpected type
+now raises ``ValueError``:
+
+* ``get_orders_for_account`` and ``get_orders_for_all_linked_accounts``:
+  ``from_entered_datetime`` and ``to_entered_datetime`` require aware
+  ``datetime.datetime``.
+* ``get_transactions``: ``start_date`` and ``end_date`` are renamed
+  ``start_datetime`` and ``end_datetime``, and require aware
+  ``datetime.datetime``.
+* ``get_price_history`` and the minute-granularity helpers
+  (``get_price_history_every_minute``, ``every_five_minutes``,
+  ``every_ten_minutes``, ``every_fifteen_minutes``,
+  ``every_thirty_minutes``): ``start_datetime`` and ``end_datetime``
+  require aware ``datetime.datetime``.
+* ``get_price_history_every_day`` and ``get_price_history_every_week``:
+  ``start_datetime`` and ``end_datetime`` are renamed ``start_date`` and
+  ``end_date``, and require ``datetime.date``. Daily and weekly candles are
+  bucketed by US Eastern calendar day, so dates are the natural input here.
+* ``get_option_chain`` (``from_date``, ``to_date``) and ``get_market_hours``
+  (``date``) require ``datetime.date``. Note ``datetime.datetime`` is a
+  subclass of ``datetime.date`` but is rejected: passing one was previously
+  accepted and silently truncated to its date.
+* ``OptionSymbol``: ``expiration_date`` still accepts a ``datetime.date``
+  or a ``YYMMDD`` string, but now rejects ``datetime.datetime`` rather than
+  silently truncating it.
+
+Aware datetimes are normalized to UTC when serialized, so the zone used to
+construct them is unimportant as long as it is correct.
+
 AI Disclosure
 -------------
 

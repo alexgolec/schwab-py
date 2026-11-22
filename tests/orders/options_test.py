@@ -92,6 +92,16 @@ class OptionSymbolTest(unittest.TestCase):
         self.assertEqual('AAPL  261218P00350000', op.build())
 
 
+    def test_date_as_datetime(self):
+        with self.assertRaisesRegex(
+                ValueError, '.*expiration_date must be a string.*'):
+            op = OptionSymbol(
+                    'AAPL',
+                    datetime.datetime(2026, 12, 18, 9, 30,
+                                      tzinfo=datetime.timezone.utc),
+                    'P', '350')
+
+
     def test_strike_as_float(self):
         with self.assertRaisesRegex(
                 ValueError, '.*strike price must be a string.*'):
