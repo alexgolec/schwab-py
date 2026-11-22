@@ -106,11 +106,47 @@ absolute value, inverting the order's intent. ``copy_price`` and
 Datetime and date parameter contract
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+V1's use of ``date`` and ``datetime`` for specifying moments in time and days
+was inconsistent and, in some cases, subtly but importantly incorrect. They were
+also out of sync with the behavior of Schwab API itself. The specific
+misbehaviors included:
+
+* On the ISO endpoints (``get_orders_*``, ``get_transactions``), naive
+  datetimes were formatted with a ``Z`` suffix, falsely labeling the
+  caller's un-zoned wall-clock time as UTC.
+* On those same endpoints, aware datetimes were *also* formatted as their
+  wall-clock fields with a ``Z`` suffix, silently discarding the offset.
+  ``03:00:00-05:00`` went out as ``03:00:00Z`` instead of the correct
+  ``08:00:00Z``, shifting the window by five hours.
+* On those same endpoints, passing a ``date`` silently fabricated
+  ``YYYY-MM-DDT00:00:00Z`` — midnight UTC, which is the prior evening in US
+  Eastern. Almost certainly not the boundary the caller meant, and the API
+  itself rejects that input shape anyway.
+* On the millisecond endpoints (``get_price_history`` and the ``every_*``
+  helpers), naive datetimes were passed through ``datetime.timestamp()``,
+  which interprets them in the machine's *local* timezone. The same naive
+  value meant UTC on the ISO endpoints but local time here — the
+  interpretation depended on which endpoint happened to receive it.
+* On the calendar-day endpoints (``get_option_chain``,
+  ``get_market_hours``, ``OptionSymbol.expiration_date``), a
+  ``datetime.datetime`` was accepted and silently truncated to its date,
+  because ``datetime`` is a subclass of ``date``. A caller who meant one
+  instant got the entire day with no warning.
+* Parameter names were backwards in two places: ``get_transactions``
+  called its instant-valued bounds ``start_date``/``end_date``, while the
+  day- and week-granularity helpers called their calendar-day bounds
+  ``start_datetime``/``end_datetime``.
+* The library's own default price-history start bound was a naive
+  ``datetime(1971, 1, 1)`` — the library itself produced the ambiguous
+  input shape it nominally forbade.
+
+In short, there was no input type that was correct everywhere: naive
+datetimes were wrong on millis endpoints, aware datetimes were wrong on ISO
+endpoints, and dates were wrong everywhere they were silently accepted.
+
 Parameters that specify instants in time now require timezone-aware
 ``datetime.datetime`` objects, and parameters that specify calendar days
-now require ``datetime.date`` objects. In 1.x these parameters accepted a
-mixture of both types, sometimes interpreting naive datetimes as local time
-and sometimes as UTC depending on the endpoint. Passing an unexpected type
+now require ``datetime.date`` objects. Passing an unexpected type
 now raises ``ValueError``:
 
 * ``get_orders_for_account`` and ``get_orders_for_all_linked_accounts``:
