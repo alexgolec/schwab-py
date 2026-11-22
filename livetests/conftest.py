@@ -1,9 +1,20 @@
 import os
 import pathlib
+import warnings
 
 import pytest
 
 import schwab
+
+
+def pytest_collection_modifyitems(items):
+    '''Runs ``@pytest.mark.run_last`` tests after all others. Destructive
+    tests (e.g. token revocation, which invalidates the shared session
+    credential) must not execute until every other test has finished
+    with the token.'''
+    last = [i for i in items if i.get_closest_marker('run_last')]
+    if last:
+        items[:] = [i for i in items if i not in last] + last
 
 
 _CREDENTIALS_FILE = os.path.join(
@@ -62,14 +73,17 @@ def live_login(schwab_credentials, tmp_path_factory):
     '''Performs one real Schwab login for the entire test run. Requires
     interactive browser access.
 
-    Returns a dict with 'client' (the authenticated client) and
+    Returns a dict with 'client' (the authenticated client),
     'fresh_login' (True if a fresh in-process login flow was performed,
-    False if an existing token file was loaded).
+    False if an existing token file was loaded), and 'token_path' (the
+    file backing the token).
 
     When the RETAINED_TOKEN_PATH environment variable (or the same key in
     schwab-credentials.env) points at a filename, the token is loaded from
     and written to that file so it can be reused across runs; it is not
-    deleted at teardown. Otherwise a temporary token is used and deleted.'''
+    deleted at teardown. Otherwise a temporary token is used; it is
+    revoked at Schwab and then deleted at teardown so no live credential
+    is left behind.'''
     retained_path = schwab_credentials['retained_token_path']
     if retained_path:
         token_path = pathlib.Path(retained_path).expanduser()
@@ -94,9 +108,21 @@ def live_login(schwab_credentials, tmp_path_factory):
                     'rerun with -s (e.g. make test-live)')
         raise
 
-    yield {'client': client, 'fresh_login': fresh_login}
+    yield {'client': client, 'fresh_login': fresh_login,
+           'token_path': str(token_path)}
 
     if not retained_path:
+        # The token is disposable: revoke it at Schwab before deleting
+        # the file so no live credential is left behind. A no-op if the
+        # revocation test already ran; best-effort so teardown cannot
+        # fail the suite.
+        try:
+            client.revoke()
+        except Exception as e:
+            warnings.warn(
+                    'cleanup revocation of the disposable token failed; '
+                    'the credential may still be live at Schwab: '
+                    f'{e}')
         token_path.unlink(missing_ok=True)
 
 

@@ -1,5 +1,4 @@
 import json
-import os
 import time
 
 import pytest
@@ -85,33 +84,21 @@ def test_fresh_login_session_can_refresh_access_token(
     assert resp.status_code == 200, resp.status_code
 
 
-def test_revoke_refresh_token(live_client, schwab_credentials):
+@pytest.mark.run_last
+def test_revoke_refresh_token(live_login, schwab_credentials):
     '''DESTRUCTIVE: revokes the session client's refresh token at
-    Schwab via ``client.revoke()`` (RFC 7009). Only runs when the
-    environment contains ``SCHWAB_LIVE_TOKEN_REVOCATION=1`` *and*
-    ``RETAINED_TOKEN_PATH`` points at the token to destroy — the
-    tombstone must land in a file we can inspect.
-
-    Afterwards the retained token file contains a secretless revoked
-    marker, direct loads refuse it, and the next ``make test-live``
-    run performs a fresh browser login. Every other test in the same
-    run will fail with auth errors once the access token dies, so run
-    this test standalone:
-
-        SCHWAB_LIVE_TOKEN_REVOCATION=1 \\
-            uv run pytest livetests/test_auth.py::test_revoke_refresh_token -sv
-    '''
-    if os.environ.get('SCHWAB_LIVE_TOKEN_REVOCATION') != '1':
+    Schwab via ``client.revoke()`` (RFC 7009). Runs only when the
+    session token is disposable (no ``RETAINED_TOKEN_PATH``): the file
+    is deleted at teardown anyway, so revoking it first costs nothing
+    and exercises the full revocation path. Skipped when the token is
+    retained, since it must stay alive for reuse across runs.'''
+    if schwab_credentials['retained_token_path']:
         pytest.skip(
-                'destructive test: set SCHWAB_LIVE_TOKEN_REVOCATION=1 '
-                'to revoke the retained refresh token at Schwab')
-    token_path = schwab_credentials['retained_token_path']
-    if not token_path:
-        pytest.skip(
-                'this test inspects the on-disk tombstone; set '
-                'RETAINED_TOKEN_PATH (environment variable or '
-                'schwab-credentials.env) so the token lives in a '
-                'known file')
+                'retained token must survive this run for reuse; '
+                'unset RETAINED_TOKEN_PATH to test revocation against '
+                'a disposable token')
+    live_client = live_login['client']
+    token_path = live_login['token_path']
 
     assert live_client.revoke() is None
     assert live_client.token_metadata.revoked
