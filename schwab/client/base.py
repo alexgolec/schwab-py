@@ -387,8 +387,8 @@ class BaseClient(EnumEnforcer):
                                       this time should be returned. Must be a
                                       timezone-aware ``datetime.datetime``.
                                       The API requires that
-                                      to_entered_datetime minus
-                                      from_entered_datetime not exceed one
+                                      ``to_entered_datetime`` minus
+                                      ``from_entered_datetime`` not exceed one
                                       year, but imposes no limit on how long
                                       ago the dates themselves may be.
                                       ``toEnteredTime`` must also be set.
@@ -422,8 +422,8 @@ class BaseClient(EnumEnforcer):
                                       this time should be returned. Must be a
                                       timezone-aware ``datetime.datetime``.
                                       The API requires that
-                                      to_entered_datetime minus
-                                      from_entered_datetime not exceed one
+                                      ``to_entered_datetime`` minus
+                                      ``from_entered_datetime`` not exceed one
                                       year, but imposes no limit on how long
                                       ago the dates themselves may be.
                                       ``toEnteredTime`` must also be set.
