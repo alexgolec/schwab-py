@@ -353,7 +353,7 @@ class ClientFromTokenFileTest(unittest.TestCase):
                          auth.client_from_token_file(
                              self.token_path, API_KEY, APP_SECRET))
         client.assert_called_once_with(API_KEY, _, token_metadata=_,
-                                       enforce_enums=_)
+                                       enforce_enums=_, base_url=auth.DEFAULT_BASE_URL)
         sync_session.assert_called_once_with(
             API_KEY,
             client_secret=APP_SECRET,
@@ -398,7 +398,7 @@ class ClientFromTokenFileTest(unittest.TestCase):
                              self.token_path, API_KEY, APP_SECRET,
                              enforce_enums=False))
         client.assert_called_once_with(API_KEY, _, token_metadata=_,
-                                       enforce_enums=False)
+                                       enforce_enums=False, base_url=auth.DEFAULT_BASE_URL)
 
     @no_duplicates
     @patch('schwab.auth.Client')
@@ -413,7 +413,31 @@ class ClientFromTokenFileTest(unittest.TestCase):
                          auth.client_from_token_file(
                              self.token_path, API_KEY, APP_SECRET))
         client.assert_called_once_with(API_KEY, _, token_metadata=_,
-                                       enforce_enums=True)
+                                       enforce_enums=True, base_url=auth.DEFAULT_BASE_URL)
+
+    @no_duplicates
+    @patch('schwab.auth.Client')
+    @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
+    @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
+    def test_custom_base_url(self, async_session, sync_session, client):
+        self.write_token()
+
+        client.return_value = 'returned client'
+
+        self.assertEqual('returned client',
+                         auth.client_from_token_file(
+                             self.token_path, API_KEY, APP_SECRET,
+                             base_url='https://proxy.example.com/'))
+        client.assert_called_once_with(
+                API_KEY, _, token_metadata=_, enforce_enums=_,
+                base_url='https://proxy.example.com')
+        sync_session.assert_called_once_with(
+            API_KEY,
+            client_secret=APP_SECRET,
+            token=self.raw_token,
+            token_endpoint='https://proxy.example.com/v1/oauth/token',
+            update_token=_,
+            leeway=_)
 
 
 class ClientFromAccessFunctionsTest(unittest.TestCase):
@@ -532,7 +556,7 @@ class ClientFromAccessFunctionsTest(unittest.TestCase):
                              token_write_func, enforce_enums=False))
 
         client.assert_called_once_with(
-                API_KEY, _, token_metadata=_, enforce_enums=False)
+                API_KEY, _, token_metadata=_, enforce_enums=False, base_url=auth.DEFAULT_BASE_URL)
 
     @no_duplicates
     @patch('schwab.auth.Client')
@@ -557,7 +581,35 @@ class ClientFromAccessFunctionsTest(unittest.TestCase):
                              token_write_func))
 
         client.assert_called_once_with(
-                API_KEY, _, token_metadata=_, enforce_enums=True)
+                API_KEY, _, token_metadata=_, enforce_enums=True, base_url=auth.DEFAULT_BASE_URL)
+
+    @no_duplicates
+    @patch('schwab.auth.Client')
+    @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
+    @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
+    def test_custom_base_url(self, async_session, sync_session, client):
+        token_read_func = MagicMock()
+        token_read_func.return_value = self.token
+
+        client.return_value = 'returned client'
+        self.assertEqual('returned client',
+                         auth.client_from_access_functions(
+                             API_KEY,
+                             APP_SECRET,
+                             token_read_func,
+                             MagicMock(),
+                             base_url='https://proxy.example.com'))
+
+        sync_session.assert_called_once_with(
+            API_KEY,
+            client_secret=APP_SECRET,
+            token=self.raw_token,
+            token_endpoint='https://proxy.example.com/v1/oauth/token',
+            update_token=_,
+            leeway=_)
+        client.assert_called_once_with(
+                API_KEY, _, token_metadata=_, enforce_enums=_,
+                base_url='https://proxy.example.com')
 
     @no_duplicates
     def test_refuses_revoked_tombstone(self):
@@ -681,6 +733,50 @@ class ClientFromReceivedUrl(unittest.TestCase):
                 'creation_timestamp': MOCK_NOW,
                 'token': self.raw_token
             }], token_capture)
+
+    @no_duplicates
+    @patch('schwab.auth.Client')
+    @patch('schwab.auth.AsyncClient')
+    @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
+    @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
+    @patch('time.time', MagicMock(return_value=MOCK_NOW))
+    def test_custom_base_url(
+            self, async_session, sync_session, async_client, client):
+        AUTH_URL = 'https://auth.url.com'
+
+        sync_session.return_value = sync_session
+        sync_session.create_authorization_url.return_value = \
+                AUTH_URL, 'oauth state'
+        sync_session.fetch_token.return_value = self.raw_token
+
+        # The authorization URL is derived from the custom base URL
+        auth_context = auth.get_auth_context(
+                API_KEY, CALLBACK_URL,
+                base_url='https://proxy.example.com')
+        sync_session.create_authorization_url.assert_called_once_with(
+                'https://proxy.example.com/v1/oauth/authorize', state=_)
+
+        client.return_value = 'returned client'
+        token_capture = []
+        self.assertEqual('returned client',
+                auth.client_from_received_url(
+                        API_KEY, APP_SECRET, auth_context,
+                        'http://redirect.url.com/?data',
+                        lambda token: token_capture.append(token),
+                        base_url='https://proxy.example.com'))
+
+        # As is the token endpoint
+        sync_session.fetch_token.assert_called_once_with(
+                'https://proxy.example.com/v1/oauth/token',
+                authorization_response=_,
+                client_id=_,
+                auth=_,
+                state='oauth state')
+
+        # And the constructed client receives the base URL
+        client.assert_called_once_with(
+                API_KEY, _, token_metadata=_, enforce_enums=_,
+                base_url='https://proxy.example.com')
 
 
 class ClientFromManualFlow(unittest.TestCase):
@@ -809,7 +905,7 @@ class ClientFromManualFlow(unittest.TestCase):
                              enforce_enums=False))
 
         client.assert_called_once_with(API_KEY, _, token_metadata=_,
-                                       enforce_enums=False)
+                                       enforce_enums=False, base_url=auth.DEFAULT_BASE_URL)
 
     @no_duplicates
     @patch('schwab.auth.Client')
@@ -833,7 +929,7 @@ class ClientFromManualFlow(unittest.TestCase):
                              API_KEY, APP_SECRET, CALLBACK_URL, self.token_path))
 
         client.assert_called_once_with(API_KEY, _, token_metadata=_,
-                                       enforce_enums=True)
+                                       enforce_enums=True, base_url=auth.DEFAULT_BASE_URL)
 
 
 class TokenMetadataTest(unittest.TestCase):
@@ -1025,7 +1121,7 @@ class EasyClientTest(unittest.TestCase):
                 API_KEY, APP_SECRET, CALLBACK_URL, self.token_path,
                 asyncio='asyncio', enforce_enums='enforce_enums',
                 callback_timeout='callback_timeout', interactive='interactive',
-                requested_browser='requested_browser')
+                requested_browser='requested_browser', base_url=None)
 
 
     @no_duplicates
@@ -1064,7 +1160,8 @@ class EasyClientTest(unittest.TestCase):
 
         client_from_token_file.assert_called_once_with(
                 self.token_path, API_KEY, APP_SECRET,
-                asyncio='asyncio', enforce_enums='enforce_enums')
+                asyncio='asyncio', enforce_enums='enforce_enums',
+                base_url=None)
 
 
     @no_duplicates
@@ -1183,6 +1280,20 @@ class SyncRevokeTest(unittest.TestCase):
         self.assertEqual([REVOKED_TOMBSTONE], self.writes)
         self.assertTrue(self.metadata.revoked)
         self.assertIsNone(self.metadata.token)
+
+    @no_duplicates
+    def test_revoke_custom_base_url(self):
+        self._ok()
+
+        client = Client(
+                API_KEY, self.mock_session,
+                token_metadata=self.metadata,
+                base_url='https://proxy.example.com')
+        self.assertIsNone(client.revoke())
+
+        self.mock_session.revoke_token.assert_called_once_with(
+                'https://proxy.example.com/v1/oauth/revoke', 'REFRESH_TOKEN',
+                token_type_hint='refresh_token')
 
     @no_duplicates
     def test_revoke_tombstone_is_secretless(self):
@@ -1312,6 +1423,21 @@ class AsyncRevokeTest(unittest.TestCase):
         self.assertEqual([REVOKED_TOMBSTONE], self.writes)
         self.assertTrue(self.metadata.revoked)
         self.assertIsNone(self.metadata.token)
+
+    @no_duplicates
+    def test_revoke_custom_base_url(self):
+        self.mock_session.revoke_token.return_value = (
+                MockResponse({}, 200))
+
+        client = ResyncProxy(AsyncClient)(
+                API_KEY, self.mock_session,
+                token_metadata=self.metadata,
+                base_url='https://proxy.example.com')
+        self.assertIsNone(client.revoke())
+
+        self.mock_session.revoke_token.assert_awaited_once_with(
+                'https://proxy.example.com/v1/oauth/revoke', 'REFRESH_TOKEN',
+                token_type_hint='refresh_token')
 
     @no_duplicates
     def test_revoke_transport_failure(self):

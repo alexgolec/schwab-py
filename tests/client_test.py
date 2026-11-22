@@ -103,6 +103,22 @@ class _TestClient:
     # Generic functionality
 
 
+    def test_base_url_default(self):
+        self.assertEqual(
+                'https://api.schwabapi.com', self.client.base_url)
+
+
+    def test_base_url_custom(self):
+        client = self.client_class(
+                API_KEY, self.mock_session,
+                base_url='https://localhost:9999/')
+        self.assertEqual('https://localhost:9999', client.base_url)
+
+        client.get_accounts()
+        self.mock_session.get.assert_called_once_with(
+                'https://localhost:9999/trader/v1/accounts', params={})
+
+
     def test_set_timeout(self):
         timeout = 'dummy'
         self.client.set_timeout(timeout)

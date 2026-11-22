@@ -35,14 +35,23 @@ class BaseClient(EnumEnforcer):
     checking status codes. For methods which support responses, they can be
     found in the response object's ``json()`` method.'''
 
+    DEFAULT_BASE_URL = 'https://api.schwabapi.com'
+
     def __init__(self, api_key, session, *, enforce_enums=True,
-                 token_metadata=None):
+                 token_metadata=None, base_url=None):
         '''Create a new client with the given API key and session. Set
-        `enforce_enums=False` to disable strict input type checking.'''
+        `enforce_enums=False` to disable strict input type checking.
+
+        :param base_url: Override the base URL used for API and OAuth
+                         requests. Defaults to ``https://api.schwabapi.com``.
+                         Useful for pointing the client at a mock server or a
+                         proxy.'''
         super().__init__(enforce_enums)
 
         self.api_key = api_key
         self.session = session
+        self.base_url = (self.DEFAULT_BASE_URL if base_url is None
+                         else base_url.rstrip('/'))
 
         # Logging-related fields
         self.logger = get_logger()
@@ -153,8 +162,6 @@ class BaseClient(EnumEnforcer):
         implementation, and the token might become expired sooner *or* later
         than the documented seven day term.'''
         return self.token_metadata.token_age()
-
-    _TOKEN_REVOKE_URL = 'https://api.schwabapi.com/v1/oauth/revoke'
 
     def revoke(self):
         '''Permanently revoke this token and make it unusable for future calls.
