@@ -3,6 +3,7 @@ from authlib.integrations.httpx_client import AsyncOAuth2Client, OAuth2Client
 import collections
 import contextlib
 import httpx2
+import inspect
 import json
 import logging
 import multiprocess
@@ -640,6 +641,13 @@ def client_from_access_functions(api_key, app_secret, token_read_func,
                      pointing the client at a mock server or a proxy.
     '''
     token = token_read_func()
+    if inspect.isawaitable(token):
+        if inspect.iscoroutine(token):
+            # Suppress 'coroutine was never awaited' warnings
+            token.close()
+        raise TypeError(
+                'token_read_func must be a function returning a token '
+                'object, not an awaitable function.')
 
     # Extract metadata and unpack the token, if necessary
     metadata = TokenMetadata.from_loaded_token(token, token_write_func)
