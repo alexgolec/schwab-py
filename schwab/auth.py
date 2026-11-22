@@ -563,6 +563,17 @@ def client_from_manual_flow(api_key, app_secret, callback_url, token_path,
 # client_from_access_functions
 
 
+def __require_sync_token_write_func(token_write_func):
+    '''Enforces that a synchronous client's token write function is
+    synchronous. An awaitable function passed to a synchronous session
+    would have its coroutine return value silently discarded by authlib
+    on every token refresh.'''
+    if inspect.iscoroutinefunction(token_write_func):
+        raise TypeError(
+                'token_write_func must be a function accepting a token '
+                'object, not an awaitable function.')
+
+
 def _client_from_token(api_key, app_secret, token, token_write_func,
                        token_metadata, asyncio, enforce_enums, base_url=None):
     '''Builds a client around an already-obtained token. Session construction
@@ -582,7 +593,17 @@ def _client_from_token(api_key, app_secret, token, token_write_func,
         session_class = AsyncOAuth2Client
         client_class = AsyncClient
     else:
-        oauth_client_update_token = token_write_func
+        def oauth_client_update_token(t, *args, **kwargs):
+            # A synchronous function masquerading as a write function but
+            # returning an awaitable would otherwise be silently discarded.
+            ret = token_write_func(t, *args, **kwargs)
+            if inspect.isawaitable(ret):
+                if inspect.iscoroutine(ret):
+                    # Suppress 'coroutine was never awaited' warnings
+                    ret.close()
+                raise TypeError(
+                        'token_write_func must be a function accepting a '
+                        'token object, not an awaitable function.')
         session_class = OAuth2Client
         client_class = Client
 
@@ -649,6 +670,9 @@ def client_from_access_functions(api_key, app_secret, token_read_func,
                 'token_read_func must be a function returning a token '
                 'object, not an awaitable function.')
 
+    if not asyncio:
+        __require_sync_token_write_func(token_write_func)
+
     # Extract metadata and unpack the token, if necessary
     metadata = TokenMetadata.from_loaded_token(token, token_write_func)
     if metadata.revoked:
@@ -708,6 +732,9 @@ def client_from_received_url(
 
     # Don't emit token details in debug logs
     register_redactions(token)
+
+    if not asyncio:
+        __require_sync_token_write_func(token_write_func)
 
     # Set up token writing and perform the initial token write
     metadata_manager = TokenMetadata(token, int(time.time()), token_write_func)

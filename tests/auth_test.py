@@ -628,6 +628,67 @@ class ClientFromAccessFunctionsTest(unittest.TestCase):
             auth.client_from_access_functions(
                     API_KEY, APP_SECRET, token_read_func, lambda t: None)
 
+    @no_duplicates
+    def test_rejects_awaitable_write_func_sync_client(self):
+        token_read_func = MagicMock(return_value=self.token)
+
+        async def token_write_func(token):
+            pass
+
+        with self.assertRaisesRegex(
+                TypeError, 'not an awaitable function'):
+            auth.client_from_access_functions(
+                    API_KEY, APP_SECRET, token_read_func, token_write_func)
+
+    @no_duplicates
+    @patch('schwab.auth.Client')
+    @patch('schwab.auth.AsyncClient')
+    @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
+    @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
+    def test_awaitable_write_func_allowed_for_async_client(
+            self, async_session, sync_session, async_client, client):
+        token_read_func = MagicMock(return_value=self.token)
+
+        async def token_write_func(token):
+            pass
+
+        async_client.return_value = 'returned client'
+        self.assertEqual('returned client',
+                         auth.client_from_access_functions(
+                             API_KEY,
+                             APP_SECRET,
+                             token_read_func,
+                             token_write_func,
+                             asyncio=True))
+        async_client.assert_called_once()
+        client.assert_not_called()
+
+    @no_duplicates
+    @patch('schwab.auth.Client')
+    @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
+    @patch('schwab.auth.AsyncOAuth2Client', new_callable=MockAsyncOAuthClient)
+    def test_rejects_awaitable_returning_write_func_at_refresh(
+            self, async_session, sync_session, client):
+        # A synchronous write function that *returns* an awaitable slips
+        # past the construction-time check but must still fail loudly at
+        # refresh time rather than silently dropping the write.
+        token_read_func = MagicMock(return_value=self.token)
+
+        async def coro():
+            pass
+
+        def token_write_func(token):
+            return coro()
+
+        auth.client_from_access_functions(
+                API_KEY, APP_SECRET, token_read_func, token_write_func)
+
+        session_call = sync_session.mock_calls[0]
+        update_token = session_call[2]['update_token']
+        with self.assertRaisesRegex(
+                TypeError, 'not an awaitable function'):
+            update_token(self.raw_token)
+
 
 # Note the client_from_received_url is called internally by the other client 
 # generation functions, so testing here is kept light
@@ -787,6 +848,27 @@ class ClientFromReceivedUrl(unittest.TestCase):
         client.assert_called_once_with(
                 API_KEY, _, token_metadata=_, enforce_enums=_,
                 base_url='https://proxy.example.com')
+
+    @no_duplicates
+    @patch('schwab.auth.OAuth2Client', new_callable=MockOAuthClient)
+    def test_rejects_awaitable_write_func(self, sync_session):
+        AUTH_URL = 'https://auth.url.com'
+
+        sync_session.return_value = sync_session
+        sync_session.create_authorization_url.return_value = \
+                AUTH_URL, 'oauth state'
+        sync_session.fetch_token.return_value = self.raw_token
+
+        auth_context = auth.get_auth_context(API_KEY, CALLBACK_URL)
+
+        async def token_write_func(token):
+            pass
+
+        with self.assertRaisesRegex(
+                TypeError, 'not an awaitable function'):
+            auth.client_from_received_url(
+                    API_KEY, APP_SECRET, auth_context,
+                    'http://redirect.url.com/?data', token_write_func)
 
 
 class ClientFromManualFlow(unittest.TestCase):
