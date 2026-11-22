@@ -103,6 +103,87 @@ because the Schwab API silently strips the sign from ``price`` and
 absolute value, inverting the order's intent. ``copy_price`` and
 ``copy_stop_price`` still bypass validation as before.
 
+Contracts Around ``date`` and ``datetime`` Parameters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+V1's use of ``date`` and ``datetime`` for specifying moments in time and days
+was inconsistent and, in some cases, subtly but importantly incorrect. They were
+also out of sync with the behavior of Schwab API itself. 
+
+V2 reforms its use of dates and times to be more correct, and to accurately
+reflect the actual values expected by the Schwab API itself. It makes the
+following changes:
+
+* Timezones are now required for methods which accept ``datetime`` objects to
+  specify instants in time. Code which generates timezone-naive instances
+  such as using ``datetime.now()`` will now see methods raise ``ValueError``
+  instead of accepting these values. For example, the call to ``datetime.now()``
+  must be replaced by one which passes a time zone explicitly such as
+  ``datetime.datetime.now(zoneinfo.ZoneInfo('America/New_York'))``.
+  
+  The methods with these new semantics are:
+
+   * :meth:`get_orders_for_account <schwab.client.Client.get_orders_for_account>`
+   * :meth:`get_orders_for_all_linked_accounts <schwab.client.Client.get_orders_for_all_linked_accounts>`
+   * :meth:`get_transactions <schwab.client.Client.get_transactions>`
+   * :meth:`get_price_history <schwab.client.Client.get_price_history>`
+   * :meth:`get_price_history_every_minute <schwab.client.Client.get_price_history_every_minute>`
+   * :meth:`get_price_history_every_five_minutes <schwab.client.Client.get_price_history_every_five_minutes>`
+   * :meth:`get_price_history_every_ten_minutes <schwab.client.Client.get_price_history_every_ten_minutes>`
+   * :meth:`get_price_history_every_fifteen_minutes <schwab.client.Client.get_price_history_every_fifteen_minutes>`
+   * :meth:`get_price_history_every_thirty_minutes <schwab.client.Client.get_price_history_every_thirty_minutes>`
+
+* Methods which accept calendar days as inputs now require ``datetime.date``
+  objects. Note that even though ``datetime.datetime`` is, strictly speaking, a
+  subclass of ``datetime.date``, we specifically detect and reject these inputs
+  rather than accepting them and ignoring their time component. As before,
+  rejection occurs by raising ``ValueError``.
+* Some method parameter names have been updated to reflect the new date
+  semantics. In particular:
+
+   * :meth:`get_transactions <schwab.client.Client.get_transactions>`:
+     ``start_date`` renamed to ``start_datetime``, ``end_date`` renamed to
+     ``end_datetime``
+   * :meth:`get_price_history_every_day <schwab.client.Client.get_price_history_every_day>`:
+     ``start_datetime`` renamed to ``start_date``, ``end_datetime`` renamed to
+     ``end_date``
+   * :meth:`get_price_history_every_week <schwab.client.Client.get_price_history_every_week>`:
+     ``start_datetime`` renamed to ``start_date``, ``end_datetime`` renamed to
+     ``end_date``
+
+* ``OptionSymbol``: ``expiration_date`` still accepts a ``datetime.date``
+  or a ``YYMMDD`` string, but now rejects ``datetime.datetime`` rather than
+  silently truncating it.
+   
+For completeness, here is a listing of the incorrect behavior of the previous
+library. If you experience changes in behavior upon migrating, please check here
+and check whether your code relied on buggy library behavior:
+
+* Some endpoints (:meth:`get_orders_for_account <schwab.client.Client.get_orders_for_account>`,
+  :meth:`get_orders_for_all_linked_accounts <schwab.client.Client.get_orders_for_all_linked_accounts>`,
+  :meth:`get_transactions <schwab.client.Client.get_transactions>`) which
+  accepted naive ``datetime``'s always
+  formatted the value with a ``Z`` suffix. This meant a naive
+  ``datetime`` would be passed to the API as though it was UTC, resulting in
+  different behavior depending on the user's time zone.
+* Those same endpoints *also* formatted timezone-aware ``datetime``'s with
+  ``Z``, shifting the input value by a different number of hours depending on
+  the user's time zone.
+* Meanwhile, endpoints which passed values to the API as timestamps
+  (:meth:`get_price_history <schwab.client.Client.get_price_history>` and the
+  ``get_price_history_every_*`` helpers)
+  converted naive ``datetime``'s using ``datetime.timestamp()``, which
+  interprets the ``datetime`` as though it were in the user's local time, and
+  then converts it to UTC. This represented an inconsistency in how naive
+  ``datetime``'s were handled.
+* Some methods (:meth:`get_orders_for_account <schwab.client.Client.get_orders_for_account>`,
+  :meth:`get_orders_for_all_linked_accounts <schwab.client.Client.get_orders_for_all_linked_accounts>`,
+  :meth:`get_transactions <schwab.client.Client.get_transactions>`) took dates
+  while the underlying API endpoints took ISO datetime strings. These dates
+  were converted to midnight UTC on that date,
+  which for users west of UTC was not on the same calendar date as the input
+  they had passed.
+
 AI Disclosure
 -------------
 

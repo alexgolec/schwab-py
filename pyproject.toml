@@ -35,6 +35,7 @@ dependencies = [
     "multiprocess",
     "psutil",
     "python-dateutil",
+    "tzdata",
     "urllib3",
     "websockets>=14.0",
 ]
