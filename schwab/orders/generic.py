@@ -79,6 +79,7 @@ class OrderBuilder(EnumEnforcer):
         self._stopType = None
         self._priceLinkBasis = None
         self._priceLinkType = None
+        self._priceOffset = None
         self._price = None
         self._orderLegCollection = None
         self._activationPrice = None
@@ -219,6 +220,9 @@ class OrderBuilder(EnumEnforcer):
         '''
         Set the stop price link basis. See
         :class:`~schwab.orders.common.StopPriceLinkBasis` for details.
+
+        Part of an all-or-nothing trio: trailing orders require
+        ``stopPriceLinkType`` and ``stopPriceOffset`` alongside it.
         '''
         stop_price_link_basis = self.convert_enum(
             stop_price_link_basis, common.StopPriceLinkBasis)
@@ -237,6 +241,9 @@ class OrderBuilder(EnumEnforcer):
         '''
         Set the stop price link type. See
         :class:`~schwab.orders.common.StopPriceLinkType` for details.
+
+        Part of an all-or-nothing trio: trailing orders require
+        ``stopPriceLinkBasis`` and ``stopPriceOffset`` alongside it.
         '''
         stop_price_link_type = self.convert_enum(
             stop_price_link_type, common.StopPriceLinkType)
@@ -254,6 +261,11 @@ class OrderBuilder(EnumEnforcer):
     def set_stop_price_offset(self, stop_price_offset):
         '''
         Set the stop price offset.
+
+        Part of an all-or-nothing trio: trailing orders require
+        ``stopPriceLinkBasis`` and ``stopPriceLinkType`` alongside it.
+        Note the API validates the sign directionally — sell orders
+        require a positive offset.
         '''
         self._stopPriceOffset = stop_price_offset
         return self
@@ -287,6 +299,11 @@ class OrderBuilder(EnumEnforcer):
         '''
         Set the price link basis. See
         :class:`~schwab.orders.common.PriceLinkBasis` for details.
+
+        Part of an all-or-nothing trio: conditional limit orders
+        require ``priceLinkType`` and ``priceOffset`` alongside it,
+        and reject it alongside a fixed ``price``. ``MANUAL`` selects
+        a fixed ``price`` instead.
         '''
         price_link_basis = self.convert_enum(
             price_link_basis, common.PriceLinkBasis)
@@ -305,6 +322,9 @@ class OrderBuilder(EnumEnforcer):
         '''
         Set the price link type. See
         :class:`~schwab.orders.common.PriceLinkType` for more details.
+
+        Part of an all-or-nothing trio: conditional limit orders
+        require ``priceLinkBasis`` and ``priceOffset`` alongside it.
         '''
         price_link_type = self.convert_enum(
             price_link_type, common.PriceLinkType)
@@ -316,6 +336,25 @@ class OrderBuilder(EnumEnforcer):
         Clear the price link basis.
         '''
         self._priceLinkType = None
+        return self
+
+    # PriceOffset
+    def set_price_offset(self, price_offset):
+        '''
+        Set the price offset used to derive the limit price of a
+        conditional order, most notably ``TRAILING_STOP_LIMIT``.
+
+        Part of an all-or-nothing trio: conditional limit orders
+        require ``priceLinkBasis`` and ``priceLinkType`` alongside it.
+        '''
+        self._priceOffset = price_offset
+        return self
+
+    def clear_price_offset(self):
+        '''
+        Clear the price offset.
+        '''
+        self._priceOffset = None
         return self
 
     # Price

@@ -3,9 +3,9 @@ import pytest
 import schwab
 from schwab.orders import equities, options
 from schwab.orders.common import (
-        Duration, OrderStrategyType, OrderType, Session,
-        SpecialInstruction, StopPriceLinkBasis, StopPriceLinkType,
-        StopType)
+        Duration, OrderStrategyType, OrderType, PriceLinkBasis,
+        PriceLinkType, Session, SpecialInstruction,
+        StopPriceLinkBasis, StopPriceLinkType, StopType)
 
 
 _S = schwab.client.Client
@@ -719,3 +719,223 @@ def test_trailing_stop_offset_sign_rule(live_client, account_hash):
     resp = live_client.preview_order(account_hash, _trailing_stop(
         equities.equity_buy_market, StopPriceLinkBasis.ASK, -5.0))
     assert resp.status_code == 200, resp.text[:200]
+
+
+################################################################################
+# priceOffset / priceLinkBasis / priceLinkType — limit-price derivation
+#
+# TRAILING_STOP_LIMIT derives its limit price from a market feed via the
+# priceLink trio, paralleling how the stopPrice trio derives the trigger.
+# These tests enshrine the field's contract, probed directly since the
+# builder's set_price_offset is a thin pass-through.
+
+def _tsl_sell(link_basis=None, link_type=None, offset='UNSET', price=None):
+    '''A minimal TRAILING_STOP_LIMIT sell with parametric price-link
+    fields. ``offset`` is injected directly to match what
+    ``builder._priceOffset`` produces; ``'UNSET'`` omits it.'''
+    builder = (equities.equity_sell_market('AAPL', 1)
+            .set_order_type(OrderType.TRAILING_STOP_LIMIT)
+            .set_stop_type(StopType.STANDARD)
+            .set_stop_price_link_basis(StopPriceLinkBasis.BID)
+            .set_stop_price_link_type(StopPriceLinkType.VALUE)
+            .set_stop_price_offset(5.0))
+    if link_basis is not None:
+        builder.set_price_link_basis(link_basis)
+    if link_type is not None:
+        builder.set_price_link_type(link_type)
+    if offset != 'UNSET':
+        builder._priceOffset = offset
+    if price is not None:
+        builder.copy_price(price)
+    return builder
+
+
+def test_fixed_price_requires_a_basis(live_client, account_hash):
+    '''A fixed price alone is not a valid limit for a TSL order — the
+    API demands a priceLinkBasis to say how the limit derives, and the
+    error names the field.'''
+    resp = live_client.preview_order(
+            account_hash, _tsl_sell(price='300.00'))
+    assert resp.status_code == 400
+    assert 'Price link basis must be populated for trailing ' \
+            'stop limit orders' in resp.text
+
+
+def test_no_basis_no_price_is_generic_limit_error(live_client,
+                                                  account_hash):
+    '''With neither a basis nor a price the API checks the derived
+    limit first: both a bare TSL and link fields without a basis hit
+    the generic 'limit price cannot be zero' rejection instead of the
+    basis-specific error.'''
+    for builder in (
+            _tsl_sell(),
+            _tsl_sell(link_type=PriceLinkType.VALUE, offset=0.10)):
+        resp = live_client.preview_order(account_hash, builder)
+        assert resp.status_code == 400
+        assert 'Limit price cannot be zero' in resp.text
+
+
+def test_market_data_bases_accepted(live_client, account_hash):
+    '''Every market-data basis derives the limit price: the trio of
+    basis + type + offset yields a 200. Note the echo strips all three
+    link fields — orderStrategy reports them as null.'''
+    for basis in (PriceLinkBasis.LAST, PriceLinkBasis.BID,
+                  PriceLinkBasis.ASK, PriceLinkBasis.ASK_BID,
+                  PriceLinkBasis.MARK, PriceLinkBasis.AVERAGE):
+        resp = live_client.preview_order(account_hash, _tsl_sell(
+                link_basis=basis, link_type=PriceLinkType.VALUE,
+                offset=0.10))
+        assert resp.status_code == 200, (basis, resp.text[:200])
+        strategy = resp.json()['orderStrategy']
+        for field in ('priceOffset', 'priceLinkBasis', 'priceLinkType'):
+            assert strategy.get(field) is None
+
+
+def test_trigger_basis_is_child_only(live_client, account_hash):
+    '''TRIGGER is not usable on a standalone order — the API reserves
+    it for child orders of trigger strategies.'''
+    resp = live_client.preview_order(account_hash, _tsl_sell(
+            link_basis=PriceLinkBasis.TRIGGER,
+            link_type=PriceLinkType.VALUE, offset=0.10))
+    assert resp.status_code == 400
+    assert 'Price link trigger only allowed on children of ' \
+            'trigger orders' in resp.text
+
+
+def test_manual_is_the_fixed_price_path(live_client, account_hash):
+    '''basis=MANUAL switches the order to a fixed limit price: with a
+    price the order previews (price echoed), and link type/offset are
+    then *rejected* as misplaced fields.'''
+    resp = live_client.preview_order(account_hash, _tsl_sell(
+            link_basis=PriceLinkBasis.MANUAL, price='300.00'))
+    assert resp.status_code == 200, resp.text[:200]
+    strategy = resp.json()['orderStrategy']
+    assert strategy['price'] == 300.0
+
+    # MANUAL + link type or offset: treated as non-link order, fields
+    # rejected outright
+    resp = live_client.preview_order(account_hash, _tsl_sell(
+            link_basis=PriceLinkBasis.MANUAL,
+            link_type=PriceLinkType.VALUE, price='300.00'))
+    assert resp.status_code == 400
+    assert 'Price link type must be populated only' in resp.text
+
+    resp = live_client.preview_order(account_hash, _tsl_sell(
+            link_basis=PriceLinkBasis.MANUAL, price='300.00',
+            offset=0.10))
+    assert resp.status_code == 400
+    assert 'Price offset must be populated only' in resp.text
+
+
+def test_base_behaves_like_no_basis(live_client, account_hash):
+    '''basis=BASE does not derive a limit price — the order falls
+    through to the generic 'limit price cannot be zero' rejection,
+    same as supplying no basis at all.'''
+    resp = live_client.preview_order(account_hash, _tsl_sell(
+            link_basis=PriceLinkBasis.BASE,
+            link_type=PriceLinkType.VALUE, offset=0.10))
+    assert resp.status_code == 400
+    assert 'Limit price cannot be zero' in resp.text
+
+
+def test_link_trio_is_all_or_nothing(live_client, account_hash):
+    '''With a non-MANUAL basis, type and offset are independently
+    required — each missing field is named in its own error.'''
+    resp = live_client.preview_order(account_hash, _tsl_sell(
+            link_basis=PriceLinkBasis.LAST,
+            link_type=PriceLinkType.VALUE))
+    assert resp.status_code == 400
+    assert 'Price offset must be populated' in resp.text
+
+    resp = live_client.preview_order(account_hash, _tsl_sell(
+            link_basis=PriceLinkBasis.LAST, offset=0.10))
+    assert resp.status_code == 400
+    assert 'Price link type must be populated' in resp.text
+
+
+def test_price_offset_types_and_sign(live_client, account_hash):
+    '''The offset accepts floats, ints, numeric strings, and zero —
+    and unlike stopPriceOffset there is no directional sign check on
+    either side. Non-numeric values are rejected.'''
+    for offset in (0.10, -0.10, 0.0, 2, '0.10'):
+        resp = live_client.preview_order(account_hash, _tsl_sell(
+                link_basis=PriceLinkBasis.LAST,
+                link_type=PriceLinkType.VALUE, offset=offset))
+        assert resp.status_code == 200, (offset, resp.text[:200])
+
+    for offset in ('abc', 'nan'):
+        resp = live_client.preview_order(account_hash, _tsl_sell(
+                link_basis=PriceLinkBasis.LAST,
+                link_type=PriceLinkType.VALUE, offset=offset))
+        assert resp.status_code == 400, offset
+        assert 'Invalid value' in resp.text
+
+
+def test_price_link_fields_rejected_on_other_order_types(
+        live_client, account_hash):
+    '''priceOffset, priceLinkBasis and priceLinkType are all rejected
+    on MARKET, LIMIT and TRAILING_STOP orders — despite an error
+    message that claims stop-limit and limit-on-close orders accept
+    them. STOP_LIMIT rejects them too.'''
+    specs = []
+
+    b = equities.equity_sell_market('AAPL', 1)
+    b._priceOffset = 0.10
+    specs.append(b)
+
+    b = equities.equity_sell_limit('AAPL', 1, '400.00')
+    b._priceOffset = 0.10
+    specs.append(b)
+
+    b = (equities.equity_sell_market('AAPL', 1)
+            .set_order_type(OrderType.TRAILING_STOP)
+            .set_stop_type(StopType.STANDARD)
+            .set_stop_price_link_basis(StopPriceLinkBasis.BID)
+            .set_stop_price_link_type(StopPriceLinkType.VALUE)
+            .set_stop_price_offset(5.0))
+    b._priceOffset = 0.10
+    specs.append(b)
+
+    for builder in specs:
+        resp = live_client.preview_order(account_hash, builder)
+        assert resp.status_code == 400
+        assert 'Price offset must be populated only' in resp.text
+
+    # The message names "stop limit or trailing stop limit" as valid
+    # recipients, but STOP_LIMIT rejects the link fields anyway.
+    b = (equities.equity_sell_limit('AAPL', 1, '300.00')
+            .set_order_type(OrderType.STOP_LIMIT)
+            .copy_stop_price('340.00')
+            .set_price_link_basis(PriceLinkBasis.LAST)
+            .set_price_link_type(PriceLinkType.VALUE))
+    b._priceOffset = 0.10
+    resp = live_client.preview_order(account_hash, b)
+    assert resp.status_code == 400
+    assert 'Price link type must be populated only' in resp.text
+
+
+def test_price_offset_buy_side_matrix(live_client, account_hash):
+    '''The buy side accepts the same link configurations, including
+    PERCENT and TICK types and negative offsets — again with no
+    directional sign enforcement.'''
+    def buy_tsl(link_type, offset):
+        b = (equities.equity_buy_market('AAPL', 1)
+                .set_order_type(OrderType.TRAILING_STOP_LIMIT)
+                .set_stop_type(StopType.STANDARD)
+                .set_stop_price_link_basis(StopPriceLinkBasis.ASK)
+                .set_stop_price_link_type(StopPriceLinkType.VALUE)
+                .set_stop_price_offset(-5.0)
+                .set_price_link_basis(PriceLinkBasis.LAST)
+                .set_price_link_type(link_type))
+        b._priceOffset = offset
+        return b
+
+    for link_type, offset in (
+            (PriceLinkType.VALUE, -0.10),
+            (PriceLinkType.VALUE, 0.10),
+            (PriceLinkType.PERCENT, 0.5),
+            (PriceLinkType.TICK, 2)):
+        resp = live_client.preview_order(
+                account_hash, buy_tsl(link_type, offset))
+        assert resp.status_code == 200, (link_type, offset,
+                                         resp.text[:200])
