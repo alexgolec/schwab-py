@@ -1845,3 +1845,110 @@ class StreamClient(EnumEnforcer):
         '''
         self._handlers['SCREENER_OPTION'].append(
             _Handler(handler, self.ScreenerFields))
+
+    ##########################################################################
+    # NEWS_HEADLINE
+
+    class NewsHeadlineFields(_BaseFieldEnum):
+        '''
+        Data fields for news headlines. This stream was well-documented in the
+        precursor TDAmeritrade API, but appears undocumented in Schwab's API.
+        This ``schwab-py`` functionality was derived from a combination of
+        applying old documentation and reverse engineering. As a result, users
+        use this stream at their own risk, since its functionality may change
+        at any time.
+        '''
+
+        #: Ticker symbol in upper case. Represented in the stream as the
+        #: ``key`` field.
+        SYMBOL = 0
+
+        #: Headline's datetime in milliseconds since epoch.
+        #:
+        #: *Note:* This field's equivalent in ``tda-api`` had an enum value of ``2``.
+        STORY_DATETIME = 1
+
+        #: Unique ID for the headline. A story is delivered once per
+        #: related subscribed key and is also observed delivered twice on
+        #: the same key, so dedup on this field.
+        #:
+        #: *Note:* This field's equivalent in ``tda-api`` had an enum value of ``3``.
+        HEADLINE_ID = 2
+
+        #: Story status. Observed values include ``'A'`` and ``'D'``.
+        #:
+        #: *Note:* This field's equivalent in ``tda-api`` had an enum value of ``4``.
+        STATUS = 3
+
+        #: Headline text; may be in languages other than English, in which
+        #: case ``LANGUAGE`` carries the locale.
+        #:
+        #: *Note:* This field's equivalent in ``tda-api`` had an enum value of ``5``.
+        HEADLINE = 4
+
+        #: Story ID. Appears to correspond to the ``HEADLINE_ID`` field
+        #: from ``tda-api``.
+        #:
+        #: *Note:* This field's equivalent in ``tda-api`` had an enum value of ``6``.
+        STORY_ID = 5
+
+        #: Array of topic keywords, e.g. ``'Technology'``.
+        #: *Note:* This field's equivalent in ``tda-api`` had an enum value of ``8``.
+        #: Also, the shape of this data appears to have changed from a comma-separated
+        #: list of string keywords to a JSON array of strings.
+        KEYWORD_ARRAY = 6
+
+        #: Array of ticker symbols related to the story; stories are
+        #: delivered on every subscribed key they relate to.
+        RELATED_SYMBOLS = 7
+
+        #: Whether the story is flagged as hot.
+        #:
+        #: *Note:* This field's equivalent in ``tda-api`` had an enum value of ``9``.
+        IS_HOT = 8
+
+        #: Story source, e.g. ``'GlobeNewswire'``, ``'Briefing.com'``,
+        #: ``'Reuters'``, etc.
+        #:
+        #: *Note:* This field's equivalent in ``tda-api`` had an enum value of ``10``.
+        STORY_SOURCE = 9
+
+        #: Full story text; may be empty for sources without a body.
+        #: Replaces TDA's separate ``NEWS_STORY`` service, which the
+        #: gateway still recognizes but reports unavailable.
+        STORY_TEXT = 10
+
+        #: Language code, e.g. ``'en-US'``; arrives even when not
+        #: requested.
+        LANGUAGE = 11
+
+    async def news_headline_subs(self, symbols):
+        '''
+        Subscribe to news headlines related to the given symbols. This is
+        the only surviving member of TDA's documented news services:
+        ``NEWS_HEADLINELIST`` (historical headlines) and ``NEWS_STORY``
+        (story bodies) are both still recognized by the gateway but
+        rejected with code 11 'Service not available or temporary down'.
+        Story text now arrives inline as ``STORY_TEXT``.
+
+        :param symbols: Equity symbols to subscribe to.
+        '''
+        await self._service_op(
+            symbols, 'NEWS_HEADLINE', 'SUBS', self.NewsHeadlineFields,
+            fields=self.NewsHeadlineFields.all_fields())
+
+    async def news_headline_unsubs(self, symbols):
+        '''
+        Un-Subscribe to news headlines related to the given symbols.
+
+        :param symbols: Equity symbols to unsubscribe from.
+        '''
+        await self._service_op(symbols, 'NEWS_HEADLINE', 'UNSUBS')
+
+    def add_news_headline_handler(self, handler):
+        '''
+        Register a function to handle news headlines as they are provided.
+        See :ref:`registering_handlers` for details.
+        '''
+        self._handlers['NEWS_HEADLINE'].append(
+            _Handler(handler, self.NewsHeadlineFields))

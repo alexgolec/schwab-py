@@ -1,10 +1,13 @@
 '''Live tests for schwab.streaming.StreamClient.
 
-These tests enshrine the wire behavior observed while the relevant
-market is closed: subscription handshake semantics, snapshot shapes,
-and which services do and do not send data on a closed book. Tests
-gated on market status skip when that market is open; protocol-level
-tests (login/logout, error paths, heartbeats) run unconditionally.
+Most of the market-data tests enshrine the wire behavior observed
+while the relevant market is closed: subscription handshake
+semantics, snapshot shapes, and which services do and do not send
+data on a closed book. Tests gated on market status skip when that
+market is open; protocol-level tests (login/logout, error paths,
+heartbeats) run unconditionally. The NEWS_HEADLINE section is the
+exception: news is not session-dependent, so most of its tests run
+in either state and one is gated on the equity market being open.
 
 The whole module shares one event loop and one logged-in stream:
 websockets bind to the loop that opened them, so a per-test loop or
@@ -127,6 +130,15 @@ def _skip_if_open(live_client, market, name):
     if conftest.market_is_open(live_client, market):
         pytest.skip(f'{name} market is open; this test enshrines '
                     'closed-market streaming behavior')
+
+
+def _skip_if_closed(live_client, market, name):
+    '''Skips the calling test when the named market is closed: used
+    by the news-headline live-stream enshrinement, which needs the
+    headline feed to be actively publishing.'''
+    if not conftest.market_is_open(live_client, market):
+        pytest.skip(f'{name} market is closed; this test enshrines '
+                    'open-market streaming behavior')
 
 
 def _item(msg):
@@ -668,3 +680,217 @@ def test_screener_option_na_items_market_closed(
         stream_loop.run_until_complete(
                 stream_client.screener_option_unsubs(
                         ['OPTION_CALL_VOLUME_0']))
+
+
+################################################################################
+# News headlines
+#
+# NEWS_HEADLINE follows the field map TDA documented for its service of
+# the same name, verified against the live stream; Schwab dropped TDA's
+# Error Code field (shifting the rest down one position) and added
+# STORY_TEXT and LANGUAGE. TDA's sister services NEWS_HEADLINELIST and
+# NEWS_STORY are still recognized but report code 11 'not available';
+# an unrecognized name returns code 21 and the server closes the
+# socket. Unlike the market-data services it is not session-dependent:
+# subscribing replays a snapshot of recent headlines for each key
+# regardless of market state.
+
+_NHF = StreamClient.NewsHeadlineFields
+
+
+def test_news_headline_snapshot_replay(
+        live_client, stream_client, stream_loop):
+    '''NEWS_HEADLINE SUBS replays a snapshot of recent headlines for
+    each key — items days old arrive immediately, before any live
+    updates. All data, replayed and live, arrives under command
+    'SUBS'. The relabeled item carries the symbol as 'key', a
+    per-key 'seq' counter of the rolling buffer, and the
+    TDA-documented field set. Stories are delivered once per related
+    subscribed key and may also repeat on the same key — identical
+    HEADLINE_ID, distinct seq.'''
+    captured, handler = _capture()
+    stream_client.add_news_headline_handler(handler)
+    try:
+        stream_loop.run_until_complete(
+                stream_client.news_headline_subs(['AAPL']))
+        msg = stream_loop.run_until_complete(
+                _drive(stream_client, captured))
+        assert msg is not None, 'no headline replay within timeout'
+        assert msg['service'] == 'NEWS_HEADLINE'
+        assert msg['command'] == 'SUBS'
+        item = _item(msg)
+        assert item['key'] == 'AAPL'
+        assert isinstance(item['seq'], int)
+        assert item['STORY_DATETIME'] > 0
+        assert item['HEADLINE_ID']
+        assert item['STATUS'] in ('A', 'D')
+        assert item['HEADLINE']
+        assert item['STORY_ID'] == item['HEADLINE_ID']
+        assert isinstance(item['KEYWORD_ARRAY'], list)
+        assert isinstance(item['RELATED_SYMBOLS'], list)
+        assert isinstance(item['IS_HOT'], bool)
+        assert item['STORY_SOURCE']
+        assert 'STORY_TEXT' in item
+    finally:
+        stream_loop.run_until_complete(
+                stream_client.news_headline_unsubs(['AAPL']))
+
+
+def test_news_headline_fields_required(
+        live_client, stream_client, stream_loop):
+    '''A NEWS_HEADLINE SUBS with no fields parameter is rejected
+    with code 22 'SUBS command failed' — unlike other services the
+    field list is mandatory.'''
+    with pytest.raises(UnexpectedResponseCode) as exc_info:
+        stream_loop.run_until_complete(
+                stream_client._service_op(
+                        ['AAPL'], 'NEWS_HEADLINE', 'SUBS'))
+    resp = exc_info.value.response
+    assert resp['response'][0]['content']['code'] == 22
+
+
+def test_news_headline_field_zero_required(
+        live_client, stream_client, stream_loop):
+    '''A field subset that omits field 0 (the key) is rejected with
+    code 22; requesting field 0 alone succeeds, so the key field is
+    the mandatory element of the field list.'''
+    with pytest.raises(UnexpectedResponseCode) as exc_info:
+        stream_loop.run_until_complete(
+                stream_client._service_op(
+                        ['AAPL'], 'NEWS_HEADLINE', 'SUBS',
+                        _NHF, fields=[
+                                _NHF.STORY_DATETIME, _NHF.HEADLINE,
+                                _NHF.STORY_SOURCE]))
+    resp = exc_info.value.response
+    assert resp['response'][0]['content']['code'] == 22
+    try:
+        stream_loop.run_until_complete(
+                stream_client._service_op(
+                        ['AAPL'], 'NEWS_HEADLINE', 'SUBS',
+                        _NHF, fields=[_NHF.SYMBOL]))
+    finally:
+        stream_loop.run_until_complete(
+                stream_client.news_headline_unsubs(['AAPL']))
+
+
+def test_news_headline_unsubs(
+        live_client, stream_client, stream_loop):
+    '''UNSUBS on an active NEWS_HEADLINE subscription is acked with
+    code 0 and no further headlines arrive for the key.'''
+    captured, handler = _capture()
+    stream_client.add_news_headline_handler(handler)
+    stream_loop.run_until_complete(
+            stream_client.news_headline_subs(['MSFT']))
+    stream_loop.run_until_complete(
+            _drive(stream_client, captured))
+    stream_loop.run_until_complete(
+            stream_client.news_headline_unsubs(['MSFT']))
+    captured.clear()
+    stream_loop.run_until_complete(_collect_silence(stream_client, 4))
+    assert captured == []
+
+
+def test_news_headlinelist_recognized_but_unavailable(
+        live_client, stream_client, stream_loop):
+    '''TDA's historical NEWS_HEADLINELIST service is still recognized
+    by the gateway — a SUBS returns code 11 'Service not available or
+    temporary down', distinct from the code 21 'Bad command
+    formatting' that invalid service names produce.'''
+    with pytest.raises(UnexpectedResponseCode) as exc_info:
+        stream_loop.run_until_complete(
+                stream_client._service_op(
+                        ['AAPL'], 'NEWS_HEADLINELIST', 'SUBS',
+                        _NHF, fields=_NHF.all_fields()))
+    resp = exc_info.value.response
+    content = resp['response'][0]['content']
+    assert content['code'] == 11
+    assert 'not available' in content['msg']
+
+
+def test_news_story_recognized_but_unavailable(
+        live_client, stream_client, stream_loop):
+    '''TDA's NEWS_STORY service is still recognized by the gateway:
+    a SUBS on a story ID returns code 11 'Service not available or
+    temporary down' rather than bad-format. Story text instead
+    arrives inline as NEWS_HEADLINE's STORY_TEXT field.'''
+    with pytest.raises(UnexpectedResponseCode) as exc_info:
+        stream_loop.run_until_complete(
+                stream_client._service_op(
+                        ['tag_reuters_com_2026-01-01_newsml_XXX'],
+                        'NEWS_STORY', 'SUBS',
+                        _NHF, fields=_NHF.all_fields()))
+    resp = exc_info.value.response
+    content = resp['response'][0]['content']
+    assert content['code'] == 11
+    assert 'not available' in content['msg']
+
+
+def test_unrecognized_service_closes_socket(
+        live_client, stream_client, stream_loop):
+    '''A service name the gateway does not recognize is fatal to the
+    session: the SUBS returns code 21 'Bad command formatting' and
+    the server then closes the websocket. Re-login restores the
+    shared session for later tests.'''
+    global _PENDING_MSG_TASK
+    if _PENDING_MSG_TASK is not None:
+        # A stashed handle_message task dies with the socket; drop it
+        # so the next _pump_once doesn't re-raise the stale close.
+        _PENDING_MSG_TASK.cancel()
+        _PENDING_MSG_TASK = None
+    with pytest.raises(UnexpectedResponseCode) as exc_info:
+        stream_loop.run_until_complete(
+                stream_client._service_op(
+                        ['AAPL'], 'NOT_A_SERVICE', 'SUBS',
+                        _NHF, fields=_NHF.all_fields()))
+    resp = exc_info.value.response
+    assert resp['response'][0]['content']['code'] == 21
+
+    async def _await_close():
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline:
+            await asyncio.wait_for(
+                    stream_client._receive(),
+                    deadline - time.monotonic())
+    with pytest.raises(websockets.exceptions.ConnectionClosed):
+        stream_loop.run_until_complete(_await_close())
+    stream_loop.run_until_complete(stream_client.login())
+
+
+def test_news_headline_live_items_market_open(
+        live_client, stream_client, stream_loop):
+    '''While the equity market is open the feed actively publishes:
+    within a broad basket of symbols at least one headline arrives
+    whose STORY_DATETIME is at or after the subscription, mixed in
+    with older replay items under the same command 'SUBS'.'''
+    _skip_if_closed(live_client, _Market.EQUITY, 'equity')
+    basket = ['AAPL', 'MSFT', 'TSLA', 'SPY', 'QQQ', 'NVDA', 'AMD',
+              'META', 'JPM', 'WMT']
+    captured, handler = _capture()
+    stream_client.add_news_headline_handler(handler)
+    try:
+        stream_loop.run_until_complete(
+                stream_client.news_headline_subs(basket))
+        deadline = time.monotonic() + 90
+        sub_time_ms = int(time.time() * 1000)
+        fresh = None
+        while fresh is None and time.monotonic() < deadline:
+            if not stream_loop.run_until_complete(
+                    _pump_once(stream_client, deadline)):
+                break
+            for msg in captured:
+                for item in msg.get('content', []):
+                    # Allow ~10min of feed-side timestamp slack;
+                    # observed live items post within seconds.
+                    if item.get('STORY_DATETIME', 0) >= \
+                            sub_time_ms - 600000:
+                        fresh = item
+                        break
+                if fresh is not None:
+                    break
+        assert fresh is not None, \
+                'no live headline within 90s on an open market'
+        assert fresh['key'] in basket
+        assert fresh['STATUS'] in ('A', 'D')
+    finally:
+        stream_loop.run_until_complete(
+                stream_client.news_headline_unsubs(basket))
