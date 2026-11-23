@@ -5,6 +5,9 @@ market is closed: subscription handshake semantics, snapshot shapes,
 and which services do and do not send data on a closed book. Tests
 gated on market status skip when that market is open; protocol-level
 tests (login/logout, error paths, heartbeats) run unconditionally.
+The NEWS_HEADLINE section is the exception: news is not
+session-dependent, so most of its tests run in either state and one
+is gated on the equity market being open.
 
 The whole module shares one event loop and one logged-in stream:
 websockets bind to the loop that opened them, so a per-test loop or
@@ -127,6 +130,15 @@ def _skip_if_open(live_client, market, name):
     if conftest.market_is_open(live_client, market):
         pytest.skip(f'{name} market is open; this test enshrines '
                     'closed-market streaming behavior')
+
+
+def _skip_if_closed(live_client, market, name):
+    '''Skips the calling test when the named market is closed: used
+    by the news-headline live-stream enshrinement, which needs the
+    headline feed to be actively publishing.'''
+    if not conftest.market_is_open(live_client, market):
+        pytest.skip(f'{name} market is closed; this test enshrines '
+                    'open-market streaming behavior')
 
 
 def _item(msg):
@@ -685,8 +697,11 @@ def test_news_headline_snapshot_replay(
         live_client, stream_client, stream_loop):
     '''NEWS_HEADLINE SUBS replays a snapshot of recent headlines for
     each key — items days old arrive immediately, before any live
-    updates. The relabeled item carries the symbol as 'key', a
-    per-key 'seq' counter, and the probed field set.'''
+    updates. All data, replayed and live, arrives under command
+    'SUBS'. The relabeled item carries the symbol as 'key', a
+    per-key 'seq' counter of the rolling buffer, and the probed
+    field set. Stories may be delivered twice with identical
+    HEADLINE_ID and distinct seq.'''
     captured, handler = _capture()
     stream_client.add_news_headline_handler(handler)
     try:
@@ -767,3 +782,43 @@ def test_news_headline_unsubs(
     captured.clear()
     stream_loop.run_until_complete(_collect_silence(stream_client, 4))
     assert captured == []
+
+
+def test_news_headline_live_items_market_open(
+        live_client, stream_client, stream_loop):
+    '''While the equity market is open the feed actively publishes:
+    within a broad basket of symbols at least one headline arrives
+    whose STORY_DATETIME is at or after the subscription, mixed in
+    with older replay items under the same command 'SUBS'.'''
+    _skip_if_closed(live_client, _Market.EQUITY, 'equity')
+    basket = ['AAPL', 'MSFT', 'TSLA', 'SPY', 'QQQ', 'NVDA', 'AMD',
+              'META', 'JPM', 'WMT']
+    captured, handler = _capture()
+    stream_client.add_news_headline_handler(handler)
+    try:
+        stream_loop.run_until_complete(
+                stream_client.news_headline_subs(basket))
+        deadline = time.monotonic() + 90
+        sub_time_ms = int(time.time() * 1000)
+        fresh = None
+        while fresh is None and time.monotonic() < deadline:
+            if not stream_loop.run_until_complete(
+                    _pump_once(stream_client, deadline)):
+                break
+            for msg in captured:
+                for item in msg.get('content', []):
+                    # Allow ~10min of feed-side timestamp slack;
+                    # observed live items post within seconds.
+                    if item.get('STORY_DATETIME', 0) >= \
+                            sub_time_ms - 600000:
+                        fresh = item
+                        break
+                if fresh is not None:
+                    break
+        assert fresh is not None, \
+                'no live headline within 90s on an open market'
+        assert fresh['key'] in basket
+        assert fresh['STATUS'] in ('A', 'D')
+    finally:
+        stream_loop.run_until_complete(
+                stream_client.news_headline_unsubs(basket))

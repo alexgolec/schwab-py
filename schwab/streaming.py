@@ -1901,7 +1901,10 @@ class StreamClient(EnumEnforcer):
         service is undocumented in the Schwab streaming API; its semantics
         were probed from the live stream. Upon subscription the service
         replays a snapshot of recent headlines for each symbol before live
-        updates begin.
+        updates begin. All items — replayed and live — arrive under
+        command ``SUBS``, ``seq`` is a per-key counter of the rolling
+        buffer, and a story may be delivered twice with identical
+        ``HEADLINE_ID`` and distinct ``seq``.
 
         :param symbols: Equity symbols to subscribe to.
         '''
