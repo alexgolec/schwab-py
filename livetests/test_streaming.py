@@ -1,13 +1,13 @@
 '''Live tests for schwab.streaming.StreamClient.
 
-These tests enshrine the wire behavior observed while the relevant
-market is closed: subscription handshake semantics, snapshot shapes,
-and which services do and do not send data on a closed book. Tests
-gated on market status skip when that market is open; protocol-level
-tests (login/logout, error paths, heartbeats) run unconditionally.
-The NEWS_HEADLINE section is the exception: news is not
-session-dependent, so most of its tests run in either state and one
-is gated on the equity market being open.
+Most of the market-data tests enshrine the wire behavior observed
+while the relevant market is closed: subscription handshake
+semantics, snapshot shapes, and which services do and do not send
+data on a closed book. Tests gated on market status skip when that
+market is open; protocol-level tests (login/logout, error paths,
+heartbeats) run unconditionally. The NEWS_HEADLINE section is the
+exception: news is not session-dependent, so most of its tests run
+in either state and one is gated on the equity market being open.
 
 The whole module shares one event loop and one logged-in stream:
 websockets bind to the loop that opened them, so a per-test loop or
