@@ -1871,10 +1871,9 @@ class StreamClient(EnumEnforcer):
         #: Headline's datetime in milliseconds since epoch. (TDA field 2.)
         STORY_DATETIME = 1
 
-        #: Unique ID for the headline, e.g. a Reuters ``newsml`` tag.
-        #: A story may be delivered once per related subscribed key and is
-        #: also observed delivered twice on the same key, so dedup on this
-        #: field. (TDA field 3.)
+        #: Unique ID for the headline. A story is delivered once per
+        #: related subscribed key and is also observed delivered twice on
+        #: the same key, so dedup on this field. (TDA field 3.)
         HEADLINE_ID = 2
 
         #: Story status. Observed values ``'A'`` and ``'D'``; TDA's own
@@ -1910,7 +1909,8 @@ class StreamClient(EnumEnforcer):
 
         #: Full story text; may be empty for sources without a body.
         #: Schwab-only field; effectively replaces TDA's separate
-        #: ``NEWS_STORY`` service, which no longer exists on the streamer.
+        #: ``NEWS_STORY`` service, which the gateway still recognizes but
+        #: reports unavailable.
         STORY_TEXT = 10
 
         #: Language code, e.g. ``'en-US'``. Schwab-only field; arrives
@@ -1920,17 +1920,21 @@ class StreamClient(EnumEnforcer):
     async def news_headline_subs(self, symbols):
         '''
         Subscribe to news headlines related to the given symbols. This is
-        the surviving member of TDA's documented news services: the
-        historical ``NEWS_HEADLINELIST`` service is recognized but
-        unavailable, and ``NEWS_STORY`` closes the socket — story text now
-        arrives inline as ``STORY_TEXT``.
+        the only surviving member of TDA's documented news services:
+        ``NEWS_HEADLINELIST`` (historical headlines) and ``NEWS_STORY``
+        (story bodies) are both still recognized by the gateway but
+        rejected with code 11 'Service not available or temporary down' —
+        story text now arrives inline as ``STORY_TEXT``.
 
-        Upon subscription the service replays a snapshot of recent
-        headlines for each symbol before live updates begin. All items —
-        replayed and live — arrive under command ``SUBS``, ``seq`` is a
-        per-key counter of the rolling buffer, and a story is delivered
-        once per related subscribed key and sometimes twice on the same
-        key, so dedup on ``HEADLINE_ID``.
+        TDA documented this service as ``All Sequence`` delivery —
+        sequenced, conflated, available 24 hours — and both hold on the
+        Schwab streamer: headlines arrive in any session state, keyed by
+        ``seq``. Upon subscription the service replays a snapshot of
+        recent headlines for each symbol before live updates begin. All
+        items — replayed and live — arrive under command ``SUBS``,
+        ``seq`` is a per-key counter of the rolling buffer, and a story
+        is delivered once per related subscribed key and sometimes twice
+        on the same key, so dedup on ``HEADLINE_ID``.
 
         :param symbols: Equity symbols to subscribe to.
         '''

@@ -688,9 +688,12 @@ def test_screener_option_na_items_market_closed(
 # NEWS_HEADLINE follows the field map TDA documented for its service of
 # the same name, verified against the live stream; Schwab dropped TDA's
 # Error Code field (shifting the rest down one position) and added
-# STORY_TEXT and LANGUAGE. Unlike the market-data services it is not
-# session-dependent: subscribing replays a snapshot of recent headlines
-# for each key regardless of market state.
+# STORY_TEXT and LANGUAGE. TDA's sister services NEWS_HEADLINELIST and
+# NEWS_STORY are still recognized but report code 11 'not available';
+# an unrecognized name returns code 21 and the server closes the
+# socket. Unlike the market-data services it is not session-dependent:
+# subscribing replays a snapshot of recent headlines for each key
+# regardless of market state.
 
 _NHF = StreamClient.NewsHeadlineFields
 
@@ -804,23 +807,52 @@ def test_news_headlinelist_recognized_but_unavailable(
     assert 'not available' in content['msg']
 
 
-def test_news_story_closes_socket(
+def test_news_story_recognized_but_unavailable(
         live_client, stream_client, stream_loop):
-    '''TDA's NEWS_STORY service is gone: requesting it closes the
-    websocket outright with a 1000 normal close. Re-login restores
-    the shared session for later tests.'''
+    '''TDA's NEWS_STORY service is still recognized by the gateway:
+    a SUBS on a story ID returns code 11 'Service not available or
+    temporary down' rather than bad-format. Story text instead
+    arrives inline as NEWS_HEADLINE's STORY_TEXT field.'''
+    with pytest.raises(UnexpectedResponseCode) as exc_info:
+        stream_loop.run_until_complete(
+                stream_client._service_op(
+                        ['tag_reuters_com_2026-01-01_newsml_XXX'],
+                        'NEWS_STORY', 'SUBS',
+                        _NHF, fields=_NHF.all_fields()))
+    resp = exc_info.value.response
+    content = resp['response'][0]['content']
+    assert content['code'] == 11
+    assert 'not available' in content['msg']
+
+
+def test_unrecognized_service_closes_socket(
+        live_client, stream_client, stream_loop):
+    '''A service name the gateway does not recognize is fatal to the
+    session: the SUBS returns code 21 'Bad command formatting' and
+    the server then closes the websocket. Re-login restores the
+    shared session for later tests.'''
     global _PENDING_MSG_TASK
     if _PENDING_MSG_TASK is not None:
         # A stashed handle_message task dies with the socket; drop it
         # so the next _pump_once doesn't re-raise the stale close.
         _PENDING_MSG_TASK.cancel()
         _PENDING_MSG_TASK = None
-    with pytest.raises(websockets.exceptions.ConnectionClosed):
+    with pytest.raises(UnexpectedResponseCode) as exc_info:
         stream_loop.run_until_complete(
                 stream_client._service_op(
-                        ['tag_reuters_com_2026-01-01_newsml_XXX'],
-                        'NEWS_STORY', 'SUBS',
+                        ['AAPL'], 'NOT_A_SERVICE', 'SUBS',
                         _NHF, fields=_NHF.all_fields()))
+    resp = exc_info.value.response
+    assert resp['response'][0]['content']['code'] == 21
+
+    async def _await_close():
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline:
+            await asyncio.wait_for(
+                    stream_client._receive(),
+                    deadline - time.monotonic())
+    with pytest.raises(websockets.exceptions.ConnectionClosed):
+        stream_loop.run_until_complete(_await_close())
     stream_loop.run_until_complete(stream_client.login())
 
 
