@@ -1924,13 +1924,12 @@ class StreamClient(EnumEnforcer):
         STORY_SOURCE = 9
 
         #: Full story text; may be empty for sources without a body.
-        #: Schwab-only field; effectively replaces TDA's separate
-        #: ``NEWS_STORY`` service, which the gateway still recognizes but
-        #: reports unavailable.
+        #: Replaces TDA's separate ``NEWS_STORY`` service, which the
+        #: gateway still recognizes but reports unavailable.
         STORY_TEXT = 10
 
-        #: Language code, e.g. ``'en-US'``. Schwab-only field; arrives
-        #: even when not requested.
+        #: Language code, e.g. ``'en-US'``; arrives even when not
+        #: requested.
         LANGUAGE = 11
 
     async def news_headline_subs(self, symbols):
