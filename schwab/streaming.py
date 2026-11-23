@@ -1851,17 +1851,12 @@ class StreamClient(EnumEnforcer):
 
     class NewsHeadlineFields(_BaseFieldEnum):
         '''
-        `Official documentation <https://developer.tdameritrade.com/content/
-        streaming-data#_Toc504640626>`__ (the TD Ameritrade doc no longer
-        resolves; the field map below follows its NEWS_HEADLINE table and
-        was verified against the Schwab live stream)
-
-        Data fields for streaming news headlines. Schwab carries over the
-        TDA field map with its Error Code field dropped — the remaining
-        TDA fields are shifted down one position — and adds ``STORY_TEXT``
-        and ``LANGUAGE``. Primarily an implementation detail and not used
-        in client code. Provided here as documentation for key values
-        stored returned in the stream messages.
+        Data fields for news headlines. This stream was well-documented in the
+        precursor TDAmeritrade API, but appears undocumented in Schwab's API.
+        This ``schwab-py`` functionality was derived from a combination of
+        applying old documentation and reverse engineering. As a result, users
+        use this stream at their own risk, since its functionality may change
+        at any time.
         '''
 
         #: Ticker symbol in upper case. Represented in the stream as the
@@ -1880,8 +1875,7 @@ class StreamClient(EnumEnforcer):
         #: *Note:* This field's equivalent in ``tda-api`` had an enum value of ``3``.
         HEADLINE_ID = 2
 
-        #: Story status. Observed values ``'A'`` and ``'D'``; TDA's own
-        #: sample data also showed ``'D'``.
+        #: Story status. Observed values include ``'A'`` and ``'D'``.
         #:
         #: *Note:* This field's equivalent in ``tda-api`` had an enum value of ``4``.
         STATUS = 3
@@ -1892,24 +1886,20 @@ class StreamClient(EnumEnforcer):
         #: *Note:* This field's equivalent in ``tda-api`` had an enum value of ``5``.
         HEADLINE = 4
 
-        #: Story ID; identical to ``HEADLINE_ID`` in all samples from both
-        #: TDA's documentation and the Schwab stream.
+        #: Story ID. Appears to correspond to the ``HEADLINE_ID`` field
+        #: from ``tda-api``.
         #:
         #: *Note:* This field's equivalent in ``tda-api`` had an enum value of ``6``.
         STORY_ID = 5
 
-        #: Array of topic keywords, e.g. ``'Technology'``, with the same
-        #: ``'*ALL*'`` marker the TDA feed carried. TDA delivered this as
-        #: a comma-separated string of coded keywords; Schwab delivers a
-        #: real JSON array.
-        #:
+        #: Array of topic keywords, e.g. ``'Technology'``.
         #: *Note:* This field's equivalent in ``tda-api`` had an enum value of ``8``.
+        #: Also, the shape of this data appears to have changed from a comma-separated
+        #: list of string keywords to a JSON array of strings.
         KEYWORD_ARRAY = 6
 
         #: Array of ticker symbols related to the story; stories are
-        #: delivered on every subscribed key they relate to. Replaces the
-        #: same-positioned TDA Count for Keyword field, which carried only
-        #: an integer keyword count.
+        #: delivered on every subscribed key they relate to.
         RELATED_SYMBOLS = 7
 
         #: Whether the story is flagged as hot.
@@ -1918,7 +1908,7 @@ class StreamClient(EnumEnforcer):
         IS_HOT = 8
 
         #: Story source, e.g. ``'GlobeNewswire'``, ``'Briefing.com'``,
-        #: Reuters.
+        #: ``'Reuters'``, etc.
         #:
         #: *Note:* This field's equivalent in ``tda-api`` had an enum value of ``10``.
         STORY_SOURCE = 9
@@ -1938,18 +1928,8 @@ class StreamClient(EnumEnforcer):
         the only surviving member of TDA's documented news services:
         ``NEWS_HEADLINELIST`` (historical headlines) and ``NEWS_STORY``
         (story bodies) are both still recognized by the gateway but
-        rejected with code 11 'Service not available or temporary down' —
-        story text now arrives inline as ``STORY_TEXT``.
-
-        TDA documented this service as ``All Sequence`` delivery —
-        sequenced, conflated, available 24 hours — and both hold on the
-        Schwab streamer: headlines arrive in any session state, keyed by
-        ``seq``. Upon subscription the service replays a snapshot of
-        recent headlines for each symbol before live updates begin. All
-        items — replayed and live — arrive under command ``SUBS``,
-        ``seq`` is a per-key counter of the rolling buffer, and a story
-        is delivered once per related subscribed key and sometimes twice
-        on the same key, so dedup on ``HEADLINE_ID``.
+        rejected with code 11 'Service not available or temporary down'.
+        Story text now arrives inline as ``STORY_TEXT``.
 
         :param symbols: Equity symbols to subscribe to.
         '''
