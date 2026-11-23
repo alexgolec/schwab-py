@@ -1866,45 +1866,55 @@ class StreamClient(EnumEnforcer):
 
         #: Ticker symbol in upper case. Represented in the stream as the
         #: ``key`` field.
+        #: The equivalent field in ``tda-api`` was 0.
         SYMBOL = 0
 
-        #: Headline's datetime in milliseconds since epoch. (TDA field 2.)
+        #: Headline's datetime in milliseconds since epoch.
+        #: The equivalent field in ``tda-api`` was 2.
         STORY_DATETIME = 1
 
         #: Unique ID for the headline. A story is delivered once per
         #: related subscribed key and is also observed delivered twice on
-        #: the same key, so dedup on this field. (TDA field 3.)
+        #: the same key, so dedup on this field.
+        #: The equivalent field in ``tda-api`` was 3.
         HEADLINE_ID = 2
 
         #: Story status. Observed values ``'A'`` and ``'D'``; TDA's own
-        #: sample data also showed ``'D'``. (TDA field 4.)
+        #: sample data also showed ``'D'``.
+        #: The equivalent field in ``tda-api`` was 4.
         STATUS = 3
 
         #: Headline text; may be in languages other than English, in which
-        #: case ``LANGUAGE`` carries the locale. (TDA field 5.)
+        #: case ``LANGUAGE`` carries the locale.
+        #: The equivalent field in ``tda-api`` was 5.
         HEADLINE = 4
 
         #: Story ID; identical to ``HEADLINE_ID`` in all samples from both
-        #: TDA's documentation and the Schwab stream. (TDA field 6.)
+        #: TDA's documentation and the Schwab stream.
+        #: The equivalent field in ``tda-api`` was 6.
         STORY_ID = 5
 
         #: Array of topic keywords, e.g. ``'Technology'``, with the same
         #: ``'*ALL*'`` marker the TDA feed carried. TDA delivered this as
         #: a comma-separated string of coded keywords; Schwab delivers a
-        #: real JSON array. (TDA field 8.)
+        #: real JSON array.
+        #: The equivalent field in ``tda-api`` was 8.
         KEYWORD_ARRAY = 6
 
         #: Array of ticker symbols related to the story; stories are
         #: delivered on every subscribed key they relate to. Replaces the
         #: same-positioned TDA Count for Keyword field, which carried only
-        #: an integer keyword count. (TDA field 7.)
+        #: an integer keyword count.
+        #: The equivalent field in ``tda-api`` was 7.
         RELATED_SYMBOLS = 7
 
-        #: Whether the story is flagged as hot. (TDA field 9.)
+        #: Whether the story is flagged as hot.
+        #: The equivalent field in ``tda-api`` was 9.
         IS_HOT = 8
 
         #: Story source, e.g. ``'GlobeNewswire'``, ``'Briefing.com'``,
-        #: Reuters. (TDA field 10.)
+        #: Reuters.
+        #: The equivalent field in ``tda-api`` was 10.
         STORY_SOURCE = 9
 
         #: Full story text; may be empty for sources without a body.
