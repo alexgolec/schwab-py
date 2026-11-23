@@ -1870,32 +1870,32 @@ class StreamClient(EnumEnforcer):
 
         #: Headline's datetime in milliseconds since epoch.
         #:
-        #: *Note:* This field's equivalent in ``tda-api`` was 2.
+        #: *Note:* This field's equivalent in ``tda-api`` had an enum value of ``2``.
         STORY_DATETIME = 1
 
         #: Unique ID for the headline. A story is delivered once per
         #: related subscribed key and is also observed delivered twice on
         #: the same key, so dedup on this field.
         #:
-        #: *Note:* This field's equivalent in ``tda-api`` was 3.
+        #: *Note:* This field's equivalent in ``tda-api`` had an enum value of ``3``.
         HEADLINE_ID = 2
 
         #: Story status. Observed values ``'A'`` and ``'D'``; TDA's own
         #: sample data also showed ``'D'``.
         #:
-        #: *Note:* This field's equivalent in ``tda-api`` was 4.
+        #: *Note:* This field's equivalent in ``tda-api`` had an enum value of ``4``.
         STATUS = 3
 
         #: Headline text; may be in languages other than English, in which
         #: case ``LANGUAGE`` carries the locale.
         #:
-        #: *Note:* This field's equivalent in ``tda-api`` was 5.
+        #: *Note:* This field's equivalent in ``tda-api`` had an enum value of ``5``.
         HEADLINE = 4
 
         #: Story ID; identical to ``HEADLINE_ID`` in all samples from both
         #: TDA's documentation and the Schwab stream.
         #:
-        #: *Note:* This field's equivalent in ``tda-api`` was 6.
+        #: *Note:* This field's equivalent in ``tda-api`` had an enum value of ``6``.
         STORY_ID = 5
 
         #: Array of topic keywords, e.g. ``'Technology'``, with the same
@@ -1903,7 +1903,7 @@ class StreamClient(EnumEnforcer):
         #: a comma-separated string of coded keywords; Schwab delivers a
         #: real JSON array.
         #:
-        #: *Note:* This field's equivalent in ``tda-api`` was 8.
+        #: *Note:* This field's equivalent in ``tda-api`` had an enum value of ``8``.
         KEYWORD_ARRAY = 6
 
         #: Array of ticker symbols related to the story; stories are
@@ -1914,13 +1914,13 @@ class StreamClient(EnumEnforcer):
 
         #: Whether the story is flagged as hot.
         #:
-        #: *Note:* This field's equivalent in ``tda-api`` was 9.
+        #: *Note:* This field's equivalent in ``tda-api`` had an enum value of ``9``.
         IS_HOT = 8
 
         #: Story source, e.g. ``'GlobeNewswire'``, ``'Briefing.com'``,
         #: Reuters.
         #:
-        #: *Note:* This field's equivalent in ``tda-api`` was 10.
+        #: *Note:* This field's equivalent in ``tda-api`` had an enum value of ``10``.
         STORY_SOURCE = 9
 
         #: Full story text; may be empty for sources without a body.
