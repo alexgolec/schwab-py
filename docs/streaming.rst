@@ -249,6 +249,7 @@ The following streams are confirmed working:
  * :ref:`level_two`
  * :ref:`screener`
  * :ref:`account_activity`
+ * :ref:`news_headline`
 
 
 .. _charts:
@@ -539,5 +540,25 @@ Account Activity
 .. automethod:: schwab.streaming::StreamClient.account_activity_unsubs
 .. automethod:: schwab.streaming::StreamClient.add_account_activity_handler
 .. autoclass:: schwab.streaming::StreamClient.AccountActivityFields
+  :members:
+  :undoc-members:
+
+.. _news_headline:
+
+++++++++++++++
+News Headlines
+++++++++++++++
+
+News headlines for subscribed symbols, inherited from the documented
+TDA ``NEWS_HEADLINE`` service. Subscribing replays a snapshot of recent
+headlines per symbol; afterwards new headlines arrive as they publish,
+in any market session. Stories arrive once per related subscribed
+symbol and occasionally twice on the same symbol, so consumers should
+deduplicate on ``HEADLINE_ID``.
+
+.. automethod:: schwab.streaming::StreamClient.news_headline_subs
+.. automethod:: schwab.streaming::StreamClient.news_headline_unsubs
+.. automethod:: schwab.streaming::StreamClient.add_news_headline_handler
+.. autoclass:: schwab.streaming::StreamClient.NewsHeadlineFields
   :members:
   :undoc-members:
