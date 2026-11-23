@@ -1845,3 +1845,82 @@ class StreamClient(EnumEnforcer):
         '''
         self._handlers['SCREENER_OPTION'].append(
             _Handler(handler, self.ScreenerFields))
+
+    ##########################################################################
+    # NEWS_HEADLINE
+
+    class NewsHeadlineFields(_BaseFieldEnum):
+        '''
+        Data fields for streaming news headlines. Note this service is
+        undocumented in the Schwab streaming API; the semantics below were
+        probed from the live stream. Primarily an implementation detail and
+        not used in client code. Provided here as documentation for key
+        values stored returned in the stream messages.
+        '''
+
+        #: Ticker symbol in upper case. Represented in the stream as the
+        #: ``key`` field.
+        SYMBOL = 0
+
+        #: Headline's datetime in milliseconds since epoch.
+        STORY_DATETIME = 1
+
+        #: Unique ID for the headline, e.g. a Reuters ``newsml`` tag.
+        HEADLINE_ID = 2
+
+        #: Story status; observed values include ``'A'`` and ``'D'``.
+        STATUS = 3
+
+        #: Headline text; may be in languages other than English.
+        HEADLINE = 4
+
+        #: Story ID; observed identical to ``HEADLINE_ID`` in all samples.
+        STORY_ID = 5
+
+        #: Array of topic keywords, e.g. ``'Technology'``, ``'*ALL*'``.
+        KEYWORD_ARRAY = 6
+
+        #: Array of ticker symbols related to the story.
+        RELATED_SYMBOLS = 7
+
+        #: Whether the story is flagged as hot.
+        IS_HOT = 8
+
+        #: Story source, e.g. ``'GlobeNewswire'``, ``'Briefing.com'``.
+        STORY_SOURCE = 9
+
+        #: Full story text; may be empty for sources without a body.
+        STORY_TEXT = 10
+
+        #: Language code, e.g. ``'en-US'``. Arrives even when not requested.
+        LANGUAGE = 11
+
+    async def news_headline_subs(self, symbols):
+        '''
+        Subscribe to news headlines related to the given symbols. This
+        service is undocumented in the Schwab streaming API; its semantics
+        were probed from the live stream. Upon subscription the service
+        replays a snapshot of recent headlines for each symbol before live
+        updates begin.
+
+        :param symbols: Equity symbols to subscribe to.
+        '''
+        await self._service_op(
+            symbols, 'NEWS_HEADLINE', 'SUBS', self.NewsHeadlineFields,
+            fields=self.NewsHeadlineFields.all_fields())
+
+    async def news_headline_unsubs(self, symbols):
+        '''
+        Un-Subscribe to news headlines related to the given symbols.
+
+        :param symbols: Equity symbols to unsubscribe from.
+        '''
+        await self._service_op(symbols, 'NEWS_HEADLINE', 'UNSUBS')
+
+    def add_news_headline_handler(self, handler):
+        '''
+        Register a function to handle news headlines as they are provided.
+        See :ref:`registering_handlers` for details.
+        '''
+        self._handlers['NEWS_HEADLINE'].append(
+            _Handler(handler, self.NewsHeadlineFields))

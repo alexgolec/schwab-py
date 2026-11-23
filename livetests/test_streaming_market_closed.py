@@ -668,3 +668,102 @@ def test_screener_option_na_items_market_closed(
         stream_loop.run_until_complete(
                 stream_client.screener_option_unsubs(
                         ['OPTION_CALL_VOLUME_0']))
+
+
+################################################################################
+# News headlines
+#
+# NEWS_HEADLINE is undocumented in the Schwab streaming API; everything
+# below is probed wire behavior. Unlike the market-data services it is
+# not session-dependent: subscribing replays a snapshot of recent
+# headlines for each key regardless of market state.
+
+_NHF = StreamClient.NewsHeadlineFields
+
+
+def test_news_headline_snapshot_replay(
+        live_client, stream_client, stream_loop):
+    '''NEWS_HEADLINE SUBS replays a snapshot of recent headlines for
+    each key — items days old arrive immediately, before any live
+    updates. The relabeled item carries the symbol as 'key', a
+    per-key 'seq' counter, and the probed field set.'''
+    captured, handler = _capture()
+    stream_client.add_news_headline_handler(handler)
+    try:
+        stream_loop.run_until_complete(
+                stream_client.news_headline_subs(['AAPL']))
+        msg = stream_loop.run_until_complete(
+                _drive(stream_client, captured))
+        assert msg is not None, 'no headline replay within timeout'
+        assert msg['service'] == 'NEWS_HEADLINE'
+        assert msg['command'] == 'SUBS'
+        item = _item(msg)
+        assert item['key'] == 'AAPL'
+        assert isinstance(item['seq'], int)
+        assert item['STORY_DATETIME'] > 0
+        assert item['HEADLINE_ID']
+        assert item['STATUS'] in ('A', 'D')
+        assert item['HEADLINE']
+        assert item['STORY_ID'] == item['HEADLINE_ID']
+        assert isinstance(item['KEYWORD_ARRAY'], list)
+        assert isinstance(item['RELATED_SYMBOLS'], list)
+        assert isinstance(item['IS_HOT'], bool)
+        assert item['STORY_SOURCE']
+        assert 'STORY_TEXT' in item
+    finally:
+        stream_loop.run_until_complete(
+                stream_client.news_headline_unsubs(['AAPL']))
+
+
+def test_news_headline_fields_required(
+        live_client, stream_client, stream_loop):
+    '''A NEWS_HEADLINE SUBS with no fields parameter is rejected
+    with code 22 'SUBS command failed' — unlike other services the
+    field list is mandatory.'''
+    with pytest.raises(UnexpectedResponseCode) as exc_info:
+        stream_loop.run_until_complete(
+                stream_client._service_op(
+                        ['AAPL'], 'NEWS_HEADLINE', 'SUBS'))
+    resp = exc_info.value.response
+    assert resp['response'][0]['content']['code'] == 22
+
+
+def test_news_headline_field_zero_required(
+        live_client, stream_client, stream_loop):
+    '''A field subset that omits field 0 (the key) is rejected with
+    code 22; requesting field 0 alone succeeds, so the key field is
+    the mandatory element of the field list.'''
+    with pytest.raises(UnexpectedResponseCode) as exc_info:
+        stream_loop.run_until_complete(
+                stream_client._service_op(
+                        ['AAPL'], 'NEWS_HEADLINE', 'SUBS',
+                        _NHF, fields=[
+                                _NHF.STORY_DATETIME, _NHF.HEADLINE,
+                                _NHF.STORY_SOURCE]))
+    resp = exc_info.value.response
+    assert resp['response'][0]['content']['code'] == 22
+    try:
+        stream_loop.run_until_complete(
+                stream_client._service_op(
+                        ['AAPL'], 'NEWS_HEADLINE', 'SUBS',
+                        _NHF, fields=[_NHF.SYMBOL]))
+    finally:
+        stream_loop.run_until_complete(
+                stream_client.news_headline_unsubs(['AAPL']))
+
+
+def test_news_headline_unsubs(
+        live_client, stream_client, stream_loop):
+    '''UNSUBS on an active NEWS_HEADLINE subscription is acked with
+    code 0 and no further headlines arrive for the key.'''
+    captured, handler = _capture()
+    stream_client.add_news_headline_handler(handler)
+    stream_loop.run_until_complete(
+            stream_client.news_headline_subs(['MSFT']))
+    stream_loop.run_until_complete(
+            _drive(stream_client, captured))
+    stream_loop.run_until_complete(
+            stream_client.news_headline_unsubs(['MSFT']))
+    captured.clear()
+    stream_loop.run_until_complete(_collect_silence(stream_client, 4))
+    assert captured == []

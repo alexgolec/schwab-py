@@ -5534,6 +5534,171 @@ class StreamClientTest(IsolatedAsyncioTestCase):
         self.assert_handler_called_once_with(async_handler, expected_item)
 
     ###########################################################################
+    # NEWS_HEADLINE
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_news_headline_subs_success(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        socket.recv.side_effect = [json.dumps(self.success_response(
+            1, 'NEWS_HEADLINE', 'SUBS'))]
+
+        await self.client.news_headline_subs(['AAPL', 'MSFT'])
+        socket.recv.assert_awaited_once()
+        request = self.request_from_socket_mock(socket)
+
+        self.assertEqual(request, {
+            'service': 'NEWS_HEADLINE',
+            'command': 'SUBS',
+            'requestid': '1',
+            'SchwabClientCustomerId': self.pref_customer_id,
+            'SchwabClientCorrelId': self.pref_correl_id,
+            'parameters': {
+                'keys': 'AAPL,MSFT',
+                'fields': '0,1,2,3,4,5,6,7,8,9,10,11'
+            }
+        })
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_news_headline_unsubs_success(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        stream_item = self.streaming_entry('NEWS_HEADLINE', 'SUBS')
+
+        socket.recv.side_effect = [
+            json.dumps(self.success_response(1, 'NEWS_HEADLINE', 'SUBS')),
+            json.dumps(stream_item),
+            json.dumps(self.success_response(
+                2, 'NEWS_HEADLINE', 'UNSUBS', 'UNSUBS command succeeded'))
+        ]
+        handler = Mock()
+        async_handler = AsyncMock()
+        self.client.add_news_headline_handler(handler)
+        self.client.add_news_headline_handler(async_handler)
+
+        await self.client.news_headline_subs(['AAPL'])
+        await self.client.handle_message()
+        await self.client.news_headline_unsubs(['AAPL'])
+
+        self.assert_handler_called_once_with(
+                handler, {'service': 'NEWS_HEADLINE',
+                          'command': 'SUBS',
+                          'timestamp': REQUEST_TIMESTAMP})
+        self.assert_handler_called_once_with(
+                async_handler, {'service': 'NEWS_HEADLINE',
+                                'command': 'SUBS',
+                                'timestamp': REQUEST_TIMESTAMP})
+
+        send_awaited = [
+            call(StringMatchesJson({
+                "requests": [{
+                    "service": "NEWS_HEADLINE",
+                    "requestid": "1",
+                    "command": "SUBS",
+                    "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
+                    "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
+                    "parameters": {
+                        "keys": "AAPL",
+                        "fields": "0,1,2,3,4,5,6,7,8,9,10,11"
+                    }
+                }]
+            })),
+            call(StringMatchesJson(
+                {"requests": [{
+                    "service": "NEWS_HEADLINE",
+                    "requestid": "2",
+                    "command": "UNSUBS",
+                    "SchwabClientCustomerId": CLIENT_CUSTOMER_ID,
+                    "SchwabClientCorrelId": CLIENT_CORRELATION_ID,
+                    "parameters": {
+                        "keys": "AAPL"
+                    }
+                }]
+            })),
+        ]
+        socket.send.assert_has_awaits(send_awaited, any_order=False)
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_news_headline_subs_failure(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        response = self.success_response(1, 'NEWS_HEADLINE', 'SUBS')
+        response['response'][0]['content']['code'] = 21
+        response = json.dumps(response)
+
+        socket.recv.side_effect = [response]
+
+        with self.assertRaises(schwab.streaming.UnexpectedResponseCode):
+            await self.client.news_headline_subs(['AAPL'])
+
+    @no_duplicates
+    @patch('schwab.streaming.ws_client.connect', new_callable=AsyncMock)
+    async def test_news_headline_handler(self, ws_connect):
+        socket = await self.login_and_get_socket(ws_connect)
+
+        stream_item = {
+            'data': [{
+                'service': 'NEWS_HEADLINE',
+                'timestamp': 1718996045319,
+                'command': 'SUBS',
+                'content': [{
+                    'seq': 1,
+                    'key': 'AAPL',
+                    '1': 1718996045310,
+                    '2': 'tag_reuters_com_2024_newsml_ABC123',
+                    '3': 'A',
+                    '4': 'Example headline text',
+                    '5': 'tag_reuters_com_2024_newsml_ABC123',
+                    '6': ['Technology', '*ALL*'],
+                    '7': ['AAPL', 'MSFT'],
+                    '8': False,
+                    '9': 'GlobeNewswire',
+                    '10': 'Full story text.',
+                    '11': 'en-US'
+                }]
+            }]
+        }
+
+        socket.recv.side_effect = [
+            json.dumps(self.success_response(1, 'NEWS_HEADLINE', 'SUBS')),
+            json.dumps(stream_item)]
+
+        handler = Mock()
+        async_handler = AsyncMock()
+        self.client.add_news_headline_handler(handler)
+        self.client.add_news_headline_handler(async_handler)
+
+        await self.client.news_headline_subs(['AAPL'])
+        await self.client.handle_message()
+
+        expected_item = {
+            'service': 'NEWS_HEADLINE',
+            'timestamp': 1718996045319,
+            'command': 'SUBS',
+            'content': [{
+                'seq': 1,
+                'key': 'AAPL',
+                'STORY_DATETIME': 1718996045310,
+                'HEADLINE_ID': 'tag_reuters_com_2024_newsml_ABC123',
+                'STATUS': 'A',
+                'HEADLINE': 'Example headline text',
+                'STORY_ID': 'tag_reuters_com_2024_newsml_ABC123',
+                'KEYWORD_ARRAY': ['Technology', '*ALL*'],
+                'RELATED_SYMBOLS': ['AAPL', 'MSFT'],
+                'IS_HOT': False,
+                'STORY_SOURCE': 'GlobeNewswire',
+                'STORY_TEXT': 'Full story text.',
+                'LANGUAGE': 'en-US'
+            }]
+        }
+
+        self.assert_handler_called_once_with(handler, expected_item)
+        self.assert_handler_called_once_with(async_handler, expected_item)
+
+    ###########################################################################
     # Handler edge cases
     #
     # Note: We use CHART_EQUITY as a test case, which leaks the implementation
