@@ -549,12 +549,17 @@ Account Activity
 News Headlines
 ++++++++++++++
 
-News headlines for subscribed symbols, inherited from the documented
-TDA ``NEWS_HEADLINE`` service. Subscribing replays a snapshot of recent
-headlines per symbol; afterwards new headlines arrive as they publish,
-in any market session. Stories arrive once per related subscribed
-symbol and occasionally twice on the same symbol, so consumers should
-deduplicate on ``HEADLINE_ID``.
+News headlines for the subscribed symbols, streamed in with apparenty latency of
+mere seconds. Subscribing replays a snapshot of recent headlines for each
+requested symbol. After the initial dump, headlines arrive as they are
+published.
+
+Note this stream may deliver duplicate headlines for stories related to multiple
+subscribed symbols. You can deduplicate stories using ``HEADLINE_ID``.
+
+*Note for Former ``tda-api`` Users:* This stream replaces the entire
+constellation of old TDAmeritrade streams. Take a look at the method and field
+documentation to learn how to extract story text from this stream.
 
 .. automethod:: schwab.streaming::StreamClient.news_headline_subs
 .. automethod:: schwab.streaming::StreamClient.news_headline_unsubs
