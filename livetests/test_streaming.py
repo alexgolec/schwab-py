@@ -894,3 +894,125 @@ def test_news_headline_live_items_market_open(
     finally:
         stream_loop.run_until_complete(
                 stream_client.news_headline_unsubs(basket))
+
+
+################################################################################
+# Dead services
+#
+# TDA documented a wider constellation of streams than it ever
+# shipped, and Schwab carries even fewer. Probing classifies every
+# dead service into two failure modes, distinguished by whether the
+# gateway still routes the service name:
+#
+#  - Recognized names reject with code 11 'Service not available or
+#    temporary down' and the socket stays open.
+#  - A smaller set of recognized names reject with code 21 'Bad
+#    command formatting' — their commands were never implemented —
+#    and the server may then close the socket.
+#
+# Truly unrecognized names also get code 21 with a socket close
+# (enshrined in test_unrecognized_service_closes_socket above). These
+# enshrinements will flag any service Schwab later provisions.
+
+
+def _sub_dead(stream_loop, stream_client, service, keys, fields):
+    '''SUBS a dead service, returning the response content dict.'''
+    with pytest.raises(UnexpectedResponseCode) as exc_info:
+        stream_loop.run_until_complete(
+                stream_client._service_op(
+                        keys, service, 'SUBS', _NHF, fields=fields))
+    return exc_info.value.response['response'][0]['content']
+
+
+# TDA-documented services that the gateway still routes but never
+# provisioned. A key of None resolves to a live option symbol via the
+# option_symbol fixture.
+_DEAD_SERVICE_CODE_11 = [
+    ('TIMESALE_EQUITY', 'AAPL'),
+    ('TIMESALE_FUTURES', '/ES'),
+    ('TIMESALE_OPTIONS', None),
+    ('ACTIVES_NASDAQ', 'NASDAQ'),
+    ('ACTIVES_NYSE', 'NYSE'),
+    ('ACTIVES_OTCBB', 'OTCBB'),
+    ('ACTIVES_OPTIONS', 'OPTIONS'),
+    ('FOREX_BOOK', 'EUR/USD'),
+    ('FUTURES_BOOK', '/ES'),
+    ('LISTED_BOOK', 'AAPL'),
+    ('CHART_OPTIONS', None),
+    ('CHART_HISTORY_FUTURES', '/ES'),
+]
+
+
+@pytest.mark.parametrize('service,key', _DEAD_SERVICE_CODE_11,
+                         ids=[svc for svc, _ in _DEAD_SERVICE_CODE_11])
+def test_dead_service_code_11(
+        live_client, stream_client, stream_loop, option_symbol,
+        service, key):
+    '''TDA-documented services the gateway routes but never
+    provisioned reject SUBS with code 11 'Service not available or
+    temporary down' and leave the socket alive. Covers the TIMESALE
+    family that tda-api implemented, the never-shipped ACTIVES and
+    extra BOOK services, and the chart-history services.'''
+    content = _sub_dead(stream_loop, stream_client, service,
+                        [key or option_symbol], _NHF.all_fields())
+    assert content['code'] == 11, content
+    assert 'not available' in content['msg']
+    assert stream_client._socket.state.name == 'OPEN'
+
+
+# Recognized service names whose commands were never implemented:
+# code 21 'Bad command formatting'. The server may then close the
+# socket — observed both killing and sparing the connection — so
+# each test re-logs in to protect the shared session.
+_DEAD_SERVICE_CODE_21 = [
+    ('TIMESALE_FOREX', 'EUR/USD'),
+    ('FUTURES_OPTIONS_BOOK', '/ES'),
+    ('LEVELTWO_FUTURES', '/ES'),
+]
+
+
+def _relogin(stream_loop, stream_client):
+    '''Restores the shared stream after a request that may have
+    killed the socket: drops a stashed handle_message task so it
+    can't re-raise a stale close, then re-logs in. login() is safe
+    on a still-open socket too (see test_double_login).'''
+    global _PENDING_MSG_TASK
+    if _PENDING_MSG_TASK is not None:
+        _PENDING_MSG_TASK.cancel()
+        _PENDING_MSG_TASK = None
+    stream_loop.run_until_complete(stream_client.login())
+
+
+@pytest.mark.parametrize('service,key', _DEAD_SERVICE_CODE_21,
+                         ids=[svc for svc, _ in _DEAD_SERVICE_CODE_21])
+def test_dead_service_code_21(
+        live_client, stream_client, stream_loop, service, key):
+    '''A few recognized service names reject with code 21 'Bad
+    command formatting' instead of 11 — registered in the routing
+    table but their commands were never implemented. The server may
+    also close the socket afterward, so the shared session is
+    re-established.'''
+    content = _sub_dead(stream_loop, stream_client, service,
+                        [key], _NHF.all_fields())
+    assert content['code'] == 21, content
+    _relogin(stream_loop, stream_client)
+
+
+def test_admin_qos_dead(live_client, stream_client, stream_loop):
+    '''TDA's ADMIN/QOS command (quality-of-service throttling, which
+    tda-api exposed as quality_of_service) is gone from the Schwab
+    command table: the request rejects with code 21 'Bad command
+    formatting'. The server may also close the socket afterward, so
+    the shared session is re-established.'''
+    request, request_id = stream_client._make_request(
+            service='ADMIN', command='QOS',
+            parameters={'qoslevel': '1'})
+    with pytest.raises(UnexpectedResponseCode) as exc_info:
+        async def _op():
+            await stream_client._send({'requests': [request]})
+            await stream_client._await_response(
+                    request_id, 'ADMIN', 'QOS')
+        stream_loop.run_until_complete(_op())
+    content = exc_info.value.response['response'][0]['content']
+    assert content['code'] == 21
+    _relogin(stream_loop, stream_client)
