@@ -685,10 +685,12 @@ def test_screener_option_na_items_market_closed(
 ################################################################################
 # News headlines
 #
-# NEWS_HEADLINE is undocumented in the Schwab streaming API; everything
-# below is probed wire behavior. Unlike the market-data services it is
-# not session-dependent: subscribing replays a snapshot of recent
-# headlines for each key regardless of market state.
+# NEWS_HEADLINE follows the field map TDA documented for its service of
+# the same name, verified against the live stream; Schwab dropped TDA's
+# Error Code field (shifting the rest down one position) and added
+# STORY_TEXT and LANGUAGE. Unlike the market-data services it is not
+# session-dependent: subscribing replays a snapshot of recent headlines
+# for each key regardless of market state.
 
 _NHF = StreamClient.NewsHeadlineFields
 
@@ -699,9 +701,10 @@ def test_news_headline_snapshot_replay(
     each key — items days old arrive immediately, before any live
     updates. All data, replayed and live, arrives under command
     'SUBS'. The relabeled item carries the symbol as 'key', a
-    per-key 'seq' counter of the rolling buffer, and the probed
-    field set. Stories may be delivered twice with identical
-    HEADLINE_ID and distinct seq.'''
+    per-key 'seq' counter of the rolling buffer, and the
+    TDA-documented field set. Stories are delivered once per related
+    subscribed key and may also repeat on the same key — identical
+    HEADLINE_ID, distinct seq.'''
     captured, handler = _capture()
     stream_client.add_news_headline_handler(handler)
     try:
@@ -782,6 +785,43 @@ def test_news_headline_unsubs(
     captured.clear()
     stream_loop.run_until_complete(_collect_silence(stream_client, 4))
     assert captured == []
+
+
+def test_news_headlinelist_recognized_but_unavailable(
+        live_client, stream_client, stream_loop):
+    '''TDA's historical NEWS_HEADLINELIST service is still recognized
+    by the gateway — a SUBS returns code 11 'Service not available or
+    temporary down', distinct from the code 21 'Bad command
+    formatting' that invalid service names produce.'''
+    with pytest.raises(UnexpectedResponseCode) as exc_info:
+        stream_loop.run_until_complete(
+                stream_client._service_op(
+                        ['AAPL'], 'NEWS_HEADLINELIST', 'SUBS',
+                        _NHF, fields=_NHF.all_fields()))
+    resp = exc_info.value.response
+    content = resp['response'][0]['content']
+    assert content['code'] == 11
+    assert 'not available' in content['msg']
+
+
+def test_news_story_closes_socket(
+        live_client, stream_client, stream_loop):
+    '''TDA's NEWS_STORY service is gone: requesting it closes the
+    websocket outright with a 1000 normal close. Re-login restores
+    the shared session for later tests.'''
+    global _PENDING_MSG_TASK
+    if _PENDING_MSG_TASK is not None:
+        # A stashed handle_message task dies with the socket; drop it
+        # so the next _pump_once doesn't re-raise the stale close.
+        _PENDING_MSG_TASK.cancel()
+        _PENDING_MSG_TASK = None
+    with pytest.raises(websockets.exceptions.ConnectionClosed):
+        stream_loop.run_until_complete(
+                stream_client._service_op(
+                        ['tag_reuters_com_2026-01-01_newsml_XXX'],
+                        'NEWS_STORY', 'SUBS',
+                        _NHF, fields=_NHF.all_fields()))
+    stream_loop.run_until_complete(stream_client.login())
 
 
 def test_news_headline_live_items_market_open(
