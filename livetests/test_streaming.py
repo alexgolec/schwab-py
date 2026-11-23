@@ -894,3 +894,96 @@ def test_news_headline_live_items_market_open(
     finally:
         stream_loop.run_until_complete(
                 stream_client.news_headline_unsubs(basket))
+
+
+################################################################################
+# Dead services
+#
+# TDA documented a wider constellation of streams than it ever
+# shipped, and Schwab carries even fewer. Probing classifies every
+# dead service into two failure modes, distinguished by whether the
+# gateway still routes the service name:
+#
+#  - Recognized names reject with code 11 'Service not available or
+#    temporary down' and the socket stays open.
+#  - A smaller set of recognized names reject with code 21 'Bad
+#    command formatting' — their commands never shipped — and the
+#    socket still stays open.
+#
+# Truly unrecognized names also get code 21, but then the server
+# closes the socket (enshrined in
+# test_unrecognized_service_closes_socket above). These enshrinements
+# will flag any service Schwab later provisions.
+
+
+def _sub_dead(stream_loop, stream_client, service, keys, fields):
+    '''SUBS a dead service, returning the response content dict.'''
+    with pytest.raises(UnexpectedResponseCode) as exc_info:
+        stream_loop.run_until_complete(
+                stream_client._service_op(
+                        keys, service, 'SUBS', _NHF, fields=fields))
+    return exc_info.value.response['response'][0]['content']
+
+
+def test_dead_services_code_11(
+        live_client, stream_client, stream_loop, option_symbol):
+    '''Every TDA-documented service that the gateway still routes but
+    never provisioned rejects SUBS with code 11 'Service not
+    available or temporary down' and leaves the socket alive. This
+    covers the TIMESALE family that tda-api implemented, the
+    never-shipped ACTIVES and extra BOOK services, and the
+    chart-history services.'''
+    cases = [
+        ('TIMESALE_EQUITY', 'AAPL'),
+        ('TIMESALE_FUTURES', '/ES'),
+        ('TIMESALE_OPTIONS', option_symbol),
+        ('ACTIVES_NASDAQ', 'NASDAQ'),
+        ('ACTIVES_NYSE', 'NYSE'),
+        ('ACTIVES_OTCBB', 'OTCBB'),
+        ('ACTIVES_OPTIONS', 'OPTIONS'),
+        ('FOREX_BOOK', 'EUR/USD'),
+        ('FUTURES_BOOK', '/ES'),
+        ('LISTED_BOOK', 'AAPL'),
+        ('CHART_OPTIONS', option_symbol),
+        ('CHART_HISTORY_FUTURES', '/ES'),
+    ]
+    for service, key in cases:
+        content = _sub_dead(stream_loop, stream_client, service,
+                            [key], _NHF.all_fields())
+        assert content['code'] == 11, (service, content)
+        assert 'not available' in content['msg']
+        assert stream_client._socket.state.name == 'OPEN'
+
+
+def test_dead_services_code_21_socket_survives(
+        live_client, stream_client, stream_loop):
+    '''A few recognized service names reject with code 21 'Bad
+    command formatting' instead of 11 — registered in the routing
+    table but their commands were never implemented — and unlike a
+    truly unknown service name, the socket stays alive.'''
+    for service, key in [('TIMESALE_FOREX', 'EUR/USD'),
+                         ('FUTURES_OPTIONS_BOOK', '/ES'),
+                         ('LEVELTWO_FUTURES', '/ES')]:
+        content = _sub_dead(stream_loop, stream_client, service,
+                            [key], _NHF.all_fields())
+        assert content['code'] == 21, (service, content)
+        assert stream_client._socket.state.name == 'OPEN'
+
+
+def test_admin_qos_dead(live_client, stream_client, stream_loop):
+    '''TDA's ADMIN/QOS command (quality-of-service throttling, which
+    tda-api exposed as quality_of_service) is gone from the Schwab
+    command table: the request rejects with code 21 'Bad command
+    formatting' and the socket stays alive.'''
+    request, request_id = stream_client._make_request(
+            service='ADMIN', command='QOS',
+            parameters={'qoslevel': '1'})
+    with pytest.raises(UnexpectedResponseCode) as exc_info:
+        async def _op():
+            await stream_client._send({'requests': [request]})
+            await stream_client._await_response(
+                    request_id, 'ADMIN', 'QOS')
+        stream_loop.run_until_complete(_op())
+    content = exc_info.value.response['response'][0]['content']
+    assert content['code'] == 21
+    assert stream_client._socket.state.name == 'OPEN'
