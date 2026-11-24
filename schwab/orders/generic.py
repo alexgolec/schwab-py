@@ -126,13 +126,9 @@ class OrderBuilder(EnumEnforcer):
     # CancelTime
     def set_cancel_time(self, cancel_time):
         '''
-        Set the order cancellation time. Only meaningful together with
-        :attr:`~schwab.orders.common.Duration.GOOD_TILL_CANCEL`; the API
-        silently ignores it on other durations. Must be within six months of
-        the order date — the API rejects later times.
-
-        :param cancel_time: A timezone-aware ``datetime.datetime``. Serialized
-                            as an ISO-8601 UTC timestamp.
+        Set order cancellation time. Must be set alongside
+        :attr:`~schwab.orders.common.Duration.GOOD_TILL_CANCEL`, and is ignored
+        for all other durations. Must be within six months of the order date.
         '''
         if not isinstance(cancel_time, datetime.datetime):
             raise ValueError(
