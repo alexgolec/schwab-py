@@ -1,11 +1,14 @@
+import datetime
+
 import pytest
 
 import schwab
 from schwab.orders import equities, options
 from schwab.orders.common import (
-        Duration, OrderStrategyType, OrderType, PriceLinkBasis,
-        PriceLinkType, Session, SpecialInstruction,
+        Duration, EquityInstruction, OrderStrategyType, OrderType,
+        PriceLinkBasis, PriceLinkType, Session, SpecialInstruction,
         StopPriceLinkBasis, StopPriceLinkType, StopType)
+from schwab.orders.generic import OrderBuilder
 
 
 _S = schwab.client.Client
@@ -506,6 +509,86 @@ def test_variant_duration(live_client, account_hash, duration):
             data, {}, order_type='LIMIT', quantity=1.0,
             duration=duration.value, price=350.0,
             legs=[('BUY', 'AAPL', 'EQUITY', 'OPENING')])
+
+
+@pytest.mark.parametrize('duration', [
+        Duration.IMMEDIATE_OR_CANCEL, Duration.END_OF_WEEK,
+        Duration.END_OF_MONTH, Duration.NEXT_END_OF_MONTH])
+def test_rejected_durations(live_client, account_hash, duration):
+    '''Four Duration values are rejected at validation with HTTP 400
+    ``Invalid value '<NAME>'``. Probed identically across equity,
+    single-leg option, multi-leg option, and stop orders — the
+    rejection is universal, not equity-specific.'''
+    builder = equities.equity_buy_limit(
+            'AAPL', 1, '350.00').set_duration(duration)
+    resp = live_client.preview_order(account_hash, builder)
+    assert resp.status_code == 400, resp.text[:300]
+    assert "Invalid value '{}'".format(duration.value) in resp.text
+
+
+def test_fok_rejected_on_stop_order(live_client, account_hash):
+    '''FILL_OR_KILL is accepted on LIMIT orders but produces a
+    structured validation reject on STOP orders — a narrower
+    acceptance than the docstring implies.'''
+    builder = (OrderBuilder()
+            .set_order_type(OrderType.STOP)
+            .set_stop_price('350.00')
+            .set_session(Session.NORMAL)
+            .set_duration(Duration.FILL_OR_KILL)
+            .set_order_strategy_type(OrderStrategyType.SINGLE)
+            .add_equity_leg(EquityInstruction.SELL, 'AAPL', 1))
+    data = _preview(live_client, account_hash, builder)
+    rejects = [r['activityMessage'] for r in
+               data['orderValidationResult'].get('rejects', [])]
+    assert 'Fill-or-kill (FOK) orders are not available for this ' \
+            'order type.' in rejects
+
+
+################################################################################
+# cancelTime
+
+def test_cancel_time_accepted_not_echoed(live_client, account_hash):
+    '''cancelTime on a GTC order validates cleanly but is NOT echoed
+    back in orderStrategy — the preview response gives no way to
+    confirm the value round-tripped.'''
+    cancel = (datetime.datetime.now(datetime.timezone.utc)
+            + datetime.timedelta(days=90))
+    builder = (equities.equity_buy_limit('AAPL', 1, '350.00')
+            .set_duration(Duration.GOOD_TILL_CANCEL)
+            .set_cancel_time(cancel))
+    data = _preview(live_client, account_hash, builder)
+    strategy = data['orderStrategy']
+    assert strategy['duration'] == 'GOOD_TILL_CANCEL'
+    assert 'cancelTime' not in strategy
+
+
+def test_cancel_time_ignored_on_non_gtc(live_client, account_hash):
+    '''cancelTime on a DAY order is silently dropped — no error, no
+    echo. The builder sets it unconditionally and lets the API sort
+    it out.'''
+    cancel = (datetime.datetime.now(datetime.timezone.utc)
+            + datetime.timedelta(days=30))
+    builder = (equities.equity_buy_limit('AAPL', 1, '350.00')
+            .set_duration(Duration.DAY)
+            .set_cancel_time(cancel))
+    data = _preview(live_client, account_hash, builder)
+    strategy = data['orderStrategy']
+    assert strategy['duration'] == 'DAY'
+    assert 'cancelTime' not in strategy
+
+
+def test_cancel_time_beyond_six_months_rejected(
+        live_client, account_hash):
+    '''Schwab enforces the six-month GTC window documented on
+    Duration.GOOD_TILL_CANCEL.'''
+    cancel = (datetime.datetime.now(datetime.timezone.utc)
+            + datetime.timedelta(days=200))
+    builder = (equities.equity_buy_limit('AAPL', 1, '350.00')
+            .set_duration(Duration.GOOD_TILL_CANCEL)
+            .set_cancel_time(cancel))
+    resp = live_client.preview_order(account_hash, builder)
+    assert resp.status_code == 400, resp.text[:300]
+    assert 'Cancel time must be within next six months' in resp.text
 
 
 def test_variant_special_instruction(live_client, account_hash):

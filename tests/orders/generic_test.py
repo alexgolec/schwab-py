@@ -67,6 +67,43 @@ class OrderBuilderTest(unittest.TestCase):
         }, self.order_builder.build()))
 
     ##########################################################################
+    # CancelTime
+
+    @no_duplicates
+    def test_cancel_time_success(self):
+        import datetime
+        self.order_builder.set_cancel_time(datetime.datetime(
+            2027, 1, 15, 20, 0, 0, tzinfo=datetime.timezone.utc))
+        self.assertFalse(has_diff({
+            'cancelTime': '2027-01-15T20:00:00+0000'
+        }, self.order_builder.build()))
+
+        self.order_builder.clear_cancel_time()
+        self.assertFalse(has_diff({}, self.order_builder.build()))
+
+    @no_duplicates
+    def test_cancel_time_non_utc_normalized(self):
+        import datetime
+        eastern = datetime.timezone(datetime.timedelta(hours=-5))
+        self.order_builder.set_cancel_time(datetime.datetime(
+            2027, 1, 15, 15, 0, 0, tzinfo=eastern))
+        self.assertFalse(has_diff({
+            'cancelTime': '2027-01-15T20:00:00+0000'
+        }, self.order_builder.build()))
+
+    @no_duplicates
+    def test_cancel_time_naive_rejected(self):
+        import datetime
+        with self.assertRaisesRegex(ValueError, 'timezone-aware'):
+            self.order_builder.set_cancel_time(
+                datetime.datetime(2027, 1, 15, 20, 0, 0))
+
+    @no_duplicates
+    def test_cancel_time_wrong_type(self):
+        with self.assertRaisesRegex(ValueError, 'datetime.datetime'):
+            self.order_builder.set_cancel_time('2027-01-15T20:00:00+0000')
+
+    ##########################################################################
     # OrderType
 
     @no_duplicates

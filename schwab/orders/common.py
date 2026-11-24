@@ -34,8 +34,6 @@ class Duration(Enum):
     #: be filled all at once, you may see partial executions throughout the day.
     DAY = 'DAY'
 
-    # TODO: Implement order cancellation date
-
     #: Keep the trade open for six months, or until the end of the cancel date,
     #: whichever is shorter. Note if the order cannot be filled all at once, you
     #: may see partial executions over the lifetime of the order.
@@ -45,10 +43,28 @@ class Duration(Enum):
     #: immediately.
     FILL_OR_KILL = 'FILL_OR_KILL'
 
-    # TODO: Document these
+    #: Fill all or part of the order immediately and cancel the remainder.
+    #:
+    #: *Note:* Schwab rejects this value at order validation time for every
+    #: probed order type, returning ``Invalid value 'IMMEDIATE_OR_CANCEL'``.
     IMMEDIATE_OR_CANCEL = 'IMMEDIATE_OR_CANCEL'
+
+    #: Keep the order open until the end of the current trading week.
+    #:
+    #: *Note:* Schwab rejects this value at order validation time for every
+    #: probed order type, returning ``Invalid value 'END_OF_WEEK'``.
     END_OF_WEEK = 'END_OF_WEEK'
+
+    #: Keep the order open until the end of the current trading month.
+    #:
+    #: *Note:* Schwab rejects this value at order validation time for every
+    #: probed order type, returning ``Invalid value 'END_OF_MONTH'``.
     END_OF_MONTH = 'END_OF_MONTH'
+
+    #: Keep the order open until the end of the next trading month.
+    #:
+    #: *Note:* Schwab rejects this value at order validation time for every
+    #: probed order type, returning ``Invalid value 'NEXT_END_OF_MONTH'``.
     NEXT_END_OF_MONTH = 'NEXT_END_OF_MONTH'
 
 
