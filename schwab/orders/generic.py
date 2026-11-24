@@ -1,4 +1,5 @@
 
+import datetime
 from enum import Enum
 
 from schwab.orders import common
@@ -68,6 +69,7 @@ class OrderBuilder(EnumEnforcer):
 
         self._session = None
         self._duration = None
+        self._cancelTime = None
         self._orderType = None
         self._complexOrderStrategyType = None
         self._quantity = None
@@ -119,6 +121,35 @@ class OrderBuilder(EnumEnforcer):
         Clear the order duration.
         '''
         self._duration = None
+        return self
+
+    # CancelTime
+    def set_cancel_time(self, cancel_time):
+        '''
+        Set the order cancellation time. Only meaningful together with
+        :attr:`~schwab.orders.common.Duration.GOOD_TILL_CANCEL`; the API
+        silently ignores it on other durations. Must be within six months of
+        the order date — the API rejects later times.
+
+        :param cancel_time: A timezone-aware ``datetime.datetime``. Serialized
+                            as an ISO-8601 UTC timestamp.
+        '''
+        if not isinstance(cancel_time, datetime.datetime):
+            raise ValueError(
+                'cancel_time must be a datetime.datetime')
+        if cancel_time.tzinfo is None or \
+                cancel_time.tzinfo.utcoffset(cancel_time) is None:
+            raise ValueError(
+                'cancel_time must be timezone-aware')
+        self._cancelTime = cancel_time.astimezone(
+                datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%S+0000')
+        return self
+
+    def clear_cancel_time(self):
+        '''
+        Clear the order cancellation time.
+        '''
+        self._cancelTime = None
         return self
 
     # OrderType
