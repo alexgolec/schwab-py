@@ -33,6 +33,15 @@ def __normalized_base_url(base_url):
     return base_url.rstrip('/')
 
 
+def __require_params(**params):
+    '''Raises ``TypeError`` when a required parameter is ``None``, so a
+    missing argument fails at the entry point instead of deep in token
+    I/O or the login flow.'''
+    for name, value in params.items():
+        if value is None:
+            raise TypeError('{} must not be None'.format(name))
+
+
 def get_logger():
     return logging.getLogger(__name__)
 
@@ -282,6 +291,9 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
                      pointing the client at a mock server or a proxy.
     '''
 
+    __require_params(api_key=api_key, app_secret=app_secret,
+                     callback_url=callback_url, token_path=token_path)
+
     if callback_timeout is None:
         callback_timeout = 0
     if callback_timeout < 0:
@@ -470,6 +482,9 @@ def client_from_token_file(token_path, api_key, app_secret, asyncio=False,
                      pointing the client at a mock server or a proxy.
     '''
 
+    __require_params(api_key=api_key, app_secret=app_secret,
+                     token_path=token_path)
+
     load = __token_loader(token_path)
 
     return client_from_access_functions(
@@ -512,6 +527,9 @@ def client_from_manual_flow(api_key, app_secret, callback_url, token_path,
                      Defaults to ``https://api.schwabapi.com``. Useful for
                      pointing the client at a mock server or a proxy.
     '''
+    __require_params(api_key=api_key, app_secret=app_secret,
+                     callback_url=callback_url, token_path=token_path)
+
     get_logger().info('Creating new token with callback URL \'%s\' ' +
                        'and token path \'%s\'', callback_url, token_path)
 
@@ -640,6 +658,10 @@ def client_from_access_functions(api_key, app_secret, token_read_func,
                      Defaults to ``https://api.schwabapi.com``. Useful for
                      pointing the client at a mock server or a proxy.
     '''
+    __require_params(api_key=api_key, app_secret=app_secret,
+                     token_read_func=token_read_func,
+                     token_write_func=token_write_func)
+
     token = token_read_func()
     if inspect.isawaitable(token):
         if inspect.iscoroutine(token):
@@ -693,6 +715,10 @@ def get_auth_context(api_key, callback_url, state=None, base_url=None):
 def client_from_received_url(
         api_key, app_secret, auth_context, received_url, token_write_func,
         asyncio=False, enforce_enums=True, base_url=None):
+    __require_params(api_key=api_key, app_secret=app_secret,
+                     auth_context=auth_context, received_url=received_url,
+                     token_write_func=token_write_func)
+
     # XXX: The AuthContext must be serializable, which means the original
     #      OAuth2Client created in get_auth_context cannot be passed around.
     #      Instead, we reconstruct it here.
@@ -801,6 +827,9 @@ def easy_client(api_key, app_secret, callback_url, token_path, asyncio=False,
                      :func:`client_from_login_flow
                      <client_from_login_flow>`.
     '''
+    __require_params(api_key=api_key, app_secret=app_secret,
+                     callback_url=callback_url, token_path=token_path)
+
     if max_token_age is None:
         max_token_age = 0
     if max_token_age < 0:

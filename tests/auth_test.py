@@ -1470,3 +1470,60 @@ class AsyncRevokeTest(unittest.TestCase):
             self.client.revoke()
         self.assertTrue(ctx.exception.server_revoked)
         self.assertTrue(ctx.exception.retryable)
+
+
+class RequiredParamValidationTest(unittest.TestCase):
+    '''Every public client-construction entry point rejects a required
+    parameter passed as None with a TypeError naming the parameter,
+    before any token I/O or login flow begins.'''
+
+    def _assert_none_rejected(self, func, valid_kwargs):
+        for missing in valid_kwargs:
+            kwargs = dict(valid_kwargs)
+            kwargs[missing] = None
+            with self.subTest(param=missing):
+                with self.assertRaisesRegex(
+                        TypeError, missing + ' must not be None'):
+                    func(**kwargs)
+
+    def test_client_from_token_file(self):
+        self._assert_none_rejected(
+                auth.client_from_token_file,
+                dict(token_path='/tmp/tok', api_key='k',
+                     app_secret='s'))
+
+    def test_client_from_access_functions(self):
+        self._assert_none_rejected(
+                auth.client_from_access_functions,
+                dict(api_key='k', app_secret='s',
+                     token_read_func=lambda: {},
+                     token_write_func=lambda t: None))
+
+    def test_client_from_manual_flow(self):
+        self._assert_none_rejected(
+                auth.client_from_manual_flow,
+                dict(api_key='k', app_secret='s',
+                     callback_url=CALLBACK_URL,
+                     token_path='/tmp/tok'))
+
+    def test_client_from_login_flow(self):
+        self._assert_none_rejected(
+                auth.client_from_login_flow,
+                dict(api_key='k', app_secret='s',
+                     callback_url=CALLBACK_URL,
+                     token_path='/tmp/tok'))
+
+    def test_client_from_received_url(self):
+        ctx = auth.get_auth_context('k', CALLBACK_URL)
+        self._assert_none_rejected(
+                auth.client_from_received_url,
+                dict(api_key='k', app_secret='s',
+                     auth_context=ctx, received_url='u',
+                     token_write_func=lambda t: None))
+
+    def test_easy_client(self):
+        self._assert_none_rejected(
+                auth.easy_client,
+                dict(api_key='k', app_secret='s',
+                     callback_url=CALLBACK_URL,
+                     token_path='/tmp/tok'))
